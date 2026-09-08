@@ -11,3 +11,14 @@
 @media(max-height:670px){.shelf-stage{inset:80px 0 190px}.shelf-stage .book-cover{width:180px;height:254px}.shelf-meta{top:69%}.create-fab{bottom:25px}.spread-area{inset:115px 0 100px}.page-strip{bottom:12px}.page-navigation{bottom:74px}.modal{max-height:94dvh}.theme-preview img{max-height:170px;object-fit:contain}}
 @media(prefers-reduced-motion:reduce){*,*:before,*:after{animation-duration:.01ms!important;transition-duration:.01ms!important}}
 .flip-stage.is-cover .flip-book{transform:translateX(-25%)}
+
+/* Editor two-level zoom and wheel/trackpad page turning */
+.spread-area{overscroll-behavior:contain}
+.active-page{position:relative;line-height:0;cursor:zoom-in}
+.spread.zoomed .active-page{cursor:default}
+.paired-page{cursor:zoom-in}
+.spread.zoomed{filter:drop-shadow(0 20px 24px #0003)}
+.spread.turn-next{animation:editor-turn-next .22s ease both}
+.spread.turn-prev{animation:editor-turn-prev .22s ease both}
+@keyframes editor-turn-next{0%{transform:translateX(0);opacity:1}45%{transform:translateX(-18px);opacity:.22}46%{transform:translateX(18px);opacity:.22}100%{transform:translateX(0);opacity:1}}
+@keyframes editor-turn-prev{0%{transform:translateX(0);opacity:1}45%{transform:translateX(18px);opacity:.22}46%{transform:translateX(-18px);opacity:.22}100%{transform:translateX(0);opacity:1}}
