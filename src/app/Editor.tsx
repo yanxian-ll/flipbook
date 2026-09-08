@@ -24,7 +24,7 @@ type TurnScene={
 };
 export function Editor(){
   const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[cropOpen,setCropOpen]=useState(false),[crop,setCrop]=useState({x:.5,y:.5,zoom:1}),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[turnDirection,setTurnDirection]=useState<'next'|'prev'|null>(null),[turnScene,setTurnScene]=useState<TurnScene|null>(null),[coverView,setCoverView]=useState(true),[coverPhase,setCoverPhase]=useState<'idle'|'closing-turn'|'centering'|'closed'|'opening-shrink'|'opening-move'|'opening-turn'>('closed');
-  const workspace=useRef<HTMLDivElement>(null);const bookWindow=useRef<HTMLDivElement>(null);const bookTrack=useRef<HTMLDivElement>(null);const turnSheet=useRef<HTMLDivElement>(null);const replaceInput=useRef<HTMLInputElement>(null);const wheelAccumulator=useRef(0),wheelTimer=useRef<number|null>(null),turnTimer=useRef<number|null>(null),turnLocked=useRef(false);const turnGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;originY:number;started:boolean}|null>(null);const panGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean}|null>(null);
+  const workspace=useRef<HTMLDivElement>(null);const bookWindow=useRef<HTMLDivElement>(null);const turnSceneRef=useRef<TurnScene|null>(null);const bookTrack=useRef<HTMLDivElement>(null);const turnSheet=useRef<HTMLDivElement>(null);const replaceInput=useRef<HTMLInputElement>(null);const wheelAccumulator=useRef(0),wheelTimer=useRef<number|null>(null),turnTimer=useRef<number|null>(null),turnLocked=useRef(false);const turnGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;originY:number;started:boolean}|null>(null);const panGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean}|null>(null);
   useEffect(()=>{let live=true;setLoading(true);void repository.get(bookId!).then(book=>{if(live){s.load(book);setLoading(false);}}).catch(e=>{setError(friendlyError(e));setLoading(false);});return()=>{live=false;void useEditor.getState().flush().catch(()=>{});clearImageCache();};},[bookId]);
   useEffect(()=>{if(!workspace.current)return;const observer=new ResizeObserver(entries=>{setViewWidth(entries[0].contentRect.width);setViewHeight(entries[0].contentRect.height);});observer.observe(workspace.current);return()=>observer.disconnect();},[loading,wide,panel]);
   useEffect(()=>()=>{if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);},[]);
@@ -36,7 +36,7 @@ export function Editor(){
   async function leave(path:string){try{await s.flush();navigate(path);}catch(e){setError(friendlyError(e));}}
   async function replace(files:FileList|null){if(!files?.[0]||!s.selected[0])return;try{const asset=await prepareAsset(files[0]);await s.addAssets([asset]);s.updateElement(s.selected[0],{assetId:asset.id,crop:{x:.5,y:.5,zoom:1}});}catch(e){setError(friendlyError(e));}finally{if(replaceInput.current)replaceInput.current.value='';}}
   if(loading)return <main className="phone-shell"><Loading/></main>;if(!s.book||error&&s.book.id!==bookId)return <main className="phone-shell"><ErrorMessage message={error}/><Button onClick={()=>navigate('/')}>返回书架</Button></main>;
-  const book=s.book,page=book.pages[s.pageIndex],selected=page.elements.find(e=>s.selected.includes(e.id));const thumbnailSpreads=Array.from({length:Math.ceil(Math.max(0,book.pages.length-1)/2)},(_,i)=>1+i*2);const openingCoverLayout=!coverView&&s.pageIndex===0&&(coverPhase==='opening-move'||coverPhase==='opening-turn');const showBookCoverVisual=s.pageIndex===0&&(coverView||coverPhase==='opening-shrink'||coverPhase==='opening-move'||coverPhase==='centering');const pair=s.pageIndex===0?-1:s.pageIndex%2===1?s.pageIndex+1:s.pageIndex-1;const spreadPairPage=pair>=0?book.pages[pair]:undefined;const showAddPageSlot=zoomMode==='spread'&&!coverView&&s.pageIndex>0&&s.pageIndex===book.pages.length-1&&s.pageIndex%2===1&&!spreadPairPage;const spreadHasRightPage=!!spreadPairPage||showAddPageSlot;const neighborIndex=s.pageIndex===0&&book.pages[1]?1:pair;const neighborPage=neighborIndex>=0?book.pages[neighborIndex]:undefined;const pairPage=zoomMode==='page'?neighborPage:spreadPairPage;const pairIndex=zoomMode==='page'?neighborIndex:pair;const spreadUnitWidth=Math.min(wide?390:170,(viewWidth-54)/2,Math.max(120,viewHeight-215)/1.4133);const spreadCanvasWidth=s.pageIndex===0&&!coverView?spreadUnitWidth:Math.min(wide?390:170,(viewWidth-54)/(spreadHasRightPage?2:1),Math.max(120,viewHeight-215)/1.4133);const pageCanvasWidth=Math.min(wide?560:viewWidth*.86,viewWidth*.86,Math.max(170,viewHeight-(panel?390:165))/1.4133);const coverCanvasWidth=Math.min(460,viewWidth*.58,Math.max(210,viewHeight-(panel?350:185))/1.4133);const canvasWidth=coverView&&s.pageIndex===0?coverCanvasWidth:zoomMode==='page'?pageCanvasWidth:spreadCanvasWidth;const pageHeight=canvasWidth*1.4133333333;const peek=.115;const visualReverse=s.pageIndex>0&&s.pageIndex%2===0;const activeSide=s.pageIndex===0?'cover':visualReverse?'right':'left';const pairSide=s.pageIndex===0?'right':visualReverse?'left':'right';const bookWindowWidth=openingCoverLayout?canvasWidth*2:canvasWidth*(zoomMode==='page'&&pairPage?1+peek:spreadHasRightPage?2:1);const spreadWidth=openingCoverLayout?canvasWidth*2:canvasWidth*(zoomMode==='page'?(pairPage?2:1):(spreadHasRightPage?2:1));const focusedShift=openingCoverLayout?canvasWidth:zoomMode==='page'&&pairPage&&visualReverse?-canvasWidth*(1-peek):0;
+  const book=s.book,page=book.pages[s.pageIndex],selected=page.elements.find(e=>s.selected.includes(e.id));const thumbnailSpreads=Array.from({length:Math.ceil(Math.max(0,book.pages.length-1)/2)},(_,i)=>1+i*2);const openingCoverLayout=!coverView&&s.pageIndex===0&&(coverPhase==='opening-move'||coverPhase==='opening-turn');const showBookCoverVisual=s.pageIndex===0&&(coverView||coverPhase==='opening-shrink'||coverPhase==='opening-move'||coverPhase==='centering');const pair=s.pageIndex===0?-1:s.pageIndex%2===1?s.pageIndex+1:s.pageIndex-1;const spreadPairPage=pair>=0?book.pages[pair]:undefined;const showAddPageSlot=zoomMode==='spread'&&!coverView&&s.pageIndex>0&&s.pageIndex===book.pages.length-1&&s.pageIndex%2===1&&!spreadPairPage;const spreadHasRightPage=!!spreadPairPage||showAddPageSlot;const neighborIndex=s.pageIndex===0&&book.pages[1]?1:pair;const neighborPage=neighborIndex>=0?book.pages[neighborIndex]:undefined;const pairPage=zoomMode==='page'?neighborPage:spreadPairPage;const pairIndex=zoomMode==='page'?neighborIndex:pair;const spreadUnitWidth=Math.min(wide?390:170,(viewWidth-54)/2,Math.max(120,viewHeight-215)/1.4133);const spreadCanvasWidth=s.pageIndex===0&&!coverView?spreadUnitWidth:Math.min(wide?390:170,(viewWidth-54)/(spreadHasRightPage?2:1),Math.max(120,viewHeight-215)/1.4133);const pageCanvasWidth=Math.min(wide?560:viewWidth*.86,viewWidth*.86,Math.max(170,viewHeight-(panel?390:165))/1.4133);const coverCanvasWidth=Math.min(460,viewWidth*.58,Math.max(210,viewHeight-(panel?350:185))/1.4133);const canvasWidth=coverView&&s.pageIndex===0?coverCanvasWidth:zoomMode==='page'?pageCanvasWidth:spreadCanvasWidth;const pageHeight=canvasWidth*1.4133333333;const peek=.115;const visualReverse=s.pageIndex>0&&s.pageIndex%2===0;const activeSide=s.pageIndex===0?'cover':visualReverse?'right':'left';const pairSide=s.pageIndex===0?'right':visualReverse?'left':'right';const physicalSpreadLocked=!!turnScene&&zoomMode==='spread';const bookWindowWidth=openingCoverLayout||physicalSpreadLocked?canvasWidth*2:canvasWidth*(zoomMode==='page'&&pairPage?1+peek:spreadHasRightPage?2:1);const spreadWidth=openingCoverLayout||physicalSpreadLocked?canvasWidth*2:canvasWidth*(zoomMode==='page'?(pairPage?2:1):(spreadHasRightPage?2:1));const focusedShift=openingCoverLayout?canvasWidth:zoomMode==='page'&&pairPage&&visualReverse?-canvasWidth*(1-peek):0;
   const tools=([['photos',Images,'素材库'],['layouts',Grid2X2,'模版'],['text',Type,'文字'],['stickers',Sticker,'贴纸'],['adjust',Sun,'调整']] as const).filter(([id])=>page.type!=='cover'||!['layouts','stickers'].includes(id));
   function openCrop(){if(selected?.type==='image'){setCrop(selected.crop??{x:.5,y:.5,zoom:1});setCropOpen(true);}}
   function makeTurnScene(direction:'next'|'prev',pageIndex=s.pageIndex):TurnScene|null{
@@ -134,11 +134,11 @@ export function Editor(){
     host.style.setProperty('--turn-origin',`${originY*100}%`);
   }
   function clearTurn(){
-    turnGesture.current=null;setTurnScene(null);setTurnDirection(null);turnLocked.current=false;
+    turnGesture.current=null;turnSceneRef.current=null;setTurnScene(null);setTurnDirection(null);turnLocked.current=false;
     if(bookWindow.current){bookWindow.current.style.setProperty('--turn-progress','0');bookWindow.current.style.setProperty('--turn-origin','50%');}
   }
   function finishTurn(commit:boolean){
-    const g=turnGesture.current,scene=turnScene;if(!g||!g.started||!scene){turnGesture.current=null;return;}
+    const g=turnGesture.current,scene=turnSceneRef.current;if(!g||!g.started||!scene){turnGesture.current=null;return;}
     const duration=commit?310:190;
     applyTurnVisual(commit?1:0,g.direction,g.originY,`transform ${duration}ms ${commit?'cubic-bezier(.18,.72,.18,1)':'cubic-bezier(.3,.75,.25,1)'}`);
     if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);
@@ -154,7 +154,7 @@ export function Editor(){
     const rect=bookWindow.current.getBoundingClientRect(),now=performance.now();
     const originY=Math.max(.06,Math.min(.94,(e.clientY-rect.top)/rect.height));
     turnGesture.current={pointerId:e.pointerId,direction,startX:e.clientX,lastX:e.clientX,lastAt:now,velocity:0,progress:0,originY,started:false};
-    setTurnScene(scene);setTurnDirection(direction);bookWindow.current.style.setProperty('--turn-origin',`${originY*100}%`);
+    turnSceneRef.current=scene;setTurnScene(scene);setTurnDirection(direction);bookWindow.current.style.setProperty('--turn-origin',`${originY*100}%`);
     e.currentTarget.setPointerCapture(e.pointerId);e.preventDefault();
   }
   function moveTurn(e:ReactPointerEvent<HTMLDivElement>){
@@ -171,16 +171,16 @@ export function Editor(){
     const signedVelocity=g.direction==='next'?-g.velocity:g.velocity;
     const commit=g.started&&(g.progress>.24||signedVelocity>.55);
     if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
-    if(g.started)finishTurn(commit);else{turnGesture.current=null;setTurnScene(null);setTurnDirection(null);turnPage(g.direction);}
+    if(g.started)finishTurn(commit);else{turnGesture.current=null;turnSceneRef.current=null;setTurnScene(null);setTurnDirection(null);turnPage(g.direction);}
   }
   function cancelTurn(e:ReactPointerEvent<HTMLDivElement>){
     const g=turnGesture.current;if(!g||g.pointerId!==e.pointerId)return;
-    if(g.started)finishTurn(false);else{turnGesture.current=null;setTurnScene(null);setTurnDirection(null);}
+    if(g.started)finishTurn(false);else{turnGesture.current=null;turnSceneRef.current=null;setTurnScene(null);setTurnDirection(null);}
   }
   function turnPage(direction:'next'|'prev',after?:()=>void){
     const state=useEditor.getState(),currentIndex=state.pageIndex,scene=makeTurnScene(direction,currentIndex);
     if(turnLocked.current||!scene||scene.target===currentIndex)return;
-    turnLocked.current=true;setTurnScene(scene);setTurnDirection(direction);
+    turnLocked.current=true;turnSceneRef.current=scene;setTurnScene(scene);setTurnDirection(direction);
     const originY=.5;
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       applyTurnVisual(0,direction,originY);
