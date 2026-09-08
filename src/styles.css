@@ -173,3 +173,38 @@
   box-shadow:none!important;
   pointer-events:none;
 }
+
+/* Physical page model: fixed leaf faces and fixed pages underneath for the entire turn. */
+.book-window.has-turn-scene .book-track{visibility:hidden}
+.turn-static-spread{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  display:flex;
+  align-items:stretch;
+  z-index:7;
+  pointer-events:none;
+  filter:drop-shadow(0 12px 15px #0002);
+}
+.turn-static-page{
+  width:50%;
+  height:100%;
+  overflow:hidden;
+  background:#fff;
+  flex:0 0 50%;
+}
+.turn-static-page.left{border-radius:6px 0 0 6px}
+.turn-static-page.right{border-radius:0 6px 6px 0}
+.turn-static-page>img,
+.turn-static-page>.thumbnail-placeholder,
+.turn-blank-page{
+  display:block;
+  width:100%;
+  height:100%;
+  min-height:0;
+  object-fit:fill;
+}
+.turn-blank-page{background:#fff}
+.turn-static-spread .spine-shadow{left:50%;z-index:8}
+.book-window.has-turn-scene .turning-sheet{z-index:10}
