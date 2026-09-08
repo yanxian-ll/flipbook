@@ -88,3 +88,26 @@
 .cover-quick-actions i{width:1px;height:19px;background:#e5e5e5}
 .cover-phase-closing-turn+.clean-page-strip,.cover-phase-centering+.clean-page-strip{opacity:0;pointer-events:none}
 @media(prefers-reduced-motion:reduce){.book-window.cover-phase-opening-shrink,.book-window.cover-phase-opening-move,.book-window.cover-phase-opening-turn,.book-window.cover-phase-centering{transform:none}}
+
+/* Keep the editor's closed cover visually identical to the bookshelf book. */
+.book-window.cover-closed{overflow:visible!important;border-radius:0;box-shadow:none!important;filter:none}
+.book-window.cover-closed .book-track{filter:none;overflow:visible}
+.book-window.cover-closed .closed-cover-page{width:100%;height:100%;overflow:visible;background:transparent;border-radius:0;line-height:normal}
+.book-window.cover-closed .closed-cover-page>.book-cover{
+  width:100%;
+  height:100%;
+  max-width:none;
+  aspect-ratio:225/318;
+  border-radius:1px 3px 3px 1px;
+  box-shadow:inset -2px 0 3px #0002,inset 0 1px 2px #fff9,3px 4px 5px #0003,0 22px 34px #0003;
+  transform:perspective(1400px) rotateY(-2deg);
+  transition:transform .3s,box-shadow .3s;
+  overflow:hidden;
+}
+.book-window.cover-closed .closed-cover-page>.book-cover:hover{
+  transform:perspective(1400px) rotateY(-4deg) translateY(-2px);
+  box-shadow:4px 7px 6px #0002,0 25px 36px #0003;
+}
+.book-window.cover-closed .closed-cover-page>.book-cover .cover-spine{width:12px}
+.book-window.cover-closed .closed-cover-page>.book-cover .cover-grain{opacity:.5}
+.book-window.cover-closed .closed-cover-page>.book-cover .cover-caption{font-size:clamp(4px,.9vw,7px)}
