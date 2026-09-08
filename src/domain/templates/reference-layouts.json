@@ -1,0 +1,2950 @@
+[
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "textOnly",
+    "maxImages": 0,
+    "minImages": 0,
+    "name": "纯文字",
+    "slots": [],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "imgTopBlock",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "图上文下",
+    "slots": [
+      {
+        "height": 0.49719994469026546,
+        "width": 1,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "textTopImgBottom",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "文上图下",
+    "slots": [
+      {
+        "height": 0.49719994469026546,
+        "width": 1,
+        "x": 0,
+        "y": 0.5028000553097345
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgba(0, 0, 0, 0)",
+    "id": "fullImage",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "铺满",
+    "slots": [
+      {
+        "height": 1,
+        "width": 1,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "imagePadded",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "居中留白",
+    "slots": [
+      {
+        "height": 0.3610342920353982,
+        "width": 0.67998046875,
+        "x": 0.160009765625,
+        "y": 0.31948285398230086
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "magazineLeft",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "杂志·左图",
+    "slots": [
+      {
+        "height": 0.49080475663716816,
+        "width": 0.519970703125,
+        "x": 0.05,
+        "y": 0.02997096238938053
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "FZLanTingHei, -apple-system, BlinkMacSystemFont, \"Helvetica Neue\", sans-serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.024336283185840708,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.046875,
+        "x": 0.57998046875,
+        "y": 0.49498755530973454
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "FZLanTingHei, -apple-system, BlinkMacSystemFont, \"Helvetica Neue\", sans-serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.03007466814159292,
+        "key": "body",
+        "letterSpacing": 0,
+        "lineHeight": 1.7,
+        "text": "Every collection begins with something small.",
+        "width": 0.87001953125,
+        "x": 0.05,
+        "y": 0.9299294800884956
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "magazineRight",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "杂志·右图",
+    "slots": [
+      {
+        "height": 0.7600248893805309,
+        "width": 0.65,
+        "x": 0.35,
+        "y": 0.079991703539823
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "FZLanTingHei, -apple-system, BlinkMacSystemFont, \"Helvetica Neue\", sans-serif",
+        "fontSize": 0.125,
+        "fontWeight": 400,
+        "height": 0.0995575221238938,
+        "key": "badge0",
+        "letterSpacing": -1,
+        "lineHeight": 1.2,
+        "text": "01",
+        "width": 0.14365234375,
+        "x": 0.0599609375,
+        "y": 0.4299986172566372
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "FZLanTingHei, -apple-system, BlinkMacSystemFont, \"Helvetica Neue\", sans-serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.03007466814159292,
+        "key": "body",
+        "letterSpacing": 0,
+        "lineHeight": 1.7,
+        "text": "Every collection begins with something small.",
+        "width": 0.87001953125,
+        "x": 0.05,
+        "y": 0.934941924778761
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "magazineNumTop",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "杂志·号上图下",
+    "slots": [
+      {
+        "height": 0.4199737278761062,
+        "width": 0.9400390625,
+        "x": 0.02998046875,
+        "y": 0.5800262721238938
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.04375,
+        "fontWeight": 400,
+        "height": 0.035398230088495575,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.07666015625,
+        "x": 0.05,
+        "y": 0.0399958517699115
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "magazineImgTop",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "杂志·图上号下",
+    "slots": [
+      {
+        "height": 0.44997925884955753,
+        "width": 0.9400390625,
+        "x": 0.02998046875,
+        "y": 0.02997096238938053
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.04375,
+        "fontWeight": 400,
+        "height": 0.035398230088495575,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.07666015625,
+        "x": 0.05,
+        "y": 0.9246059181415928
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "dualVertical",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "上下",
+    "slots": [
+      {
+        "height": 0.3822594026548672,
+        "width": 0.719970703125,
+        "x": 0.139990234375,
+        "y": 0.1044662610619469
+      },
+      {
+        "height": 0.3822594026548672,
+        "width": 0.719970703125,
+        "x": 0.139990234375,
+        "y": 0.5132743362831859
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "dualHorizontal",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "左右",
+    "slots": [
+      {
+        "height": 0.27876106194690264,
+        "width": 0.39375,
+        "x": 0.0875,
+        "y": 0.3606194690265487
+      },
+      {
+        "height": 0.27876106194690264,
+        "width": 0.39375,
+        "x": 0.51875,
+        "y": 0.3606194690265487
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "dualBigSmall",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "大小",
+    "slots": [
+      {
+        "height": 0.6199875553097345,
+        "width": 1,
+        "x": 0,
+        "y": 0
+      },
+      {
+        "height": 0.26282494469026546,
+        "width": 0.371240234375,
+        "x": 0.541259765625,
+        "y": 0.6785813053097345
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "dual2Stack",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "编号上下",
+    "slots": [
+      {
+        "height": 0.29998617256637167,
+        "width": 0.680078125,
+        "x": 0.1599609375,
+        "y": 0.13996819690265486
+      },
+      {
+        "height": 0.29998617256637167,
+        "width": 0.680078125,
+        "x": 0.1599609375,
+        "y": 0.5399958517699115
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.028125,
+        "fontWeight": 400,
+        "height": 0.022123893805309738,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.04931640625,
+        "x": 0.1599609375,
+        "y": 0.10498478982300884
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.028125,
+        "fontWeight": 400,
+        "height": 0.022123893805309738,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.054443359375,
+        "x": 0.1599609375,
+        "y": 0.5049778761061947
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "dual2Stagger",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "阶梯错位",
+    "slots": [
+      {
+        "height": 0.21999446902654868,
+        "width": 0.67001953125,
+        "x": 0.27998046875,
+        "y": 0.4199737278761062
+      },
+      {
+        "height": 0.17999861725663716,
+        "width": 0.530029296875,
+        "x": 0.419970703125,
+        "y": 0.6799986172566371
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(153, 153, 153)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.09551299778761062,
+        "key": "body",
+        "letterSpacing": 0.3,
+        "lineHeight": 1.8,
+        "text": "Daily Flipin 𐃆·̩͙₊˚⊹\nFlip in my feelings and\nmemories.",
+        "width": 0.5400390625,
+        "x": 0.0599609375,
+        "y": 0.2799709623893805
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.17998046875,
+        "y": 0.39999308628318586
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.042333984375,
+        "x": 0.32998046875,
+        "y": 0.659983407079646
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "dual2Music",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "并排Flipin",
+    "slots": [
+      {
+        "height": 0.29998617256637167,
+        "width": 0.32998046875,
+        "x": 0.1099609375,
+        "y": 0.2799709623893805
+      },
+      {
+        "height": 0.29998617256637167,
+        "width": 0.419970703125,
+        "x": 0.469970703125,
+        "y": 0.2799709623893805
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(136, 136, 136)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "music",
+        "letterSpacing": 0.4,
+        "lineHeight": 1.2,
+        "text": "Flipin*",
+        "width": 0.090869140625,
+        "x": 0.799169921875,
+        "y": 0.21999446902654868
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.1099609375,
+        "y": 0.6199875553097345
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "triRow",
+    "maxImages": 3,
+    "minImages": 3,
+    "name": "一行三张",
+    "slots": [
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.075,
+        "y": 0.4055931969026549
+      },
+      {
+        "height": 0.18881360619469023,
+        "width": 0.26669921875,
+        "x": 0.366650390625,
+        "y": 0.4055931969026549
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.658349609375,
+        "y": 0.4055931969026549
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "tri3Column",
+    "maxImages": 3,
+    "minImages": 3,
+    "name": "竖列编号",
+    "slots": [
+      {
+        "height": 0.23997511061946905,
+        "width": 0.55,
+        "x": 0.2,
+        "y": 0.079991703539823
+      },
+      {
+        "height": 0.23997511061946905,
+        "width": 0.55,
+        "x": 0.2,
+        "y": 0.3599972345132743
+      },
+      {
+        "height": 0.23997511061946905,
+        "width": 0.55,
+        "x": 0.2,
+        "y": 0.6399681969026548
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.769970703125,
+        "y": 0.29998617256637167
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.042333984375,
+        "x": 0.769970703125,
+        "y": 0.579991703539823
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.04208984375,
+        "x": 0.769970703125,
+        "y": 0.8599972345132744
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "tri3Asymmetric",
+    "maxImages": 3,
+    "minImages": 3,
+    "name": "错位通栏",
+    "slots": [
+      {
+        "height": 0.25,
+        "width": 0.47998046875,
+        "x": 0.05,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.1699737278761062,
+        "width": 0.45,
+        "x": 0.3,
+        "y": 0.4199737278761062
+      },
+      {
+        "height": 0.329991703539823,
+        "width": 0.9400390625,
+        "x": 0.02998046875,
+        "y": 0.6399681969026548
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(136, 136, 136)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "label",
+        "letterSpacing": 0.4,
+        "lineHeight": 1.2,
+        "text": "Time To Flipin*",
+        "width": 0.18173828125,
+        "x": 0.76826171875,
+        "y": 0.04998617256637168
+      },
+      {
+        "align": "start",
+        "color": "rgb(153, 153, 153)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.027862278761061947,
+        "key": "body",
+        "letterSpacing": 0.3,
+        "lineHeight": 1.8,
+        "text": "Daily Flipin⋆⭒˚.⋆",
+        "width": 0.177392578125,
+        "x": 0.05,
+        "y": 0.319966814159292
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.042333984375,
+        "x": 0.7876953125,
+        "y": 0.5699668141592921
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "quadGrid",
+    "maxImages": 4,
+    "minImages": 4,
+    "name": "四宫格",
+    "slots": [
+      {
+        "height": 0.2721238938053097,
+        "width": 0.384375,
+        "x": 0.1,
+        "y": 0.2168141592920354
+      },
+      {
+        "height": 0.2721238938053097,
+        "width": 0.384375,
+        "x": 0.515625,
+        "y": 0.2168141592920354
+      },
+      {
+        "height": 0.2721238938053097,
+        "width": 0.384375,
+        "x": 0.1,
+        "y": 0.5110619469026548
+      },
+      {
+        "height": 0.2721238938053097,
+        "width": 0.384375,
+        "x": 0.515625,
+        "y": 0.5110619469026548
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "quad4Zigzag",
+    "maxImages": 4,
+    "minImages": 4,
+    "name": "Z字编号",
+    "slots": [
+      {
+        "height": 0.21999446902654868,
+        "width": 0.45,
+        "x": 0.05,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.45,
+        "x": 0.5,
+        "y": 0.2799709623893805
+      },
+      {
+        "height": 0.19997925884955753,
+        "width": 0.37998046875,
+        "x": 0.05,
+        "y": 0.5299709623893806
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.6,
+        "x": 0.35,
+        "y": 0.75
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.881689453125,
+        "y": 0.04998617256637168
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.042333984375,
+        "x": 0.877685546875,
+        "y": 0.4799847898230089
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.04208984375,
+        "x": 0.05,
+        "y": 0.7099695796460177
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.041748046875,
+        "x": 0.35,
+        "y": 0.9499792588495576
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "quad4Ball",
+    "maxImages": 4,
+    "minImages": 4,
+    "name": "2x2·ball",
+    "slots": [
+      {
+        "height": 0.23997511061946905,
+        "width": 0.42998046875,
+        "x": 0.05,
+        "y": 0.079991703539823
+      },
+      {
+        "height": 0.23997511061946905,
+        "width": 0.42998046875,
+        "x": 0.52001953125,
+        "y": 0.079991703539823
+      },
+      {
+        "height": 0.23997511061946905,
+        "width": 0.42998046875,
+        "x": 0.05,
+        "y": 0.3499723451327434
+      },
+      {
+        "height": 0.23997511061946905,
+        "width": 0.42998046875,
+        "x": 0.52001953125,
+        "y": 0.3499723451327434
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(136, 136, 136)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "ball",
+        "letterSpacing": 0.4,
+        "lineHeight": 1.2,
+        "text": "[ball]",
+        "width": 0.0693359375,
+        "x": 0.05,
+        "y": 0.9000967920353983
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "quad4Mixed",
+    "maxImages": 4,
+    "minImages": 4,
+    "name": "混排文字",
+    "slots": [
+      {
+        "height": 0.2099695796460177,
+        "width": 0.22998046875,
+        "x": 0.039990234375,
+        "y": 0.02997096238938053
+      },
+      {
+        "height": 0.2099695796460177,
+        "width": 0.25,
+        "x": 0.3,
+        "y": 0.02997096238938053
+      },
+      {
+        "height": 0.44997925884955753,
+        "width": 0.65,
+        "x": 0.3,
+        "y": 0.26998064159292035
+      },
+      {
+        "height": 0.22998478982300885,
+        "width": 0.22998046875,
+        "x": 0.039990234375,
+        "y": 0.7399751106194691
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(136, 136, 136)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.028761061946902654,
+        "key": "ball",
+        "letterSpacing": 0.4,
+        "lineHeight": 1.2,
+        "text": "Flipin ݁₊ ⊹ ⋆ ˚",
+        "width": 0.15908203125,
+        "x": 0.039990234375,
+        "y": 0.2599903207964602
+      },
+      {
+        "align": "right",
+        "color": "rgb(153, 153, 153)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.03183766592920354,
+        "key": "body",
+        "letterSpacing": 0.3,
+        "lineHeight": 1.8,
+        "text": "Flip in my feelings and memories. ˖°𓇼",
+        "width": 0.4947265625,
+        "x": 0.4552734375,
+        "y": 0.9281664823008848
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "quad4Rows",
+    "maxImages": 4,
+    "minImages": 4,
+    "name": "横条编号",
+    "slots": [
+      {
+        "height": 0.17999861725663716,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.05997649336283186
+      },
+      {
+        "height": 0.17999861725663716,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.2799709623893805
+      },
+      {
+        "height": 0.17999861725663716,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.5
+      },
+      {
+        "height": 0.17999861725663716,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.7199944690265486
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.47998046875,
+        "y": 0.05997649336283186
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.042333984375,
+        "x": 0.47998046875,
+        "y": 0.2799709623893805
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.04208984375,
+        "x": 0.47998046875,
+        "y": 0.5
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.041748046875,
+        "x": 0.47998046875,
+        "y": 0.7199944690265486
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "penta5Zigzag",
+    "maxImages": 5,
+    "minImages": 5,
+    "name": "锯齿编号",
+    "slots": [
+      {
+        "height": 0.159983407079646,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.0399958517699115
+      },
+      {
+        "height": 0.159983407079646,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.22998478982300885
+      },
+      {
+        "height": 0.159983407079646,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.4199737278761062
+      },
+      {
+        "height": 0.159983407079646,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.6099972345132744
+      },
+      {
+        "height": 0.159983407079646,
+        "width": 0.4,
+        "x": 0.55,
+        "y": 0.7999861725663717
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.04384765625,
+        "x": 0.486181640625,
+        "y": 0.0399958517699115
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.048388671875,
+        "x": 0.481640625,
+        "y": 0.22998478982300885
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.048095703125,
+        "x": 0.48193359375,
+        "y": 0.4199737278761062
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.047705078125,
+        "x": 0.48232421875,
+        "y": 0.6099972345132744
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "badge4",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[05]",
+        "width": 0.048193359375,
+        "x": 0.4818359375,
+        "y": 0.7999861725663717
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "penta5Cascade",
+    "maxImages": 5,
+    "minImages": 5,
+    "name": "瀑布级联",
+    "slots": [
+      {
+        "height": 0.2799709623893805,
+        "width": 0.3,
+        "x": 0.05,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.3799778761061947,
+        "width": 0.419970703125,
+        "x": 0.27998046875,
+        "y": 0.14999308628318583
+      },
+      {
+        "height": 0.17999861725663716,
+        "width": 0.219970703125,
+        "x": 0.730029296875,
+        "y": 0.3499723451327434
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.7199944690265486
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.7199944690265486
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.911669921875,
+        "y": 0.9323147123893806
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "sixGrid",
+    "maxImages": 6,
+    "minImages": 6,
+    "name": "六宫格",
+    "slots": [
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.075,
+        "y": 0.30233683628318586
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.366650390625,
+        "y": 0.30233683628318586
+      },
+      {
+        "height": 0.18881360619469023,
+        "width": 0.26669921875,
+        "x": 0.65830078125,
+        "y": 0.30233683628318586
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.075,
+        "y": 0.5088495575221239
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.366650390625,
+        "y": 0.5088495575221239
+      },
+      {
+        "height": 0.18881360619469023,
+        "width": 0.26669921875,
+        "x": 0.65830078125,
+        "y": 0.5088495575221239
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "six6GridNum",
+    "maxImages": 6,
+    "minImages": 6,
+    "name": "网格编号",
+    "slots": [
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.22998478982300885
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.22998478982300885
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.22998478982300885
+      }
+    ],
+    "texts": [
+      {
+        "align": "center",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.19997925884955753
+      },
+      {
+        "align": "center",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.19997925884955753
+      },
+      {
+        "align": "center",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.19997925884955753
+      },
+      {
+        "align": "center",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.3799778761061947
+      },
+      {
+        "align": "center",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge4",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[05]",
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.3799778761061947
+      },
+      {
+        "align": "center",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge5",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[06]",
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.3799778761061947
+      },
+      {
+        "align": "right",
+        "color": "rgb(153, 153, 153)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "body",
+        "letterSpacing": 0.3,
+        "lineHeight": 1.2,
+        "text": "Every collection begins with something small.",
+        "width": 0.594775390625,
+        "x": 0.355224609375,
+        "y": 0.9000967920353983
+      },
+      {
+        "align": "right",
+        "color": "rgb(153, 153, 153)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "credit",
+        "letterSpacing": 0.3,
+        "lineHeight": 1.2,
+        "text": "©Flipin Collection",
+        "width": 0.236474609375,
+        "x": 0.713525390625,
+        "y": 0.9301023230088497
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "six6Sidebar",
+    "maxImages": 6,
+    "minImages": 6,
+    "name": "侧栏竖列",
+    "slots": [
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.0399958517699115
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.19496681415929204
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.3499723451327434
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.5049778761061947
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.659983407079646
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.8149889380530974
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.601708984375,
+        "y": 0.0399958517699115
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.042333984375,
+        "x": 0.597705078125,
+        "y": 0.19496681415929204
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.04208984375,
+        "x": 0.59794921875,
+        "y": 0.3499723451327434
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.041748046875,
+        "x": 0.598291015625,
+        "y": 0.5049778761061947
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge4",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[05]",
+        "width": 0.042138671875,
+        "x": 0.597900390625,
+        "y": 0.659983407079646
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge5",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[06]",
+        "width": 0.042578125,
+        "x": 0.5974609375,
+        "y": 0.8149889380530974
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "seven7Scatter",
+    "maxImages": 7,
+    "minImages": 7,
+    "name": "竖列编号",
+    "slots": [
+      {
+        "height": 0.11998755530973453,
+        "width": 0.2,
+        "x": 0.7599609375,
+        "y": 0.02997096238938053
+      },
+      {
+        "height": 0.17999861725663716,
+        "width": 0.2,
+        "x": 0.7599609375,
+        "y": 0.1649958517699115
+      },
+      {
+        "height": 0.10999723451327434,
+        "width": 0.2,
+        "x": 0.7599609375,
+        "y": 0.3599972345132743
+      },
+      {
+        "height": 0.10999723451327434,
+        "width": 0.2,
+        "x": 0.7599609375,
+        "y": 0.4849972345132743
+      },
+      {
+        "height": 0.10999723451327434,
+        "width": 0.2,
+        "x": 0.7599609375,
+        "y": 0.6099972345132744
+      },
+      {
+        "height": 0.10999723451327434,
+        "width": 0.2,
+        "x": 0.7599609375,
+        "y": 0.7349972345132744
+      },
+      {
+        "height": 0.10999723451327434,
+        "width": 0.2,
+        "x": 0.7599609375,
+        "y": 0.8599972345132744
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.032861328125,
+        "x": 0.707177734375,
+        "y": 0.02997096238938053
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.036328125,
+        "x": 0.7037109375,
+        "y": 0.1649958517699115
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.036083984375,
+        "x": 0.703955078125,
+        "y": 0.3599972345132743
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.035791015625,
+        "x": 0.704248046875,
+        "y": 0.4849972345132743
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge4",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[05]",
+        "width": 0.0361328125,
+        "x": 0.70390625,
+        "y": 0.6099972345132744
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge5",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[06]",
+        "width": 0.0365234375,
+        "x": 0.703515625,
+        "y": 0.7349972345132744
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge6",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[07]",
+        "width": 0.03505859375,
+        "x": 0.70498046875,
+        "y": 0.8599972345132744
+      },
+      {
+        "align": "center",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.028125,
+        "fontWeight": 400,
+        "height": 0.055724557522123894,
+        "key": "body",
+        "letterSpacing": 0.2,
+        "lineHeight": 1.4,
+        "text": "Every collection\nbegins with something small.",
+        "width": 0.630029296875,
+        "x": 0.05,
+        "y": 0.44997925884955753
+      },
+      {
+        "align": "center",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "credit",
+        "letterSpacing": 0.2,
+        "lineHeight": 1.2,
+        "text": "©Flipin Collection",
+        "width": 0.630029296875,
+        "x": 0.05,
+        "y": 0.5199806415929203
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "seven7Cascade",
+    "maxImages": 7,
+    "minImages": 7,
+    "name": "瀑布层叠",
+    "slots": [
+      {
+        "height": 0.13996819690265486,
+        "width": 0.219970703125,
+        "x": 0.750048828125,
+        "y": 0
+      },
+      {
+        "height": 0.29998617256637167,
+        "width": 0.35,
+        "x": 0.07998046875,
+        "y": 0.09997234513274336
+      },
+      {
+        "height": 0.12997787610619468,
+        "width": 0.169970703125,
+        "x": 0.47998046875,
+        "y": 0.25
+      },
+      {
+        "height": 0.14999308628318583,
+        "width": 0.17998046875,
+        "x": 0.17998046875,
+        "y": 0.4199737278761062
+      },
+      {
+        "height": 0.3599972345132743,
+        "width": 0.47998046875,
+        "x": 0.37998046875,
+        "y": 0.3599972345132743
+      },
+      {
+        "height": 0.23997511061946905,
+        "width": 0.27998046875,
+        "x": 0.02998046875,
+        "y": 0.6799986172566371
+      },
+      {
+        "height": 0.13996819690265486,
+        "width": 0.2,
+        "x": 0.419970703125,
+        "y": 0.7799709623893806
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(136, 136, 136)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "mind",
+        "letterSpacing": 0.4,
+        "lineHeight": 1.2,
+        "text": "[Mind]",
+        "width": 0.088525390625,
+        "x": 0.861474609375,
+        "y": 0.14999308628318583
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "eight8GridNum",
+    "maxImages": 8,
+    "minImages": 8,
+    "name": "4x2编号",
+    "slots": [
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.17998046875,
+        "y": 0.05997649336283186
+      },
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.519970703125,
+        "y": 0.05997649336283186
+      },
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.17998046875,
+        "y": 0.2599903207964602
+      },
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.519970703125,
+        "y": 0.2599903207964602
+      },
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.17998046875,
+        "y": 0.4599695796460177
+      },
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.519970703125,
+        "y": 0.4599695796460177
+      },
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.17998046875,
+        "y": 0.659983407079646
+      },
+      {
+        "height": 0.11998755530973453,
+        "width": 0.3,
+        "x": 0.519970703125,
+        "y": 0.659983407079646
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.038330078125,
+        "x": 0.17998046875,
+        "y": 0.18998893805309736
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.042333984375,
+        "x": 0.519970703125,
+        "y": 0.18998893805309736
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.04208984375,
+        "x": 0.17998046875,
+        "y": 0.3899681969026549
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.041748046875,
+        "x": 0.519970703125,
+        "y": 0.3899681969026549
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge4",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[05]",
+        "width": 0.042138671875,
+        "x": 0.17998046875,
+        "y": 0.5899820243362832
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge5",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[06]",
+        "width": 0.042578125,
+        "x": 0.519970703125,
+        "y": 0.5899820243362832
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge6",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[07]",
+        "width": 0.040869140625,
+        "x": 0.17998046875,
+        "y": 0.7899958517699115
+      },
+      {
+        "align": "start",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "badge7",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[08]",
+        "width": 0.04189453125,
+        "x": 0.519970703125,
+        "y": 0.7899958517699115
+      },
+      {
+        "align": "right",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "body",
+        "letterSpacing": 0.3,
+        "lineHeight": 1.2,
+        "text": "Every collection begins with something small.",
+        "width": 0.594775390625,
+        "x": 0.355224609375,
+        "y": 0.9000967920353983
+      },
+      {
+        "align": "right",
+        "color": "rgb(26, 26, 26)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "credit",
+        "letterSpacing": 0.3,
+        "lineHeight": 1.2,
+        "text": "©Flipin Collection",
+        "width": 0.236474609375,
+        "x": 0.713525390625,
+        "y": 0.9301023230088497
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "nineGrid",
+    "maxImages": 9,
+    "minImages": 9,
+    "name": "九宫格",
+    "slots": [
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.075,
+        "y": 0.05309734513274336
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.366650390625,
+        "y": 0.05309734513274336
+      },
+      {
+        "height": 0.18881360619469023,
+        "width": 0.26669921875,
+        "x": 0.65830078125,
+        "y": 0.05309734513274336
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.075,
+        "y": 0.25961006637168144
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.366650390625,
+        "y": 0.25961006637168144
+      },
+      {
+        "height": 0.18881360619469023,
+        "width": 0.26669921875,
+        "x": 0.65830078125,
+        "y": 0.25961006637168144
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.075,
+        "y": 0.4661227876106195
+      },
+      {
+        "height": 0.18877903761061948,
+        "width": 0.266650390625,
+        "x": 0.366650390625,
+        "y": 0.4661227876106195
+      },
+      {
+        "height": 0.18881360619469023,
+        "width": 0.26669921875,
+        "x": 0.65830078125,
+        "y": 0.4661227876106195
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "id": "nine9GridNum",
+    "maxImages": 9,
+    "minImages": 9,
+    "name": "3x3编号",
+    "slots": [
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.04998617256637168
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.30997649336283184
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.30997649336283184
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.30997649336283184
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.05,
+        "y": 0.5699668141592921
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.3599609375,
+        "y": 0.5699668141592921
+      },
+      {
+        "height": 0.21999446902654868,
+        "width": 0.27998046875,
+        "x": 0.669970703125,
+        "y": 0.5699668141592921
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(136, 136, 136)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.021875,
+        "fontWeight": 400,
+        "height": 0.017699115044247787,
+        "key": "mind1",
+        "letterSpacing": 0.4,
+        "lineHeight": 1.2,
+        "text": "[Mind]",
+        "width": 0.07841796875,
+        "x": 0.87158203125,
+        "y": 0.009990320796460178
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge0",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[01]",
+        "width": 0.032861328125,
+        "x": 0.05,
+        "y": 0.27499308628318586
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge1",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[02]",
+        "width": 0.036328125,
+        "x": 0.3599609375,
+        "y": 0.27499308628318586
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge2",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[03]",
+        "width": 0.036083984375,
+        "x": 0.669970703125,
+        "y": 0.27499308628318586
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge3",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[04]",
+        "width": 0.035791015625,
+        "x": 0.05,
+        "y": 0.534983407079646
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge4",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[05]",
+        "width": 0.0361328125,
+        "x": 0.3599609375,
+        "y": 0.534983407079646
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge5",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[06]",
+        "width": 0.0365234375,
+        "x": 0.669970703125,
+        "y": 0.534983407079646
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge6",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[07]",
+        "width": 0.03505859375,
+        "x": 0.05,
+        "y": 0.7949737278761062
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge7",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[08]",
+        "width": 0.0359375,
+        "x": 0.3599609375,
+        "y": 0.7949737278761062
+      },
+      {
+        "align": "start",
+        "color": "rgb(170, 170, 170)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.01875,
+        "fontWeight": 400,
+        "height": 0.01327433628318584,
+        "key": "badge8",
+        "letterSpacing": 0,
+        "lineHeight": 1.2,
+        "text": "[09]",
+        "width": 0.036474609375,
+        "x": 0.669970703125,
+        "y": 0.7949737278761062
+      },
+      {
+        "align": "start",
+        "color": "rgb(136, 136, 136)",
+        "fontFamily": "Domine, Georgia, serif",
+        "fontSize": 0.025,
+        "fontWeight": 400,
+        "height": 0.01991150442477876,
+        "key": "mind2",
+        "letterSpacing": 0.4,
+        "lineHeight": 1.2,
+        "text": "[Mind]",
+        "width": 0.088525390625,
+        "x": 0.861474609375,
+        "y": 0.9501175331858408
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 238, 29)",
+    "family": "tpl1",
+    "id": "tpl1_p1_left",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版一 · P1L",
+    "overlay": "/reference/templates/tpl1_p1_left.png",
+    "slots": [
+      {
+        "height": 0.4372925884955752,
+        "width": 0.93876953125,
+        "x": 0.02939453125,
+        "y": 0.02177820796460177
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(247, 141, 255)",
+    "family": "tpl1",
+    "id": "tpl1_p1_right",
+    "maxImages": 3,
+    "minImages": 3,
+    "name": "模版一 · P1R",
+    "overlay": "/reference/templates/tpl1_p1_right.png",
+    "slots": [
+      {
+        "height": 0.27388689159292035,
+        "width": 0.386767578125,
+        "x": 0.56279296875,
+        "y": 0.05047013274336283
+      },
+      {
+        "height": 0.27388689159292035,
+        "width": 0.386767578125,
+        "x": 0.56279296875,
+        "y": 0.3622787610619469
+      },
+      {
+        "height": 0.27388689159292035,
+        "width": 0.386767578125,
+        "x": 0.56279296875,
+        "y": 0.6741910951327433
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl1",
+    "id": "tpl1_p2_left",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版一 · P2L",
+    "overlay": "/reference/templates/tpl1_p2_left.png",
+    "slots": [
+      {
+        "height": 1,
+        "width": 1,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl1",
+    "id": "tpl1_p2_right",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版一 · P2R",
+    "overlay": "/reference/templates/tpl1_p2_right.png",
+    "slots": [
+      {
+        "height": 0.38167173672566373,
+        "width": 0.82109375,
+        "x": 0.094189453125,
+        "y": 0.2897884402654867
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(20, 130, 221)",
+    "family": "tpl1",
+    "id": "tpl1_p3_left",
+    "maxImages": 6,
+    "minImages": 6,
+    "name": "模版一 · P3L",
+    "overlay": "/reference/templates/tpl1_p3_left.png",
+    "slots": [
+      {
+        "height": 0.412887168141593,
+        "width": 0.461669921875,
+        "x": 0.0509765625,
+        "y": 0.050366426991150445
+      },
+      {
+        "height": 0.12659015486725664,
+        "width": 0.177685546875,
+        "x": 0.553271484375,
+        "y": 0.05168003318584071
+      },
+      {
+        "height": 0.12659015486725664,
+        "width": 0.177685546875,
+        "x": 0.770654296875,
+        "y": 0.05168003318584071
+      },
+      {
+        "height": 0.18338633849557523,
+        "width": 0.25888671875,
+        "x": 0.686669921875,
+        "y": 0.46798949115044247
+      },
+      {
+        "height": 0.18238384955752213,
+        "width": 0.257763671875,
+        "x": 0.0509765625,
+        "y": 0.7643805309734514
+      },
+      {
+        "height": 0.18238384955752213,
+        "width": 0.257666015625,
+        "x": 0.34677734375,
+        "y": 0.7643805309734514
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 238, 29)",
+    "family": "tpl1",
+    "id": "tpl1_p3_right",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版一 · P3R",
+    "overlay": "/reference/templates/tpl1_p3_right.png",
+    "slots": [
+      {
+        "height": 0.6735688606194691,
+        "shape": "ellipse",
+        "width": 0.73388671875,
+        "x": 0.13798828125,
+        "y": 0.1492671460176991
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl1",
+    "id": "tpl1_p4_left",
+    "maxImages": 3,
+    "minImages": 3,
+    "name": "模版一 · P4L",
+    "overlay": "/reference/templates/tpl1_p4_left.png",
+    "slots": [
+      {
+        "height": 0.19669524336283187,
+        "width": 0.44228515625,
+        "x": 0.06396484375,
+        "y": 0.05807522123893805
+      },
+      {
+        "height": 0.24519496681415928,
+        "width": 0.303271484375,
+        "x": 0.61748046875,
+        "y": 0.30226769911504425
+      },
+      {
+        "height": 0.4212873340707965,
+        "width": 0.44228515625,
+        "x": 0.06396484375,
+        "y": 0.5193929756637168
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(12, 109, 72)",
+    "family": "tpl1",
+    "id": "tpl1_p4_right",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版一 · P4R",
+    "overlay": "/reference/templates/tpl1_p4_right.png",
+    "slots": [
+      {
+        "height": 0.500172842920354,
+        "width": 0.541552734375,
+        "x": 0.40078125,
+        "y": 0.04179341814159293
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl1",
+    "id": "tpl1_p5_left",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "模版一 · P5L",
+    "overlay": "/reference/templates/tpl1_p5_left.png",
+    "slots": [
+      {
+        "height": 0.31678650442477874,
+        "shape": "ellipse",
+        "width": 0.64765625,
+        "x": 0.174853515625,
+        "y": 0.10398230088495576
+      },
+      {
+        "height": 0.3157840154867257,
+        "shape": "ellipse",
+        "width": 0.64599609375,
+        "x": 0.17578125,
+        "y": 0.5993846792035398
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 238, 29)",
+    "family": "tpl1",
+    "id": "tpl1_p5_right",
+    "maxImages": 9,
+    "minImages": 9,
+    "name": "模版一 · P5R",
+    "overlay": "/reference/templates/tpl1_p5_right.png",
+    "slots": [
+      {
+        "height": 0.13388412610619468,
+        "width": 0.2966796875,
+        "x": 0.04287109375,
+        "y": 0.14878318584070796
+      },
+      {
+        "height": 0.13388412610619468,
+        "width": 0.2966796875,
+        "x": 0.3515625,
+        "y": 0.14878318584070796
+      },
+      {
+        "height": 0.13388412610619468,
+        "width": 0.296484375,
+        "x": 0.6603515625,
+        "y": 0.14878318584070796
+      },
+      {
+        "height": 0.13388412610619468,
+        "width": 0.2966796875,
+        "x": 0.04287109375,
+        "y": 0.3570934734513274
+      },
+      {
+        "height": 0.13388412610619468,
+        "width": 0.2966796875,
+        "x": 0.3515625,
+        "y": 0.3570934734513274
+      },
+      {
+        "height": 0.13388412610619468,
+        "width": 0.296484375,
+        "x": 0.6603515625,
+        "y": 0.3570934734513274
+      },
+      {
+        "height": 0.13398783185840707,
+        "width": 0.2966796875,
+        "x": 0.04287109375,
+        "y": 0.5654728982300885
+      },
+      {
+        "height": 0.13398783185840707,
+        "width": 0.2966796875,
+        "x": 0.3515625,
+        "y": 0.5654728982300885
+      },
+      {
+        "height": 0.13398783185840707,
+        "width": 0.296484375,
+        "x": 0.6603515625,
+        "y": 0.5654728982300885
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p1_left",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版二 · P1L",
+    "overlay": "/reference/templates/tpl2_p1_left.png",
+    "slots": [
+      {
+        "height": 0.46639933628318586,
+        "width": 0.937158203125,
+        "x": 0.03115234375,
+        "y": 0.5071902654867256
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(0, 0, 0)",
+        "fontFamily": "\"Mendl Sans Dusk Medium\", \"Mendl Sans Dusk\", sans-serif",
+        "fontSize": 0.11875,
+        "fontWeight": 500,
+        "height": 0.15970685840707963,
+        "key": "title",
+        "letterSpacing": -0.6,
+        "lineHeight": 0.95,
+        "text": "FLIP IN\nMOMENTS",
+        "width": 0.7,
+        "x": 0.044970703125,
+        "y": 0.04497372787610619
+      },
+      {
+        "align": "right",
+        "color": "rgb(0, 0, 0)",
+        "fontFamily": "\"Mendl Sans Dusk\", sans-serif",
+        "fontSize": 0.0375,
+        "fontWeight": 400,
+        "height": 0.02654867256637168,
+        "key": "edition",
+        "letterSpacing": 0,
+        "lineHeight": 1,
+        "text": "Edition #01",
+        "width": 0.170458984375,
+        "x": 0.779541015625,
+        "y": 0.05997649336283186
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p1_right",
+    "maxImages": 4,
+    "minImages": 4,
+    "name": "模版二 · P1R",
+    "overlay": "/reference/templates/tpl2_p1_right.png",
+    "slots": [
+      {
+        "height": 0.38906941371681414,
+        "width": 0.515966796875,
+        "x": 0.0587890625,
+        "y": 0.044178650442477874
+      },
+      {
+        "height": 0.20557936946902655,
+        "width": 0.267578125,
+        "x": 0.674365234375,
+        "y": 0.2276686946902655
+      },
+      {
+        "height": 0.21919939159292037,
+        "width": 0.267578125,
+        "x": 0.307177734375,
+        "y": 0.5020741150442478
+      },
+      {
+        "height": 0.22089325221238937,
+        "width": 0.267578125,
+        "x": 0.674365234375,
+        "y": 0.7432936946902655
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p2_left",
+    "maxImages": 7,
+    "minImages": 7,
+    "name": "模版二 · P2L",
+    "overlay": "/reference/templates/tpl2_p2_left.png",
+    "slots": [
+      {
+        "height": 0.1707688053097345,
+        "width": 0.3263671875,
+        "x": 0.24716796875,
+        "y": 0.11297013274336284
+      },
+      {
+        "height": 0.1673810840707965,
+        "width": 0.1919921875,
+        "x": 0.611962890625,
+        "y": 0.15887721238938052
+      },
+      {
+        "height": 0.12659015486725664,
+        "width": 0.2099609375,
+        "x": 0.08037109375,
+        "y": 0.30838633849557523
+      },
+      {
+        "height": 0.13336559734513273,
+        "width": 0.2423828125,
+        "x": 0.682763671875,
+        "y": 0.3508711283185841
+      },
+      {
+        "height": 0.16568722345132744,
+        "width": 0.239990234375,
+        "x": 0.141552734375,
+        "y": 0.4586905420353982
+      },
+      {
+        "height": 0.1171875,
+        "width": 0.165576171875,
+        "x": 0.645556640625,
+        "y": 0.5088841261061947
+      },
+      {
+        "height": 0.1673810840707965,
+        "width": 0.194384765625,
+        "x": 0.4103515625,
+        "y": 0.5249930862831859
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p2_right",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版二 · P2R",
+    "slots": [
+      {
+        "height": 1,
+        "width": 1,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p3_left",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "模版二 · P3L",
+    "overlay": "/reference/templates/tpl2_p3_left.png",
+    "slots": [
+      {
+        "height": 0.3287818030973451,
+        "width": 0.3515625,
+        "x": 0.6083984375,
+        "y": 0.0781941371681416
+      },
+      {
+        "height": 0.4756982853982301,
+        "width": 0.502783203125,
+        "x": 0.045556640625,
+        "y": 0.49357024336283184
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p3_right",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版二 · P3R",
+    "overlay": "/reference/templates/tpl2_p3_right.png",
+    "slots": [
+      {
+        "height": 0.7772746128318584,
+        "width": 0.944384765625,
+        "x": 0.027587890625,
+        "y": 0.01866703539823009
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p4_left",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "模版二 · P4L",
+    "overlay": "/reference/templates/tpl2_p4_left.png",
+    "slots": [
+      {
+        "height": 0.33127074115044247,
+        "width": 0.734375,
+        "x": 0.133154296875,
+        "y": 0.1562845685840708
+      },
+      {
+        "height": 0.33127074115044247,
+        "width": 0.734375,
+        "x": 0.133154296875,
+        "y": 0.5088841261061947
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p4_right",
+    "maxImages": 5,
+    "minImages": 5,
+    "name": "模版二 · P4R",
+    "overlay": "/reference/templates/tpl2_p4_right.png",
+    "slots": [
+      {
+        "height": 0.06028761061946902,
+        "width": 0.2435546875,
+        "x": 0.461962890625,
+        "y": 0.2012928650442478
+      },
+      {
+        "height": 0.061186393805309734,
+        "width": 0.212353515625,
+        "x": 0.219580078125,
+        "y": 0.2930724557522124
+      },
+      {
+        "height": 0.06028761061946902,
+        "width": 0.212353515625,
+        "x": 0.377978515625,
+        "y": 0.3864767699115044
+      },
+      {
+        "height": 0.06028761061946902,
+        "width": 0.212353515625,
+        "x": 0.219580078125,
+        "y": 0.551299778761062
+      },
+      {
+        "height": 0.06028761061946902,
+        "width": 0.212353515625,
+        "x": 0.577197265625,
+        "y": 0.551299778761062
+      }
+    ],
+    "texts": [
+      {
+        "align": "start",
+        "color": "rgb(0, 0, 0)",
+        "fontFamily": "\"Mendl Sans Dusk\", sans-serif",
+        "fontSize": 0.109375,
+        "fontWeight": 400,
+        "height": 0.07743362831858407,
+        "key": "word1",
+        "letterSpacing": 0.5,
+        "lineHeight": 1,
+        "text": "This",
+        "width": 0.1830078125,
+        "x": 0.2099609375,
+        "y": 0.18998893805309736
+      },
+      {
+        "align": "start",
+        "color": "rgb(0, 0, 0)",
+        "fontFamily": "\"Mendl Sans Dusk\", sans-serif",
+        "fontSize": 0.109375,
+        "fontWeight": 400,
+        "height": 0.07743362831858407,
+        "key": "word2",
+        "letterSpacing": 0.5,
+        "lineHeight": 1,
+        "text": "is a",
+        "width": 0.14091796875,
+        "x": 0.5099609375,
+        "y": 0.2799709623893805
+      },
+      {
+        "align": "start",
+        "color": "rgb(0, 0, 0)",
+        "fontFamily": "\"Mendl Sans Dusk\", sans-serif",
+        "fontSize": 0.109375,
+        "fontWeight": 400,
+        "height": 0.07743362831858407,
+        "key": "word3",
+        "letterSpacing": 0.5,
+        "lineHeight": 1,
+        "text": "Flip",
+        "width": 0.167822265625,
+        "x": 0.6599609375,
+        "y": 0.3799778761061947
+      },
+      {
+        "align": "start",
+        "color": "rgb(0, 0, 0)",
+        "fontFamily": "\"Mendl Sans Dusk\", sans-serif",
+        "fontSize": 0.109375,
+        "fontWeight": 400,
+        "height": 0.07743362831858407,
+        "key": "word4",
+        "letterSpacing": 0.5,
+        "lineHeight": 1,
+        "text": "of Summer",
+        "width": 0.47890625,
+        "x": 0.119970703125,
+        "y": 0.44997925884955753
+      },
+      {
+        "align": "start",
+        "color": "rgb(0, 0, 0)",
+        "fontFamily": "\"Mendl Sans Dusk\", sans-serif",
+        "fontSize": 0.109375,
+        "fontWeight": 400,
+        "height": 0.07743362831858407,
+        "key": "word5",
+        "letterSpacing": 0.5,
+        "lineHeight": 1,
+        "text": "2026",
+        "width": 0.245263671875,
+        "x": 0.45,
+        "y": 0.6349903207964602
+      }
+    ]
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p5_left",
+    "maxImages": 1,
+    "minImages": 1,
+    "name": "模版二 · P5L",
+    "slots": [
+      {
+        "height": 1,
+        "width": 1,
+        "x": 0,
+        "y": 0
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(255, 255, 255)",
+    "family": "tpl2",
+    "id": "tpl2_p5_right",
+    "maxImages": 2,
+    "minImages": 2,
+    "name": "模版二 · P5R",
+    "overlay": "/reference/templates/tpl2_p5_right.png",
+    "slots": [
+      {
+        "height": 0.2802820796460177,
+        "width": 0.616796875,
+        "x": 0.337158203125,
+        "y": 0.4739698561946903
+      },
+      {
+        "height": 0.17927267699115043,
+        "width": 0.41279296875,
+        "x": 0.541162109375,
+        "y": 0.7840846238938053
+      }
+    ],
+    "texts": []
+  },
+  {
+    "background": "rgb(250, 250, 248)",
+    "id": "empty",
+    "maxImages": 0,
+    "minImages": 0,
+    "name": "空白",
+    "slots": [],
+    "texts": []
+  }
+]

@@ -10,15 +10,19 @@ export interface Element {
   fontSize?: number; fontWeight?: number; align?: 'left' | 'center' | 'right';
   fit?: 'cover' | 'contain'; crop?: { x: number; y: number; zoom: number };
   border?: number; borderColor?: string; shadow?: boolean; cornerRadius?: number;
+  frameLocked?: boolean; frameShape?: 'ellipse'; templateTextKey?: string;
+  freeImage?: boolean; lineHeight?: number; letterSpacing?: number;
 }
 export interface Page {
   id: string; type: 'cover' | 'normal'; background: string; pattern?: string;
   elements: Element[]; layoutId?: string; order: number;
+  templateOverlay?: string;
 }
 export interface Book {
   id: string; title: string; themeId: ThemeId; format: { width: number; height: number };
   coverPageId: string; pages: Page[]; assets: Asset[]; createdAt: number; updatedAt: number;
   version: number; workspaceBackground: string; coverTemplate: 'basic' | 'cutout';
+  customLayouts?: {id:string;name:string;minImages:number;maxImages:number;slots:{x:number;y:number;width:number;height:number;shape?:'ellipse'}[]}[];
 }
 export interface StoredAsset extends Asset { original: Blob; preview: Blob; thumbnail: Blob }
 export const W = 1200;
