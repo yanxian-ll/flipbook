@@ -127,14 +127,19 @@ export function Editor(){
     const rotateX=vertical*13*wave;
     const rotateZ=vertical*(direction==='next'?-6:6)*wave;
     const lift=-5*wave;
+    const showingBack=progress>=.5;
     sheet.style.transition=transition;
     sheet.style.transformOrigin=`${direction==='next'?'left':'right'} ${originY*100}%`;
     sheet.style.transform=`perspective(1800px) translateY(${lift}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`;
+    sheet.style.setProperty('--turn-front-opacity',showingBack?'0':'1');
+    sheet.style.setProperty('--turn-back-opacity',showingBack?'1':'0');
+    sheet.dataset.face=showingBack?'back':'front';
     host.style.setProperty('--turn-progress',String(progress));
     host.style.setProperty('--turn-origin',`${originY*100}%`);
   }
   function clearTurn(){
     turnGesture.current=null;turnSceneRef.current=null;setTurnScene(null);setTurnDirection(null);turnLocked.current=false;
+    if(turnSheet.current){turnSheet.current.style.setProperty('--turn-front-opacity','1');turnSheet.current.style.setProperty('--turn-back-opacity','0');delete turnSheet.current.dataset.face;}
     if(bookWindow.current){bookWindow.current.style.setProperty('--turn-progress','0');bookWindow.current.style.setProperty('--turn-origin','50%');}
   }
   function finishTurn(commit:boolean){
