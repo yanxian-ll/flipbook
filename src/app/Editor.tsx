@@ -5,17 +5,18 @@ import {repository,friendlyError} from '../db/repository';
 import {useEditor} from '../store/editor';
 import {EditorCanvas} from '../editor/EditorCanvas';
 import {clearImageCache} from '../editor/renderer';
-import {PageThumbnail} from '../components/PageThumbnail';
+import {PageThumbnail,preloadPageThumbnail} from '../components/PageThumbnail';
 import {Button,IconButton,Loading,ErrorMessage,Modal} from '../components/ui';
 import {EditorPanel,type PanelId} from '../panels/EditorPanel';
 import {ExportDialog} from '../export/ExportDialog';
 import {prepareAsset} from '../domain/assets';
 export function Editor(){
-  const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(false),[exporting,setExporting]=useState(false),[deleting,setDeleting]=useState(false),[pageMenu,setPageMenu]=useState(false),[cropOpen,setCropOpen]=useState(false),[crop,setCrop]=useState({x:.5,y:.5,zoom:1}),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[turnDirection,setTurnDirection]=useState<'next'|'prev'|null>(null);
+  const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[deleting,setDeleting]=useState(false),[pageMenu,setPageMenu]=useState(false),[cropOpen,setCropOpen]=useState(false),[crop,setCrop]=useState({x:.5,y:.5,zoom:1}),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[turnDirection,setTurnDirection]=useState<'next'|'prev'|null>(null);
   const workspace=useRef<HTMLDivElement>(null);const bookWindow=useRef<HTMLDivElement>(null);const turnSheet=useRef<HTMLDivElement>(null);const replaceInput=useRef<HTMLInputElement>(null);const dragged=useRef<number|null>(null);const wheelAccumulator=useRef(0),wheelTimer=useRef<number|null>(null),turnTimer=useRef<number|null>(null),turnLocked=useRef(false);const turnGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;originY:number;started:boolean}|null>(null);
   useEffect(()=>{let live=true;setLoading(true);void repository.get(bookId!).then(book=>{if(live){s.load(book);setLoading(false);}}).catch(e=>{setError(friendlyError(e));setLoading(false);});return()=>{live=false;void useEditor.getState().flush().catch(()=>{});clearImageCache();};},[bookId]);
   useEffect(()=>{if(!workspace.current)return;const observer=new ResizeObserver(entries=>{setViewWidth(entries[0].contentRect.width);setViewHeight(entries[0].contentRect.height);});observer.observe(workspace.current);return()=>observer.disconnect();},[loading,wide,panel]);
   useEffect(()=>()=>{if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);},[]);
+  useEffect(()=>{const b=s.book;if(!b)return;const i=s.pageIndex;const left=i===0?0:(i%2===1?i:i-1);const indices=i===0?[0,1,2]:[left-2,left-1,left,left+1,left+2,left+3];for(const n of indices){if(n>=0&&n<b.pages.length)void preloadPageThumbnail(b.pages[n],.12);}},[s.book,s.pageIndex]);
   useEffect(()=>{function key(e:KeyboardEvent){if((e.target as HTMLElement).closest('input,textarea,select,[contenteditable=true]')||document.querySelector('[role=dialog]'))return;const state=useEditor.getState();const mod=e.ctrlKey||e.metaKey;const key=e.key.toLowerCase();if(mod&&key==='z'){e.preventDefault();if(e.shiftKey)state.redo();else state.undo();}else if(mod&&['c','v','d'].includes(key)){e.preventDefault();if(key==='c')state.copy();if(key==='v')state.paste();if(key==='d')state.duplicateSelected();}else if(key==='delete'||key==='backspace'){e.preventDefault();state.deleteSelected();}else if(key==='escape'){state.select(null);setPanel(null);}else if(e.key.startsWith('Arrow')&&state.selected.length){e.preventDefault();const d=e.shiftKey?10:1;state.change(b=>{for(const element of b.pages[state.pageIndex].elements){if(state.selected.includes(element.id)&&!element.locked){element.x+=e.key==='ArrowLeft'?-d:e.key==='ArrowRight'?d:0;element.y+=e.key==='ArrowUp'?-d:e.key==='ArrowDown'?d:0;}}});}}
     function exit(e:BeforeUnloadEvent){if(useEditor.getState().status!=='saved'){void useEditor.getState().flush().catch(()=>{});e.preventDefault();}}
     function visibility(){if(document.visibilityState==='hidden')void useEditor.getState().flush().catch(()=>{});}
@@ -26,29 +27,28 @@ export function Editor(){
   const book=s.book,page=book.pages[s.pageIndex],selected=page.elements.find(e=>s.selected.includes(e.id));const pair=s.pageIndex===0?-1:s.pageIndex%2===1?s.pageIndex+1:s.pageIndex-1;const spreadPairPage=pair>=0?book.pages[pair]:undefined;const neighborIndex=s.pageIndex===0&&book.pages[1]?1:pair;const neighborPage=neighborIndex>=0?book.pages[neighborIndex]:undefined;const pairPage=zoomMode==='page'?neighborPage:spreadPairPage;const pairIndex=zoomMode==='page'?neighborIndex:pair;const spreadCanvasWidth=Math.min(wide?340:160,(viewWidth-42)/(spreadPairPage?2:1),Math.max(100,viewHeight-235)/1.4133);const pageCanvasWidth=Math.min(wide?520:viewWidth*.82,viewWidth*.82,Math.max(150,viewHeight-(panel?410:165))/1.4133);const canvasWidth=zoomMode==='page'?pageCanvasWidth:spreadCanvasWidth;const pageHeight=canvasWidth*1.4133333333;const peek=.115;const visualReverse=s.pageIndex>0&&s.pageIndex%2===0;const activeSide=s.pageIndex===0?'cover':visualReverse?'right':'left';const pairSide=s.pageIndex===0?'right':visualReverse?'left':'right';const bookWindowWidth=canvasWidth*(zoomMode==='page'&&pairPage?1+peek:pairPage?2:1);const spreadWidth=canvasWidth*(pairPage?2:1);const focusedShift=zoomMode==='page'&&pairPage&&visualReverse?-canvasWidth*(1-peek):0;
   const tools=[['photos',Images,'素材库'],['layouts',Grid2X2,'模版'],['text',Type,'文字'],['stickers',Sticker,'贴纸'],['adjust',Sun,'调整']] as const;
   function openCrop(){if(selected?.type==='image'){setCrop(selected.crop??{x:.5,y:.5,zoom:1});setCropOpen(true);}}
-  function pageTurnTarget(direction:'next'|'prev'){
+  function turnPages(direction:'next'|'prev'){
     const last=book.pages.length-1;
-    if(zoomMode==='page')return Math.max(0,Math.min(last,s.pageIndex+(direction==='next'?1:-1)));
     if(direction==='next'){
-      if(s.pageIndex===0)return last>=1?1:0;
-      const spreadStart=s.pageIndex%2===1?s.pageIndex:s.pageIndex-1;
-      const next=spreadStart+2;
-      return next<=last?next:s.pageIndex;
+      if(s.pageIndex===0){
+        if(last<1)return null;
+        return {front:0,back:1,under:Math.min(2,last),target:1,side:'cover' as const};
+      }
+      const left=s.pageIndex%2===1?s.pageIndex:s.pageIndex-1;
+      const right=Math.min(last,left+1),back=right+1;
+      if(back>last)return null;
+      return {front:right,back,under:Math.min(last,back+1),target:back,side:'right' as const};
     }
-    if(s.pageIndex===0)return 0;
-    if(s.pageIndex<=2)return 0;
-    const spreadStart=s.pageIndex%2===1?s.pageIndex:s.pageIndex-1;
-    return Math.max(1,spreadStart-2);
-  }
-  function turnSourceIndex(direction:'next'|'prev'){
-    if(zoomMode==='page'||s.pageIndex===0)return s.pageIndex;
+    if(s.pageIndex===0)return null;
     const left=s.pageIndex%2===1?s.pageIndex:s.pageIndex-1;
-    const right=Math.min(book.pages.length-1,left+1);
-    return direction==='next'?right:left;
+    if(left<=1)return {front:left,back:0,under:0,target:0,side:'left' as const};
+    return {front:left,back:left-1,under:left-2,target:left-1,side:'left' as const};
   }
+  function pageTurnTarget(direction:'next'|'prev'){return turnPages(direction)?.target??s.pageIndex;}
   function turnSheetLeft(direction:'next'|'prev'){
-    if(zoomMode==='spread')return direction==='next'&&pairPage?canvasWidth:0;
-    return pairPage&&visualReverse?canvasWidth*peek:0;
+    const turn=turnPages(direction);if(!turn)return 0;
+    if(turn.side==='cover')return 0;
+    return (turn.side==='right'?canvasWidth:0)+focusedShift;
   }
   function applyTurnVisual(progress:number,direction:'next'|'prev',originY:number,transition='none'){
     const sheet=turnSheet.current,host=bookWindow.current;if(!sheet||!host)return;
@@ -69,7 +69,7 @@ export function Editor(){
   }
   function finishTurn(commit:boolean){
     const g=turnGesture.current;if(!g||!g.started){turnGesture.current=null;return;}
-    const target=pageTurnTarget(g.direction),duration=commit?310:190;
+    const target=turnPages(g.direction)?.target??s.pageIndex,duration=commit?310:190;
     applyTurnVisual(commit?1:0,g.direction,g.originY,`transform ${duration}ms ${commit?'cubic-bezier(.18,.72,.18,1)':'cubic-bezier(.3,.75,.25,1)'}`);
     if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);
     turnTimer.current=window.setTimeout(()=>{if(commit&&target!==s.pageIndex)s.setPage(target);clearTurn();},duration+18);
@@ -104,7 +104,7 @@ export function Editor(){
     if(turnLocked.current||pageTurnTarget(direction)===s.pageIndex)return;
     turnLocked.current=true;setTurnDirection(direction);
     const originY=.5;
-    requestAnimationFrame(()=>requestAnimationFrame(()=>{applyTurnVisual(0,direction,originY);requestAnimationFrame(()=>{applyTurnVisual(1,direction,originY,'transform 310ms cubic-bezier(.18,.72,.18,1)');if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);const target=pageTurnTarget(direction);turnTimer.current=window.setTimeout(()=>{s.setPage(target);clearTurn();},328);});}));
+    requestAnimationFrame(()=>requestAnimationFrame(()=>{applyTurnVisual(0,direction,originY);requestAnimationFrame(()=>{applyTurnVisual(1,direction,originY,'transform 310ms cubic-bezier(.18,.72,.18,1)');if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);const target=turnPages(direction)?.target??s.pageIndex;turnTimer.current=window.setTimeout(()=>{if(target!==s.pageIndex)s.setPage(target);clearTurn();},328);});}));
   }
   function handleWheel(e:WheelEvent<HTMLDivElement>){
     if(turnLocked.current||Math.abs(e.deltaY)<1)return;
@@ -121,7 +121,7 @@ export function Editor(){
     <div className="save-status" role="status">{s.status==='saved'?<><Check size={10}/>已保存</>:s.status==='saving'?'保存中…':<button onClick={()=>void s.flush().catch(()=>{})}>保存失败，点此重试</button>}</div>
     {selected&&<div className="context-toolbar">{selected.type==='image'&&<><IconButton label="替换图片" onClick={()=>replaceInput.current?.click()}><Replace size={16}/></IconButton><IconButton label="裁剪图片" onClick={openCrop}><Crop size={16}/></IconButton></>}<IconButton label="复制元素" onClick={s.duplicateSelected}><Copy size={16}/></IconButton><IconButton label="删除元素" onClick={s.deleteSelected}><Trash2 size={16}/></IconButton></div>}
     <input ref={replaceInput} type="file" hidden accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={e=>void replace(e.target.files)}/>
-    <div className={`spread-area ${panel?'panel-open':''} zoom-${zoomMode}`} onWheel={handleWheel} title="滚轮：单页/双页缩放；按住页面外侧并左右拖动：翻页"><div ref={bookWindow} className={`book-window zoom-${zoomMode} ${turnDirection?`is-turning turn-${turnDirection}`:''}`} style={{width:bookWindowWidth,height:pageHeight}}><div className="spread book-track" style={{width:spreadWidth,flexDirection:visualReverse?'row-reverse':'row',transform:`translateX(${focusedShift}px)`}}><div className={`active-page book-page book-page-${activeSide}`} onClick={()=>{if(zoomMode==='spread')setZoomMode('page');}}><EditorCanvas page={page} width={Math.max(90,canvasWidth)} onTextEdit={()=>setPanel('text')} onCrop={openCrop}/></div>{pairPage&&<button className={`paired-page book-page book-page-${pairSide}`} aria-label={`放大并编辑第 ${pairIndex} 页`} style={{width:canvasWidth}} onClick={()=>zoomToPage(pairIndex)}><PageThumbnail page={pairPage} scale={.5}/></button>}{pairPage&&<div className="spine-shadow"/>}</div>{turnDirection&&book.pages[turnSourceIndex(turnDirection)]&&book.pages[pageTurnTarget(turnDirection)]&&<><div className={`turn-underlay turn-${turnDirection}`} style={{left:turnSheetLeft(turnDirection),width:canvasWidth}} aria-hidden><PageThumbnail page={book.pages[pageTurnTarget(turnDirection)]} scale={.5}/></div><div ref={turnSheet} className={`turning-sheet turn-${turnDirection}`} style={{left:turnSheetLeft(turnDirection),width:canvasWidth}} aria-hidden><div className="turn-face turn-front"><PageThumbnail page={book.pages[turnSourceIndex(turnDirection)]} scale={.5}/></div><div className="turn-face turn-back"><PageThumbnail page={book.pages[pageTurnTarget(turnDirection)]} scale={.5}/></div></div></>}<div className={`page-turn-zone previous ${pageTurnTarget('prev')===s.pageIndex?'disabled':''}`} onPointerDown={e=>startTurn('prev',e)} onPointerMove={moveTurn} onPointerUp={endTurn} onPointerCancel={cancelTurn} aria-hidden/><div className={`page-turn-zone next ${pageTurnTarget('next')===s.pageIndex?'disabled':''}`} onPointerDown={e=>startTurn('next',e)} onPointerMove={moveTurn} onPointerUp={endTurn} onPointerCancel={cancelTurn} aria-hidden/></div></div>
+    <div className={`spread-area ${panel?'panel-open':''} zoom-${zoomMode}`} onWheel={handleWheel} title="滚轮：单页/双页缩放；按住页面外侧并左右拖动：翻页"><div ref={bookWindow} className={`book-window zoom-${zoomMode} ${turnDirection?`is-turning turn-${turnDirection}`:''}`} style={{width:bookWindowWidth,height:pageHeight}}><div className="spread book-track" style={{width:spreadWidth,flexDirection:visualReverse?'row-reverse':'row',transform:`translateX(${focusedShift}px)`}}><div className={`active-page book-page book-page-${activeSide}`} onClick={()=>{if(zoomMode==='spread')setZoomMode('page');}}><EditorCanvas page={page} width={Math.max(90,canvasWidth)} onTextEdit={()=>setPanel('text')} onCrop={openCrop}/></div>{pairPage&&<button className={`paired-page book-page book-page-${pairSide}`} aria-label={`放大并编辑第 ${pairIndex} 页`} style={{width:canvasWidth}} onClick={()=>zoomToPage(pairIndex)}><PageThumbnail page={pairPage} scale={.5}/></button>}{pairPage&&<div className="spine-shadow"/>}</div>{turnDirection&&turnPages(turnDirection)&&(()=>{const turn=turnPages(turnDirection)!;return <><div className={`turn-underlay turn-${turnDirection}`} style={{left:turnSheetLeft(turnDirection),width:canvasWidth}} aria-hidden><PageThumbnail page={book.pages[turn.under]} scale={.12} immediate/></div><div ref={turnSheet} className={`turning-sheet turn-${turnDirection}`} style={{left:turnSheetLeft(turnDirection),width:canvasWidth}} aria-hidden><div className="turn-face turn-front"><PageThumbnail page={book.pages[turn.front]} scale={.12} immediate/></div><div className="turn-face turn-back"><PageThumbnail page={book.pages[turn.back]} scale={.12} immediate/></div></div></>;})()}<div className={`page-turn-zone previous ${pageTurnTarget('prev')===s.pageIndex?'disabled':''}`} onPointerDown={e=>startTurn('prev',e)} onPointerMove={moveTurn} onPointerUp={endTurn} onPointerCancel={cancelTurn} aria-hidden/><div className={`page-turn-zone next ${pageTurnTarget('next')===s.pageIndex?'disabled':''}`} onPointerDown={e=>startTurn('next',e)} onPointerMove={moveTurn} onPointerUp={endTurn} onPointerCancel={cancelTurn} aria-hidden/></div></div>
     <div className="page-navigation"><IconButton label="上一页" disabled={turnLocked.current||pageTurnTarget('prev')===s.pageIndex} onClick={()=>turnPage('prev')}><ChevronLeft size={17}/></IconButton><button onClick={()=>setPageMenu(true)}>{s.pageIndex===0?'封面':`${s.pageIndex} / ${book.pages.length-1}`} <MoreHorizontal size={13}/></button><IconButton label="下一页" disabled={turnLocked.current||pageTurnTarget('next')===s.pageIndex} onClick={()=>turnPage('next')}><ChevronRight size={17}/></IconButton></div>
     <div className="page-strip">{book.pages.map((p,i)=><button key={p.id} draggable={i!==0} aria-label={i===0?'封面':`第 ${i} 页`} className={i===s.pageIndex?'selected':''} onClick={()=>s.setPage(i)} onDragStart={()=>dragged.current=i} onDragOver={e=>e.preventDefault()} onDrop={e=>{e.preventDefault();if(dragged.current!==null)s.reorderPage(dragged.current,i);dragged.current=null;}}><PageThumbnail page={p}/><span>{i===0?'封面':i}</span></button>)}<button className="add-page" aria-label="新建页面" onClick={s.addPage}><Plus size={19}/></button></div>
   </div><nav className="editor-tools">{tools.map(([id,Icon,label])=><button key={id} className={panel===id?'selected':''} onClick={()=>setPanel(panel===id?null:id)}><Icon size={21} strokeWidth={1.6}/><span>{label}</span></button>)}</nav>{panel&&<EditorPanel panel={panel} onClose={()=>setPanel(null)}/>}
