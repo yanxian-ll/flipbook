@@ -230,3 +230,32 @@
   transition:opacity 0s linear;
   transform-style:preserve-3d;
 }
+
+/* Deterministic physical leaf: only one immutable side is ever painted. */
+.physical-leaf{
+  transform-style:preserve-3d;
+}
+.physical-leaf .turn-face{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  opacity:1!important;
+  visibility:visible!important;
+  backface-visibility:visible!important;
+  -webkit-backface-visibility:visible!important;
+  transition:none!important;
+}
+.physical-leaf .physical-leaf-front{
+  transform:none!important;
+}
+.physical-leaf .physical-leaf-back{
+  transform:rotateY(180deg)!important;
+}
+.physical-leaf .turn-face>img,
+.physical-leaf .turn-face>.thumbnail-placeholder,
+.physical-leaf .turn-face>.book-cover{
+  width:100%;
+  height:100%;
+  max-width:none;
+}
