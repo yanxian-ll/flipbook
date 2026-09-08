@@ -87,7 +87,7 @@ export function Editor(){
     const now=performance.now(),dt=Math.max(1,now-g.lastAt);g.velocity=(e.clientX-g.lastX)/dt;g.lastX=e.clientX;g.lastAt=now;
     const signed=g.direction==='next'?g.startX-e.clientX:e.clientX-g.startX;
     const travel=Math.max(1,canvasWidth*(1-peek));const progress=Math.max(0,Math.min(1,signed/travel));g.progress=progress;
-    if(!g.started&&progress>.01){g.started=true;bookWindow.current?.classList.add('is-panning');}
+    if(!g.started&&progress>.01){g.started=true;turnLocked.current=true;bookWindow.current?.classList.add('is-panning');}
     if(g.started)setTrackShift(focusedShift+(panTargetShift(g.direction)-focusedShift)*progress);
     if(g.started)e.preventDefault();
   }
@@ -104,6 +104,7 @@ export function Editor(){
   }
   function slideToPair(direction:'next'|'prev'){
     if(!canPan(direction)||pairIndex<0||turnLocked.current)return;
+    turnLocked.current=true;
     panGesture.current={pointerId:-1,direction,startX:0,lastX:0,lastAt:0,velocity:0,progress:1,started:true};
     bookWindow.current?.classList.add('is-panning');
     requestAnimationFrame(()=>finishPan(true));
