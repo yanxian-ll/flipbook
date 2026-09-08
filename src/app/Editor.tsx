@@ -24,10 +24,10 @@ type TurnScene={
 };
 export function Editor(){
   const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[cropOpen,setCropOpen]=useState(false),[crop,setCrop]=useState({x:.5,y:.5,zoom:1}),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[turnDirection,setTurnDirection]=useState<'next'|'prev'|null>(null),[turnScene,setTurnScene]=useState<TurnScene|null>(null),[coverView,setCoverView]=useState(true),[coverPhase,setCoverPhase]=useState<'idle'|'closing-turn'|'centering'|'closed'|'opening-shrink'|'opening-move'|'opening-turn'>('closed');
-  const workspace=useRef<HTMLDivElement>(null);const bookWindow=useRef<HTMLDivElement>(null);const turnSceneRef=useRef<TurnScene|null>(null);const bookTrack=useRef<HTMLDivElement>(null);const turnSheet=useRef<HTMLDivElement>(null);const replaceInput=useRef<HTMLInputElement>(null);const wheelAccumulator=useRef(0),wheelTimer=useRef<number|null>(null),turnTimer=useRef<number|null>(null),turnLocked=useRef(false);const turnGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;originY:number;started:boolean}|null>(null);const panGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean}|null>(null);
+  const workspace=useRef<HTMLDivElement>(null);const bookWindow=useRef<HTMLDivElement>(null);const turnSceneRef=useRef<TurnScene|null>(null);const bookTrack=useRef<HTMLDivElement>(null);const turnSheet=useRef<HTMLDivElement>(null);const replaceInput=useRef<HTMLInputElement>(null);const wheelAccumulator=useRef(0),wheelTimer=useRef<number|null>(null),turnTimer=useRef<number|null>(null),turnFrame=useRef<number|null>(null),turnLocked=useRef(false);const turnGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;originY:number;started:boolean}|null>(null);const panGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean}|null>(null);
   useEffect(()=>{let live=true;setLoading(true);void repository.get(bookId!).then(book=>{if(live){s.load(book);setLoading(false);}}).catch(e=>{setError(friendlyError(e));setLoading(false);});return()=>{live=false;void useEditor.getState().flush().catch(()=>{});clearImageCache();};},[bookId]);
   useEffect(()=>{if(!workspace.current)return;const observer=new ResizeObserver(entries=>{setViewWidth(entries[0].contentRect.width);setViewHeight(entries[0].contentRect.height);});observer.observe(workspace.current);return()=>observer.disconnect();},[loading,wide,panel]);
-  useEffect(()=>()=>{if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);},[]);
+  useEffect(()=>()=>{if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);if(turnFrame.current!==null)window.cancelAnimationFrame(turnFrame.current);},[]);
   useEffect(()=>{const b=s.book;if(!b)return;const i=s.pageIndex;const left=i===0?0:(i%2===1?i:i-1);const indices=i===0?[0,1,2]:[left-2,left-1,left,left+1,left+2,left+3];for(const n of indices){if(n>=0&&n<b.pages.length)void preloadPageThumbnail(b.pages[n],.12);}},[s.book,s.pageIndex]);
   useEffect(()=>{function key(e:KeyboardEvent){if((e.target as HTMLElement).closest('input,textarea,select,[contenteditable=true]')||document.querySelector('[role=dialog]'))return;const state=useEditor.getState();const mod=e.ctrlKey||e.metaKey;const key=e.key.toLowerCase();if(mod&&key==='z'){e.preventDefault();if(e.shiftKey)state.redo();else state.undo();}else if(mod&&['c','v','d'].includes(key)){e.preventDefault();if(key==='c')state.copy();if(key==='v')state.paste();if(key==='d')state.duplicateSelected();}else if(key==='delete'||key==='backspace'){e.preventDefault();state.deleteSelected();}else if(key==='escape'){state.select(null);setPanel(null);}else if(e.key.startsWith('Arrow')&&state.selected.length){e.preventDefault();const d=e.shiftKey?10:1;state.change(b=>{for(const element of b.pages[state.pageIndex].elements){if(state.selected.includes(element.id)&&!element.locked&&!frameIsFixed(b.pages[state.pageIndex],element)){element.x+=e.key==='ArrowLeft'?-d:e.key==='ArrowRight'?d:0;element.y+=e.key==='ArrowUp'?-d:e.key==='ArrowDown'?d:0;}}});}}
     function exit(e:BeforeUnloadEvent){if(useEditor.getState().status!=='saved'){void useEditor.getState().flush().catch(()=>{});e.preventDefault();}}
@@ -120,7 +120,7 @@ export function Editor(){
     if(s.pageIndex===0)return direction==='next';
     return visualReverse?direction==='next':direction==='prev';
   }
-  function applyTurnVisual(progress:number,direction:'next'|'prev',originY:number,transition='none'){
+  function applyTurnVisual(progress:number,direction:'next'|'prev',originY:number){
     const sheet=turnSheet.current,host=bookWindow.current;if(!sheet||!host)return;
     const wave=Math.sin(Math.PI*progress),vertical=originY-.5;
     const rotateY=(direction==='next'?-178:178)*progress;
@@ -128,7 +128,7 @@ export function Editor(){
     const rotateZ=vertical*(direction==='next'?-6:6)*wave;
     const lift=-5*wave;
     const showingBack=progress>=.5;
-    sheet.style.transition=transition;
+    sheet.style.transition='none';
     sheet.style.transformOrigin=`${direction==='next'?'left':'right'} ${originY*100}%`;
     sheet.style.transform=`perspective(1800px) translateY(${lift}px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) rotateZ(${rotateZ}deg)`;
     sheet.style.setProperty('--turn-front-opacity',showingBack?'0':'1');
@@ -137,21 +137,34 @@ export function Editor(){
     host.style.setProperty('--turn-progress',String(progress));
     host.style.setProperty('--turn-origin',`${originY*100}%`);
   }
+  function animateTurnProgress(from:number,to:number,duration:number,direction:'next'|'prev',originY:number,onDone:()=>void){
+    if(turnFrame.current!==null)window.cancelAnimationFrame(turnFrame.current);
+    const started=performance.now(),commit=to>from;
+    const frame=(now:number)=>{
+      const linear=Math.max(0,Math.min(1,(now-started)/duration));
+      const eased=commit?1-Math.pow(1-linear,3):1-Math.pow(1-linear,2);
+      const progress=from+(to-from)*eased;
+      if(turnGesture.current)turnGesture.current.progress=progress;
+      applyTurnVisual(progress,direction,originY);
+      if(linear<1){turnFrame.current=window.requestAnimationFrame(frame);return;}
+      turnFrame.current=null;applyTurnVisual(to,direction,originY);onDone();
+    };
+    turnFrame.current=window.requestAnimationFrame(frame);
+  }
   function clearTurn(){
+    if(turnFrame.current!==null){window.cancelAnimationFrame(turnFrame.current);turnFrame.current=null;}
     turnGesture.current=null;turnSceneRef.current=null;setTurnScene(null);setTurnDirection(null);turnLocked.current=false;
     if(turnSheet.current){turnSheet.current.style.setProperty('--turn-front-opacity','1');turnSheet.current.style.setProperty('--turn-back-opacity','0');delete turnSheet.current.dataset.face;}
     if(bookWindow.current){bookWindow.current.style.setProperty('--turn-progress','0');bookWindow.current.style.setProperty('--turn-origin','50%');}
   }
   function finishTurn(commit:boolean){
     const g=turnGesture.current,scene=turnSceneRef.current;if(!g||!g.started||!scene){turnGesture.current=null;return;}
-    const duration=commit?310:190;
-    applyTurnVisual(commit?1:0,g.direction,g.originY,`transform ${duration}ms ${commit?'cubic-bezier(.18,.72,.18,1)':'cubic-bezier(.3,.75,.25,1)'}`);
-    if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);
-    turnTimer.current=window.setTimeout(()=>{
+    const duration=commit?Math.max(140,310*(1-g.progress)):Math.max(110,190*g.progress);
+    animateTurnProgress(g.progress,commit?1:0,duration,g.direction,g.originY,()=>{
       if(!commit){clearTurn();return;}
       const latest=useEditor.getState();if(scene.target!==latest.pageIndex)latest.setPage(scene.target);
       requestAnimationFrame(()=>requestAnimationFrame(()=>clearTurn()));
-    },duration+18);
+    });
   }
   function startTurn(direction:'next'|'prev',e:ReactPointerEvent<HTMLDivElement>){
     if(e.button!==0||turnLocked.current||!canPhysicalTurn(direction)||!bookWindow.current)return;
@@ -189,13 +202,9 @@ export function Editor(){
     const originY=.5;
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       applyTurnVisual(0,direction,originY);
-      requestAnimationFrame(()=>{
-        applyTurnVisual(1,direction,originY,'transform 310ms cubic-bezier(.18,.72,.18,1)');
-        if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);
-        turnTimer.current=window.setTimeout(()=>{
-          const latest=useEditor.getState();if(scene.target!==latest.pageIndex)latest.setPage(scene.target);
-          requestAnimationFrame(()=>requestAnimationFrame(()=>{clearTurn();after?.();}));
-        },328);
+      animateTurnProgress(0,1,310,direction,originY,()=>{
+        const latest=useEditor.getState();if(scene.target!==latest.pageIndex)latest.setPage(scene.target);
+        requestAnimationFrame(()=>requestAnimationFrame(()=>{clearTurn();after?.();}));
       });
     }));
   }
