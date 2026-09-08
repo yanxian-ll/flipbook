@@ -31,6 +31,12 @@
 .page-turn-zone.previous{left:0}
 .page-turn-zone.next{right:0}
 .page-turn-zone.disabled{pointer-events:none}
+.page-pan-zone{position:absolute;top:0;bottom:0;z-index:13;touch-action:none;cursor:ew-resize}
+.page-pan-zone.previous{left:0}
+.page-pan-zone.next{right:0}
+.book-window.is-panning .book-track{will-change:transform}
+.book-window.is-panning .page-turn-zone{pointer-events:none}
+.book-window.is-panning{box-shadow:0 20px 38px #00000026}
 .turn-underlay,.turning-sheet{position:absolute;top:0;height:100%;overflow:hidden;border-radius:6px;background:#fff}
 .turn-underlay{z-index:8;box-shadow:inset 0 0 20px #0000000b}
 .turning-sheet{z-index:10;transform-style:preserve-3d;will-change:transform;box-shadow:0 10px 22px #0003}
