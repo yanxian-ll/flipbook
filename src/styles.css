@@ -40,8 +40,8 @@
 .turn-underlay,.turning-sheet{position:absolute;top:0;height:100%;overflow:hidden;border-radius:6px;background:#fff}
 .turn-underlay{z-index:8;box-shadow:inset 0 0 20px #0000000b}
 .turning-sheet{z-index:10;transform-style:preserve-3d;will-change:transform;box-shadow:0 10px 22px #0003}
-.turn-face{position:absolute;inset:0;overflow:hidden;background:#fff;backface-visibility:hidden;-webkit-backface-visibility:hidden}
-.turn-back{transform:rotateY(180deg);filter:brightness(.985)}
+.turn-face{position:absolute;inset:0;overflow:hidden;background:#fff}
+.turn-back{filter:brightness(.985)}
 .turning-sheet:after{content:'';position:absolute;inset:0;pointer-events:none;backface-visibility:hidden;background:linear-gradient(90deg,transparent 58%,rgba(0,0,0,.18));opacity:calc(var(--turn-progress)*.9)}
 .turn-prev.turning-sheet:after{background:linear-gradient(270deg,transparent 58%,rgba(0,0,0,.18))}
 .book-window.is-turning:before{content:'';position:absolute;inset:0;z-index:9;pointer-events:none;background:radial-gradient(circle at 100% var(--turn-origin),rgba(255,255,255,.24),transparent 24%)}
@@ -209,27 +209,6 @@
 .turn-static-spread .spine-shadow{left:50%;z-index:8}
 .book-window.has-turn-scene .turning-sheet{z-index:10}
 
-/* Explicit paper-side visibility: never let the browser reuse the front texture on the back. */
-.turning-sheet{
-  --turn-front-opacity:1;
-  --turn-back-opacity:0;
-}
-.turning-sheet .turn-front{
-  opacity:var(--turn-front-opacity);
-  transform:translateZ(.2px);
-  visibility:visible;
-}
-.turning-sheet .turn-back{
-  opacity:var(--turn-back-opacity);
-  transform:rotateY(180deg) translateZ(.2px);
-  visibility:visible;
-}
-.turning-sheet[data-face="front"] .turn-back{pointer-events:none}
-.turning-sheet[data-face="back"] .turn-front{pointer-events:none}
-.turn-face{
-  transition:opacity 0s linear;
-  transform-style:preserve-3d;
-}
 
 /* Deterministic physical leaf: only one immutable side is ever painted. */
 .physical-leaf{
