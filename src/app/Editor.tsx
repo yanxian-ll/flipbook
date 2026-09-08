@@ -25,10 +25,10 @@ type TurnScene={
 export function Editor(){
   const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[cropOpen,setCropOpen]=useState(false),[crop,setCrop]=useState({x:.5,y:.5,zoom:1}),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[turnDirection,setTurnDirection]=useState<'next'|'prev'|null>(null),[turnScene,setTurnScene]=useState<TurnScene|null>(null),[coverView,setCoverView]=useState(true),[coverPhase,setCoverPhase]=useState<'idle'|'closing-turn'|'centering'|'closed'|'opening-shrink'|'opening-move'|'opening-turn'>('closed');
   const workspace=useRef<HTMLDivElement>(null);const bookWindow=useRef<HTMLDivElement>(null);const turnSceneRef=useRef<TurnScene|null>(null);const bookTrack=useRef<HTMLDivElement>(null);const turnSheet=useRef<HTMLDivElement>(null);const replaceInput=useRef<HTMLInputElement>(null);const wheelAccumulator=useRef(0),wheelTimer=useRef<number|null>(null),turnTimer=useRef<number|null>(null),turnFrame=useRef<number|null>(null),turnLocked=useRef(false);const turnGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;originY:number;started:boolean}|null>(null);const panGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean}|null>(null);
-  useEffect(()=>{let live=true;setLoading(true);void repository.get(bookId!).then(book=>{if(live){s.load(book);setLoading(false);}}).catch(e=>{setError(friendlyError(e));setLoading(false);});return()=>{live=false;void useEditor.getState().flush().catch(()=>{});clearImageCache();};},[bookId]);
+  useEffect(()=>{let live=true;setLoading(true);void repository.get(bookId!).then(async book=>{if(!live)return;s.load(book);await Promise.allSettled(book.pages.map(page=>preloadPageThumbnail(page,.12)));if(live)setLoading(false);}).catch(e=>{setError(friendlyError(e));setLoading(false);});return()=>{live=false;void useEditor.getState().flush().catch(()=>{});clearImageCache();};},[bookId]);
   useEffect(()=>{if(!workspace.current)return;const observer=new ResizeObserver(entries=>{setViewWidth(entries[0].contentRect.width);setViewHeight(entries[0].contentRect.height);});observer.observe(workspace.current);return()=>observer.disconnect();},[loading,wide,panel]);
   useEffect(()=>()=>{if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);if(turnTimer.current!==null)window.clearTimeout(turnTimer.current);if(turnFrame.current!==null)window.cancelAnimationFrame(turnFrame.current);},[]);
-  useEffect(()=>{const b=s.book;if(!b)return;const i=s.pageIndex;const left=i===0?0:(i%2===1?i:i-1);const indices=i===0?[0,1,2]:[left-2,left-1,left,left+1,left+2,left+3];for(const n of indices){if(n>=0&&n<b.pages.length)void preloadPageThumbnail(b.pages[n],.12);}},[s.book,s.pageIndex]);
+  useEffect(()=>{const b=s.book;if(!b)return;void Promise.allSettled(b.pages.map(page=>preloadPageThumbnail(page,.12)));},[s.book]);
   useEffect(()=>{function key(e:KeyboardEvent){if((e.target as HTMLElement).closest('input,textarea,select,[contenteditable=true]')||document.querySelector('[role=dialog]'))return;const state=useEditor.getState();const mod=e.ctrlKey||e.metaKey;const key=e.key.toLowerCase();if(mod&&key==='z'){e.preventDefault();if(e.shiftKey)state.redo();else state.undo();}else if(mod&&['c','v','d'].includes(key)){e.preventDefault();if(key==='c')state.copy();if(key==='v')state.paste();if(key==='d')state.duplicateSelected();}else if(key==='delete'||key==='backspace'){e.preventDefault();state.deleteSelected();}else if(key==='escape'){state.select(null);setPanel(null);}else if(e.key.startsWith('Arrow')&&state.selected.length){e.preventDefault();const d=e.shiftKey?10:1;state.change(b=>{for(const element of b.pages[state.pageIndex].elements){if(state.selected.includes(element.id)&&!element.locked&&!frameIsFixed(b.pages[state.pageIndex],element)){element.x+=e.key==='ArrowLeft'?-d:e.key==='ArrowRight'?d:0;element.y+=e.key==='ArrowUp'?-d:e.key==='ArrowDown'?d:0;}}});}}
     function exit(e:BeforeUnloadEvent){if(useEditor.getState().status!=='saved'){void useEditor.getState().flush().catch(()=>{});e.preventDefault();}}
     function visibility(){if(document.visibilityState==='hidden')void useEditor.getState().flush().catch(()=>{});}
@@ -55,6 +55,10 @@ export function Editor(){
     const left=pageIndex%2===1?pageIndex:pageIndex-1;
     if(left<=1)return {direction,front:left,back:0,baseLeft:null,baseRight:left+1<=last?left+1:null,target:0,sheetSide:'left',coverLeaf:true};
     return {direction,front:left,back:left-1,baseLeft:left-2,baseRight:left+1<=last?left+1:null,target:left-1,sheetSide:'left',coverLeaf:false};
+  }
+  function prepareTurnScene(scene:TurnScene){
+    const indexes=[scene.front,scene.back,scene.baseLeft,scene.baseRight].filter((index):index is number=>index!==null);
+    return Promise.allSettled([...new Set(indexes)].map(index=>preloadPageThumbnail(book.pages[index],.12)));
   }
   function pageTurnTarget(direction:'next'|'prev'){return makeTurnScene(direction)?.target??s.pageIndex;}
   function turnSheetLeft(scene:TurnScene|null=turnScene){
@@ -195,10 +199,13 @@ export function Editor(){
     const g=turnGesture.current;if(!g||g.pointerId!==e.pointerId)return;
     if(g.started)finishTurn(false);else{turnGesture.current=null;turnSceneRef.current=null;setTurnScene(null);setTurnDirection(null);}
   }
-  function turnPage(direction:'next'|'prev',after?:()=>void){
+  async function turnPage(direction:'next'|'prev',after?:()=>void){
     const state=useEditor.getState(),currentIndex=state.pageIndex,scene=makeTurnScene(direction,currentIndex);
     if(turnLocked.current||!scene||scene.target===currentIndex)return;
-    turnLocked.current=true;turnSceneRef.current=scene;setTurnScene(scene);setTurnDirection(direction);
+    turnLocked.current=true;
+    await prepareTurnScene(scene);
+    if(useEditor.getState().pageIndex!==currentIndex){turnLocked.current=false;return;}
+    turnSceneRef.current=scene;setTurnScene(scene);setTurnDirection(direction);
     const originY=.5;
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
       applyTurnVisual(0,direction,originY);
