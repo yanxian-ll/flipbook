@@ -208,3 +208,25 @@
 .turn-blank-page{background:#fff}
 .turn-static-spread .spine-shadow{left:50%;z-index:8}
 .book-window.has-turn-scene .turning-sheet{z-index:10}
+
+/* Explicit paper-side visibility: never let the browser reuse the front texture on the back. */
+.turning-sheet{
+  --turn-front-opacity:1;
+  --turn-back-opacity:0;
+}
+.turning-sheet .turn-front{
+  opacity:var(--turn-front-opacity);
+  transform:translateZ(.2px);
+  visibility:visible;
+}
+.turning-sheet .turn-back{
+  opacity:var(--turn-back-opacity);
+  transform:rotateY(180deg) translateZ(.2px);
+  visibility:visible;
+}
+.turning-sheet[data-face="front"] .turn-back{pointer-events:none}
+.turning-sheet[data-face="back"] .turn-front{pointer-events:none}
+.turn-face{
+  transition:opacity 0s linear;
+  transform-style:preserve-3d;
+}
