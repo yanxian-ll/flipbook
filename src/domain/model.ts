@@ -17,12 +17,13 @@ export interface Element {
 export interface Page {
   id: string; type: 'cover' | 'normal'; background: string; pattern?: string;
   elements: Element[]; layoutId?: string; order: number;
-  templateOverlay?: string;
+  templateOverlay?: string; templateBackground?: string;
 }
 export interface Book {
   id: string; title: string; themeId: ThemeId; format: { width: number; height: number };
   coverPageId: string; pages: Page[]; assets: Asset[]; createdAt: number; updatedAt: number;
   version: number; workspaceBackground: string; coverTemplate: 'basic' | 'cutout';
+  defaultPageBackground?: string;
   customLayouts?: {id:string;name:string;minImages:number;maxImages:number;slots:{x:number;y:number;width:number;height:number;shape?:'ellipse'}[]}[];
 }
 export interface StoredAsset extends Asset { original: Blob; preview: Blob; thumbnail: Blob }
@@ -42,9 +43,11 @@ export function newBook(title: string, themeId: ThemeId, assets: Asset[] = []): 
   const cover = blankPage(0, themeId === 'scrapbook' ? '#f5ec30' : '#e8e2cf');
   if(assets[0]) cover.elements.push(imageElement(assets[0].id,{x:414,y:360,width:372,height:498}));
   cover.elements.push(textElement('TIME TO FLIPIN',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center',color:'#4a3f1a'}));
-  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout'};
+  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3'};
 }
 export function validateBook(value: unknown): asserts value is Book {
   const b = value as Book;
   if(!b || typeof b.id !== 'string' || typeof b.title !== 'string' || !Array.isArray(b.pages) || b.pages.length === 0 || !Array.isArray(b.assets) || b.format?.width !== W || b.format?.height !== H || b.pages[0].type !== 'cover' || b.pages.some(p=>!Array.isArray(p.elements)||typeof p.background!=='string')) throw new Error('画册数据损坏，无法打开。原数据已保留。');
 }
+
+export function visualPageBackground(page:Page){return page.templateBackground??page.background;}
