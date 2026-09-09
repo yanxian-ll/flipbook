@@ -43,7 +43,7 @@ export function imageElement(assetId: string, patch: Partial<Element> = {}): Ele
 export function newBook(title: string, themeId: ThemeId, assets: Asset[] = []): Book {
   const cover = blankPage(0, themeId === 'scrapbook' ? '#f5ec30' : '#e8e2cf');
   if(assets[0]) cover.elements.push(imageElement(assets[0].id,{x:414,y:360,width:372,height:498}));
-  cover.elements.push(textElement('TIME TO FLIPIN',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center',color:'#4a3f1a'}));
+  cover.elements.push(textElement('TIME TO FLIPBOOK',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center',color:'#4a3f1a'}));
   return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3'};
 }
 export function validateBook(value: unknown): asserts value is Book {
@@ -52,3 +52,30 @@ export function validateBook(value: unknown): asserts value is Book {
 }
 
 export function visualPageBackground(page:Page){return page.templateBackground??page.background;}
+
+
+const LEGACY_BRAND=['FLIP','IN'].join('');
+function replaceLegacyBrandText(value:string){
+  return value.replace(new RegExp(LEGACY_BRAND,'gi'),match=>{
+    if(match===match.toUpperCase())return 'FLIPBOOK';
+    if(match===match.toLowerCase())return 'flipbook';
+    return 'Flipbook';
+  });
+}
+export function migrateLegacyBrandBook(value:Book){
+  const book=structuredClone(value);
+  let changed=false;
+  const update=(value:string)=>{
+    const next=replaceLegacyBrandText(value);
+    if(next!==value)changed=true;
+    return next;
+  };
+  book.title=update(book.title);
+  for(const page of book.pages){
+    for(const element of page.elements){
+      if(element.text)element.text=update(element.text);
+    }
+  }
+  if(book.customLayouts)for(const layout of book.customLayouts)layout.name=update(layout.name);
+  return {book,changed};
+}
