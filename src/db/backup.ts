@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import {repository} from './repository';
-import {type Asset,type Book,type StoredAsset,uid,validateBook} from '../domain/model';
+import {type Book,type StoredAsset,uid,validateBook} from '../domain/model';
 
 type BackupManifest={
   format:'flipin-backup';
@@ -68,8 +68,9 @@ export async function importBookBackup(file:File){
   if(existing.some(item=>item.id===book.id)){
     book.id=uid();
     book.title=`${book.title}（恢复副本）`;
-    book.createdAt=book.updatedAt=Date.now();
+    book.createdAt=Date.now();
   }
+  book.updatedAt=Date.now();
 
   const storedAssets:StoredAsset[]=[];
   for(const metadata of book.assets){
