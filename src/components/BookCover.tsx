@@ -4,7 +4,7 @@ import {dragCrop} from '../domain/crop';
 import {repository} from '../db/repository';
 import {useEditor} from '../store/editor';
 
-function useCoverImage(book:Book){
+function useCoverImage(book:Book,quality:'thumbnail'|'preview'='thumbnail'){
   const [src,setSrc]=useState('');
   const image=book.pages[0].elements.find(element=>element.type==='image');
   useEffect(()=>{
@@ -12,12 +12,12 @@ function useCoverImage(book:Book){
     setSrc('');
     if(image?.assetId)void repository.getAsset(image.assetId).then(asset=>{
       if(asset&&!disposed){
-        url=URL.createObjectURL(asset.thumbnail);
+        url=URL.createObjectURL(asset[quality]);
         setSrc(url);
       }
     }).catch(()=>{});
     return()=>{disposed=true;if(url)URL.revokeObjectURL(url);};
-  },[image?.assetId]);
+  },[image?.assetId,quality]);
   return src;
 }
 
@@ -27,11 +27,12 @@ function coverCropStyle(image?:Element){
     objectPosition:`${crop.x*100}% ${crop.y*100}%`,
     transform:`scale(${crop.zoom})`,
     transformOrigin:`${crop.x*100}% ${crop.y*100}%`,
+    filter:`blur(${Math.max(0,image?.blur??0)}px)`,
   };
 }
 
-function CoverContents({book,cropOverride}:{book:Book;cropOverride?:Element['crop']}){
-  const src=useCoverImage(book);
+function CoverContents({book,cropOverride,quality='thumbnail'}:{book:Book;cropOverride?:Element['crop'];quality?:'thumbnail'|'preview'}){
+  const src=useCoverImage(book,quality);
   const cover=book.pages[0];
   const image=cover.elements.find(element=>element.type==='image');
   const shownImage=image&&cropOverride?{...image,crop:cropOverride}:image;
@@ -45,7 +46,7 @@ function CoverContents({book,cropOverride}:{book:Book;cropOverride?:Element['cro
 
 export function BookCoverVisual({book,className='',cropOverride}:{book:Book;className?:string;cropOverride?:Element['crop']}){
   const cover=book.pages[0];
-  return <div className={`book-cover ${book.coverTemplate} ${className}`.trim()} style={{backgroundColor:cover.background}}><CoverContents book={book} cropOverride={cropOverride}/></div>;
+  return <div className={`book-cover ${book.coverTemplate} ${className}`.trim()} style={{backgroundColor:cover.background}}><CoverContents book={book} cropOverride={cropOverride} quality="preview"/></div>;
 }
 
 export function BookCover({book,onClick}:{book:Book;onClick?:()=>void}){
