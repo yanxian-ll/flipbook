@@ -1,4 +1,4 @@
-import type {Layout} from './layouts';
+import type {Layout,Slot} from './layouts';
 export type ThemeId = 'scrapbook' | 'editorial';
 export interface Asset {
   id: string; name: string; mimeType: string; width: number; height: number;
@@ -20,13 +20,15 @@ export interface Page {
   elements: Element[]; layoutId?: string; order: number;
   templateOverlay?: string; templateBackground?: string;
 }
+export interface CoverTemplate {id:string;name:string;slot:Slot}
 export interface Book {
   id: string; title: string; themeId: ThemeId; format: { width: number; height: number };
   coverPageId: string; pages: Page[]; assets: Asset[]; createdAt: number; updatedAt: number;
-  version: number; workspaceBackground: string; coverTemplate: 'basic' | 'cutout';
+  version: number; workspaceBackground: string; coverTemplate: string;
   defaultPageBackground?: string;
   workspacePattern?: string; workspaceImageId?: string;
   customLayouts?: Layout[];
+  customCoverTemplates?: CoverTemplate[];
 }
 export interface StoredAsset extends Asset { original: Blob; preview: Blob; thumbnail: Blob }
 export const W = 1200;
@@ -79,5 +81,6 @@ export function migrateLegacyBrandBook(value:Book){
     }
   }
   if(book.customLayouts)for(const layout of book.customLayouts)layout.name=update(layout.name);
+  if(book.customCoverTemplates)for(const template of book.customCoverTemplates)template.name=update(template.name);
   return {book,changed};
 }
