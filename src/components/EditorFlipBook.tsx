@@ -61,7 +61,7 @@ export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
   if(needsFiller)synthetic.push(<FlipLeaf key="__blank__" book={book} index={plusIndex+1} kind="blank" onFocus={onFocus} onAddPage={onAddPage} scale={imageScale}/>);
   synthetic.push(<FlipLeaf key="__back__" book={book} index={backIndex} kind="back" onFocus={onFocus} onAddPage={onAddPage} scale={imageScale}/>);
 
-  return <div className={`editor-pageflip-shell ${activeIndex===0?'is-cover':''}`}>
+  return <div className={`editor-pageflip-shell ${activeIndex===0?'is-cover':''}`} style={{width:pageWidth*2,height:pageHeight}}>
     <HTMLFlipBook
       key={`${book.id}:${book.pages.length}:${Math.round(pageWidth)}`}
       ref={flip}
