@@ -238,3 +238,21 @@
   height:100%;
   max-width:none;
 }
+
+/* Smooth physical page turns: keep the animation on the compositor. */
+.book-window.has-turn-scene .turn-static-spread{filter:none!important}
+.book-window.has-turn-scene .turning-sheet:after{display:none!important}
+.book-window.has-turn-scene:before{display:none!important}
+.book-window.has-turn-scene{transform:translateZ(0)}
+.physical-leaf{
+  contain:paint;
+  will-change:transform;
+  transform:translateZ(0);
+}
+.physical-leaf .turn-face{
+  contain:paint;
+  will-change:visibility;
+}
+.turn-static-spread,.turn-static-page{
+  contain:paint;
+}
