@@ -33,7 +33,7 @@ function LiveEditorSurface({children}:{children:ReactNode}){
   useEffect(()=>{
     const node=surface.current;if(!node)return;
     const stop=(event:Event)=>event.stopPropagation();
-    const events=['mousedown','pointerdown','touchstart','wheel'] as const;
+    const events=['mousedown','pointerdown','touchstart'] as const;
     for(const type of events)node.addEventListener(type,stop,{passive:false});
     return()=>{for(const type of events)node.removeEventListener(type,stop);};
   },[]);
