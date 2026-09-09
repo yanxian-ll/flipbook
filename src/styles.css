@@ -1025,3 +1025,18 @@
 .studio .zoom-page .editor-pageflip-shell.is-cover{
   overflow:visible;
 }
+
+/* Clicking the cover body opens the book; photo/text hotspots stay editable above it. */
+.cover-editor-open-hit{
+  position:absolute;
+  inset:0;
+  z-index:10;
+  padding:0;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+.cover-editor-photo-hit,
+.cover-editor-text-hit{
+  z-index:12;
+}
