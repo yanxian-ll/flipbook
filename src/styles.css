@@ -1229,3 +1229,30 @@
 .page-thumbnail-host>img{display:block;width:100%;height:100%;object-fit:fill}.page-thumbnail-host>.thumbnail-placeholder{width:100%;height:100%}
 
 .thumbnail-retry{position:relative;z-index:6;width:100%;height:100%;padding:12px;background:#f4f4f4;color:#777;font-size:12px}
+
+/* Side-library centering: reserve the open side only once, then center all central controls in the remaining workspace. */
+@media(min-width:850px){
+  .studio.expanded.photo-library-open .editor-workspace,
+  .studio.expanded.template-library-open .editor-workspace{
+    margin-left:0!important;
+  }
+
+  .studio.expanded.photo-library-open:not(.template-library-open) .view-mode-switch{
+    left:calc(50% + 150px);
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) .view-mode-switch{
+    left:calc(50% - 150px);
+  }
+  .studio.expanded.photo-library-open.template-library-open .view-mode-switch{
+    left:50%;
+  }
+}
+
+@media(min-width:1500px){
+  .studio.expanded.photo-library-open:not(.template-library-open) .view-mode-switch{
+    left:calc(50% + 185px);
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) .view-mode-switch{
+    left:calc(50% - 185px);
+  }
+}
