@@ -1,9 +1,9 @@
 import {create} from 'zustand';
 import {produce,current} from 'immer';
 import {repository,friendlyError} from '../db/repository';
-import {type Book,type Element,type StoredAsset,blankPage,uid} from '../domain/model';
+import {type Book,type Element,type StoredAsset,blankPage,imageElement,uid,W,H} from '../domain/model';
 import {assetMetadata} from '../domain/assets';
-import {applyLayout,layouts,defaultLayout,frameIsFixed} from '../domain/layouts';
+import {applyLayout,layouts,defaultLayout,fitAssetIds,frameIsFixed} from '../domain/layouts';
 type Status='saved'|'saving'|'error';
 interface EditorState {
   book:Book|null; pageIndex:number; selected:string[]; past:Book[]; future:Book[];
@@ -78,7 +78,45 @@ export const useEditor=create<EditorState>((set,get)=>({
     get().setPage(1+toGroup*2);
   },
   layout(id,assetIds){const layout=[...layouts,...(get().book?.customLayouts??[])].find(l=>l.id===id);if(!layout)return;get().change(b=>{b.pages[get().pageIndex]=applyLayout(b.pages[get().pageIndex],layout,assetIds);});set({selected:[]});},
-  setPhotos(ids){const layout=defaultLayout(ids.length);get().change(b=>{const page=b.pages[get().pageIndex];if(page.type==='cover'){const image=page.elements.find(e=>e.type==='image');if(ids[0]){if(image){image.assetId=ids[0];image.crop={x:.5,y:.5,zoom:1};}else page.elements.unshift({id:uid(),type:'image',assetId:ids[0],x:414,y:360,width:372,height:498,rotation:0,opacity:1,frameLocked:true,crop:{x:.5,y:.5,zoom:1}});}return;}b.pages[get().pageIndex]=applyLayout(page,layout,ids);});set({selected:[]});},
+  setPhotos(ids){
+    get().change(b=>{
+      const page=b.pages[get().pageIndex];
+      if(page.type==='cover'){
+        const image=page.elements.find(e=>e.type==='image');
+        if(ids[0]){
+          if(image){
+            if(image.assetId!==ids[0])image.assetId=ids[0];
+          }else page.elements.unshift({id:uid(),type:'image',assetId:ids[0],x:414,y:360,width:372,height:498,rotation:0,opacity:1,frameLocked:true,crop:{x:.5,y:.5,zoom:1}});
+        }
+        return;
+      }
+
+      if(page.layoutId){
+        const layout=[...layouts,...(b.customLayouts??[])].find(item=>item.id===page.layoutId);
+        const existingFrames=page.elements.filter(element=>element.type==='image'&&!element.freeImage);
+        const targetCount=layout?.slots.length??existingFrames.length;
+        const fitted=fitAssetIds(ids,targetCount);
+        const frames=fitted.map((assetId,index)=>{
+          const existing=existingFrames[index];
+          if(existing){
+            existing.assetId=assetId;
+            return existing;
+          }
+          const slot=layout?.slots[index];
+          return slot
+            ?imageElement(assetId,{x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape})
+            :imageElement(assetId,{frameLocked:true});
+        });
+        const nonTemplateElements=page.elements.filter(element=>element.type!=='image'||element.freeImage);
+        page.elements=[...frames,...nonTemplateElements];
+        return;
+      }
+
+      const layout=defaultLayout(ids.length);
+      b.pages[get().pageIndex]=applyLayout(page,layout,ids);
+    });
+    set({selected:[]});
+  },
   async addAssets(assets){await repository.putAssets(assets);get().change(b=>{b.assets.push(...assets.map(assetMetadata));});},
   async removeAssets(ids){
     const currentBook=get().book;
