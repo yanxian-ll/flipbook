@@ -2,15 +2,17 @@ import JSZip from 'jszip';
 import {repository} from './repository';
 import {type Book,type StoredAsset,uid,validateBook} from '../domain/model';
 
+const BACKUP_FORMAT='flipbook-backup';
+const LEGACY_BACKUP_FORMAT=['flip','in-backup'].join('');
 type BackupManifest={
-  format:'flipin-backup';
+  format:string;
   version:1;
   exportedAt:number;
   book:Book;
 };
 
 function safeName(name:string){
-  return (name.trim()||'flipin').replace(/[\\/:*?"<>|]+/g,'_').slice(0,80);
+  return (name.trim()||'flipbook').replace(/[\\/:*?"<>|]+/g,'_').slice(0,80);
 }
 
 function downloadBlob(blob:Blob,name:string){
@@ -34,7 +36,7 @@ async function requireAssetFile(zip:JSZip,path:string,type:string){
 export async function exportBookBackup(bookId:string){
   const book=await repository.get(bookId);
   const zip=new JSZip();
-  const manifest:BackupManifest={format:'flipin-backup',version:1,exportedAt:Date.now(),book:structuredClone(book)};
+  const manifest:BackupManifest={format:BACKUP_FORMAT,version:1,exportedAt:Date.now(),book:structuredClone(book)};
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
 
   for(const metadata of book.assets){
@@ -48,19 +50,19 @@ export async function exportBookBackup(bookId:string){
 
   const blob=await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
   const stamp=new Date().toISOString().slice(0,10);
-  downloadBlob(blob,`${safeName(book.title)}-${stamp}.flipin-backup`);
+  downloadBlob(blob,`${safeName(book.title)}-${stamp}.flipbook-backup`);
 }
 
 export async function importBookBackup(file:File){
   const zip=await JSZip.loadAsync(file);
   const manifestEntry=zip.file('manifest.json');
-  if(!manifestEntry)throw new Error('这不是有效的 FLIPIN 作品备份。');
+  if(!manifestEntry)throw new Error('这不是有效的 FLIPBOOK 作品备份。');
 
   let manifest:BackupManifest;
   try{manifest=JSON.parse(await manifestEntry.async('string')) as BackupManifest;}
   catch{throw new Error('备份文件的作品信息无法读取。');}
 
-  if(manifest.format!=='flipin-backup'||manifest.version!==1)throw new Error('不支持这个版本的 FLIPIN 备份。');
+  if(![BACKUP_FORMAT,LEGACY_BACKUP_FORMAT].includes(manifest.format)||manifest.version!==1)throw new Error('不支持这个版本的 FLIPBOOK 备份。');
   validateBook(manifest.book);
 
   const existing=await repository.list();
