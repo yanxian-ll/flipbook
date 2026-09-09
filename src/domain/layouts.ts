@@ -29,6 +29,9 @@ export function defaultLayout(count:number):Layout {
   const layout=layouts.find(l=>l.id===ids[count]);if(!layout)throw new Error('每页最多放 9 张照片，请在下一页继续添加。');return layout;
 }
 export function frameIsFixed(page:Page,element:Page['elements'][number]){return element.type==='image'&&!element.freeImage&&(!!element.frameLocked||!!page.layoutId||page.type==='cover');}
+function layoutVisualBackground(layout:Layout){
+  return layout.background?.startsWith('rgba(')?'#ffffff':layout.background;
+}
 export function applyLayout(page:Page,layout:Layout,assetIds?:string[]):Page {
   if(page.layoutId===layout.id&&!assetIds)return page;
   const oldImages=page.elements.filter(e=>e.type==='image');
@@ -39,8 +42,7 @@ export function applyLayout(page:Page,layout:Layout,assetIds?:string[]):Page {
     return [imageElement(id,{id:oldImages[i]?.id??crypto.randomUUID(),x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape})];
   });
   const texts=(layout.texts??[]).map(t=>textElement(t.text,{x:t.x*W,y:t.y*H,width:Math.max(t.width*W,10),height:Math.max(t.height*H+4,10),fontSize:t.fontSize*W,fontFamily:t.fontFamily,fontWeight:t.fontWeight,color:t.color,align:t.align==='center'?'center':t.align==='right'?'right':'left',lineHeight:t.lineHeight,letterSpacing:t.letterSpacing*W/320,templateTextKey:t.key}));
-  const background=page.layoutId?page.background:layout.background?.startsWith('rgba(')?'#ffffff':layout.background??page.background;
-  return {...page,layoutId:layout.id,templateOverlay:layout.overlay,background,pattern:undefined,elements:[...images,...texts]};
+  return {...page,layoutId:layout.id,templateOverlay:layout.overlay,templateBackground:layoutVisualBackground(layout),pattern:undefined,elements:[...images,...texts]};
 }
 export function autoLayout(book:Book,assets:Asset[]):Book {
   const pages:Page[]=[book.pages[0]];
