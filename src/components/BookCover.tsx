@@ -39,7 +39,7 @@ function CoverContents({book,cropOverride}:{book:Book;cropOverride?:Element['cro
     <span className="cover-grain"/>
     <span className="cover-spine"/>
     {src&&<span className="cover-window"><img className="cover-window-image" src={src} alt="画册封面照片" style={coverCropStyle(shownImage)}/></span>}
-    <span className="cover-caption">{cover.elements.find(element=>element.type==='text')?.text??'TIME TO FLIPIN'}</span>
+    <span className="cover-caption">{cover.elements.find(element=>element.type==='text')?.text??'TIME TO FLIPBOOK'}</span>
   </>;
 }
 
