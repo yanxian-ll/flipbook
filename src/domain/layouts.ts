@@ -5,7 +5,30 @@ export interface Slot {x:number;y:number;width:number;height:number;shape?:'elli
 export interface LayoutText {x:number;y:number;width:number;height:number;key:string;text:string;fontFamily:string;fontSize:number;fontWeight:number;fontStyle?:'normal'|'italic';color:string;align:string;lineHeight:number;letterSpacing:number}
 export interface Layout {id:string;name:string;minImages:number;maxImages:number;slots:Slot[];family?:string;background?:string;overlay?:string;texts?:LayoutText[]}
 const auditedOverlayTexts=overlayTexts as Record<string,LayoutText[]>;
-export const TEMPLATE_TEXT_SCHEMA=2;
+export const TEMPLATE_TEXT_SCHEMA=3;
+export const singlePhotoTemplateCaptions=[
+  'Keep my feelings and memories.',
+  'Keep this moment close.',
+  'Hold on to this little moment.',
+  'Some days deserve to stay.',
+  'Keep a piece of today.',
+  'This moment is worth keeping.',
+  'A quiet memory to keep.',
+  'Save a little light from today.',
+  'One more moment for the pages.',
+  'Let this day stay with me.',
+] as const;
+function stableTextIndex(value:string,count:number){
+  let hash=2166136261;
+  for(let i=0;i<value.length;i++){hash^=value.charCodeAt(i);hash=Math.imul(hash,16777619);}
+  return (hash>>>0)%count;
+}
+export function singlePhotoTemplateCaption(assetId:string,pageId:string){
+  return singlePhotoTemplateCaptions[stableTextIndex(`${pageId}:${assetId}`,singlePhotoTemplateCaptions.length)];
+}
+export function isSinglePhotoTemplateCaption(value:string){
+  return (singlePhotoTemplateCaptions as readonly string[]).includes(value);
+}
 const hasAuditedOverlay=(id:string)=>Object.prototype.hasOwnProperty.call(auditedOverlayTexts,id);
 const cleanedOverlay=(layout:Layout)=>hasAuditedOverlay(layout.id)&&layout.overlay
   ?`/reference/templates-clean/${layout.id}.webp`
@@ -43,6 +66,11 @@ export function migrateBookTemplateTexts(value:Book){
       if(source.layoutId==='tpl2_p1_left'){
         const title=page.elements.find(element=>element.type==='text'&&element.templateTextKey==='title');
         if(title&&['FLIPBOOK\nMOMENTS','FLIP IN\nMOMENTS'].includes(title.text??''))title.text='LIFE IN\nPAGES';
+      }
+      if(source.layoutId==='tpl2_p3_right'){
+        const caption=page.elements.find(element=>element.type==='text'&&element.templateTextKey==='caption');
+        const image=page.elements.find(element=>element.type==='image'&&!element.freeImage);
+        if(caption&&image?.assetId&&isSinglePhotoTemplateCaption(caption.text??''))caption.text=singlePhotoTemplateCaption(image.assetId,page.id);
       }
       const existing=new Set(page.elements.filter(element=>element.type==='text'&&element.templateTextKey).map(element=>element.templateTextKey!));
       for(const text of layout.texts??[])if(!existing.has(text.key))page.elements.push(layoutTextElement(text));
@@ -90,7 +118,10 @@ export function applyLayout(page:Page,layout:Layout,assetIds?:string[]):Page {
     const id=ids[i];if(!id)return [];
     return [imageElement(id,{id:oldImages[i]?.id??crypto.randomUUID(),x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape})];
   });
-  const texts=(layout.texts??[]).map(layoutTextElement);
+  const texts=(layout.texts??[]).map(text=>{
+    if(layout.id==='tpl2_p3_right'&&text.key==='caption'&&ids[0])return layoutTextElement({...text,text:singlePhotoTemplateCaption(ids[0],page.id)});
+    return layoutTextElement(text);
+  });
   return {...page,layoutId:layout.id,templateOverlay:layout.overlay,templateBackground:layoutVisualBackground(layout),templateTextSchema:TEMPLATE_TEXT_SCHEMA,pattern:undefined,elements:[...images,...texts]};
 }
 export function autoLayout(book:Book,assets:Asset[]):Book {
