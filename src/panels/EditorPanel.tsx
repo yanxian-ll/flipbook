@@ -90,6 +90,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const layoutCounts=useMemo(()=>new Set(allLayouts.map(layout=>layout.slots.length)),[allLayouts]);
   const variants=useMemo(()=>allLayouts
     .filter(layout=>layout.slots.length===layoutCount)
+    .sort((a,b)=>Number(b.id===page.layoutId)-Number(a.id===page.layoutId))
     .map(layout=>({layout,preview:applyLayout(page,layout,fitAssetIds(previewSourceIds,layout.slots.length))})),
   [allLayouts,layoutCount,page,previewSourceIds.join('|')]);
   const fixed=selected?frameIsFixed(page,selected):false;
