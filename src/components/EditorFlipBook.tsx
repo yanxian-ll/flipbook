@@ -1,10 +1,11 @@
-import {Children,Component,forwardRef,useEffect,useImperativeHandle,useRef,type ForwardedRef,type ReactNode} from 'react';
+import {Children,Component,forwardRef,useEffect,useImperativeHandle,useRef,useState,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import type {Book} from '../domain/model';
 import {BookCoverEditor,BookCoverVisual} from './BookCover';
 import {PageThumbnail} from './PageThumbnail';
 import {EditorCanvas} from '../editor/EditorCanvas';
 import {Plus} from 'lucide-react';
+import {useEditor} from '../store/editor';
 
 export type EditorFlipBookHandle={
   flipNext:()=>void;
@@ -28,10 +29,11 @@ type LeafProps={
   onImageSelect:()=>void;
   onBlankPage:()=>void;
   onOpenCover:()=>void;
+  onInteractionChange:(active:boolean)=>void;
   scale:number;
 };
 
-function LiveEditorSurface({children}:{children:ReactNode}){
+function LiveEditorSurface({children,onInteractionChange}:{children:ReactNode;onInteractionChange?:(active:boolean)=>void}){
   const surface=useRef<HTMLDivElement>(null);
   useEffect(()=>{
     const node=surface.current;if(!node)return;
@@ -40,11 +42,16 @@ function LiveEditorSurface({children}:{children:ReactNode}){
     for(const type of events)node.addEventListener(type,stop,{passive:false});
     return()=>{for(const type of events)node.removeEventListener(type,stop);};
   },[]);
-  return <div ref={surface} className="editor-flip-live">{children}</div>;
+  return <div
+    ref={surface}
+    className="editor-flip-live"
+    onPointerEnter={()=>onInteractionChange?.(true)}
+    onPointerLeave={()=>onInteractionChange?.(false)}
+  >{children}</div>;
 }
 
 function FlipLeafInner(
-  {book,index,kind,active,priority,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,scale}:LeafProps,
+  {book,index,kind,active,priority,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,onInteractionChange,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
   if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-hidden/>;
@@ -59,10 +66,10 @@ function FlipLeafInner(
   return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''}`} data-density={index===0?'hard':'soft'}>
     {index===0
       ?active
-        ?<LiveEditorSurface><BookCoverEditor book={book} width={width} onTextEdit={onTextEdit} onImageSelect={onImageSelect} onOpen={onOpenCover}/></LiveEditorSurface>
+        ?<LiveEditorSurface onInteractionChange={onInteractionChange}><BookCoverEditor book={book} width={width} onTextEdit={onTextEdit} onImageSelect={onImageSelect} onOpen={onOpenCover}/></LiveEditorSurface>
         :<BookCoverVisual book={book} className="editor-flip-cover-visual"/>
       :active
-        ?<LiveEditorSurface>
+        ?<LiveEditorSurface onInteractionChange={onInteractionChange}>
           <EditorCanvas page={page} width={width} onTextEdit={onTextEdit} onCrop={onCrop} onImageSelect={onImageSelect} onBackgroundClick={onBlankPage}/>
         </LiveEditorSurface>
         :<>
@@ -136,6 +143,9 @@ function EditorFlipBookInner(
   ref:ForwardedRef<EditorFlipBookHandle>
 ){
   const flip=useRef<any>(null);
+  const [editingSurfaceHovered,setEditingSurfaceHovered]=useState(false);
+  const hasSelectedElement=useEditor(state=>state.selected.length>0);
+  const nativeFlipLocked=editingSurfaceHovered||hasSelectedElement;
   const safeWidth=Math.max(40,Math.floor(pageWidth));
   const pageHeight=Math.round(safeWidth*1696/1200);
   const imageScale=Math.max(.24,Math.min(.5,safeWidth/1200*1.15));
@@ -154,7 +164,7 @@ function EditorFlipBookInner(
 
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
   const openCover=()=>flip.current?.pageFlip?.().flipNext?.();
-  const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover:openCover,scale:imageScale};
+  const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover:openCover,onInteractionChange:setEditingSurfaceHovered,scale:imageScale};
 
   const fallback=<StaticBookFallback
     book={book}
@@ -171,7 +181,7 @@ function EditorFlipBookInner(
   if(!book.pages.length)return fallback;
 
   return <FlipBookBoundary resetKey={resetKey} fallback={fallback}>
-    <div className={`editor-pageflip-shell ${activeIndex===0?'is-cover':''}`} style={{width:safeWidth*2,height:pageHeight}}>
+    <div className={`editor-pageflip-shell ${activeIndex===0?'is-cover':''} ${nativeFlipLocked?'native-flip-locked':''}`} style={{width:safeWidth*2,height:pageHeight}}>
       <HTMLFlipBook
         key={resetKey}
         ref={flip}
@@ -191,9 +201,9 @@ function EditorFlipBookInner(
         showCover
         mobileScrollSupport
         clickEventForward
-        useMouseEvents
+        useMouseEvents={!nativeFlipLocked}
         swipeDistance={28}
-        showPageCorners
+        showPageCorners={!nativeFlipLocked}
         disableFlipByClick
         startPage={Math.max(0,Math.min(lastReal,activeIndex))}
         className="editor-flip-book"
