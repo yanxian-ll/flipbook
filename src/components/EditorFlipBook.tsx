@@ -1,4 +1,4 @@
-import {Component,forwardRef,useEffect,useImperativeHandle,useRef,type ForwardedRef,type ReactNode} from 'react';
+import {Children,Component,forwardRef,useEffect,useImperativeHandle,useRef,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import type {Book} from '../domain/model';
 import {BookCoverEditor,BookCoverVisual} from './BookCover';
@@ -202,16 +202,12 @@ function EditorFlipBookInner(
           if(Number.isFinite(index)&&index>=0&&index<=lastReal)onFlip(index);
         }}
       >
-        {book.pages.map((_,index)=><FlipLeaf
-          key={book.pages[index].id}
-          {...leafProps}
-          index={index}
-          kind="page"
-          active={activeIndex===index}
-        />)}
-        <FlipLeaf key="__add__" {...leafProps} index={plusIndex} kind="add" active={false}/>
-        {needsFiller&&<FlipLeaf key="__blank__" {...leafProps} index={plusIndex+1} kind="blank" active={false}/>}
-        <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false}/>
+        {Children.toArray([
+          ...book.pages.map((_,index)=><FlipLeaf key={book.pages[index].id} {...leafProps} index={index} kind="page" active={activeIndex===index}/>),
+          <FlipLeaf key="__add__" {...leafProps} index={plusIndex} kind="add" active={false}/>,
+          needsFiller?<FlipLeaf key="__blank__" {...leafProps} index={plusIndex+1} kind="blank" active={false}/>:null,
+          <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false}/>
+        ])}
       </HTMLFlipBook>
       {activeIndex>0&&<button className="editor-flip-nav-zone previous" aria-label="翻到上一跨页" onClick={()=>flip.current?.pageFlip?.().flipPrev?.()}/>}
       {activeIndex<lastReal&&<button className="editor-flip-nav-zone next" aria-label="翻到下一跨页" onClick={()=>flip.current?.pageFlip?.().flipNext?.()}/>}

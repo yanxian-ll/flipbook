@@ -8,9 +8,9 @@ const assets:Asset[]=Array.from({length:10},(_,i)=>({id:`asset-${i}`,name:`photo
 beforeEach(async()=>{await db.books.clear();await db.assets.clear();});
 describe('reference template catalog',()=>{
   it('covers all 54 non-cutout reference definitions and valid frames',()=>{expect(layouts).toHaveLength(54);for(const layout of layouts){expect(layout.slots).toHaveLength(layout.minImages);for(const s of layout.slots){expect(s.x).toBeGreaterThanOrEqual(0);expect(s.y).toBeGreaterThanOrEqual(0);expect(s.x+s.width).toBeLessThanOrEqual(1.001);expect(s.y+s.height).toBeLessThanOrEqual(1.001);}}});
-  it('matches both official picker counts and ordering from one to nine photos',()=>{
-    expect(Array.from({length:9},(_,i)=>layoutsForCount(i+1,'scrapbook').length)).toEqual([13,7,5,4,1,4,1,1,1]);
-    expect(Array.from({length:9},(_,i)=>layoutsForCount(i+1,'editorial').length)).toEqual([10,9,3,5,2,3,2,1,0]);
+  it('offers both style families with preferred style ordering',()=>{
+    expect(Array.from({length:9},(_,i)=>layoutsForCount(i+1,'scrapbook').length)).toEqual([15,10,5,5,2,4,2,1,1]);
+    expect(Array.from({length:9},(_,i)=>layoutsForCount(i+1,'editorial').length)).toEqual([15,10,5,5,2,4,2,1,1]);
     expect(layoutsForCount(6,'scrapbook').slice(0,2).map(l=>l.id)).toEqual(['six6Sidebar','tpl1_p3_left']);
     expect(layoutsForCount(2,'editorial')[0].id).toBe('tpl2_p3_left');
   });
@@ -19,7 +19,8 @@ describe('reference template catalog',()=>{
     const page=applyLayout(blankPage(1),first,ids);page.elements.push(textElement('User note'));
     expect(page.templateOverlay).toContain('tpl1');expect(page.elements.filter(e=>e.type==='image').every(e=>e.frameShape==='ellipse')).toBe(true);
     const result=applyLayout(page,defaultLayout(2));expect(result.templateOverlay).toBeUndefined();expect(result.elements.filter(e=>e.type==='image').map(e=>e.assetId)).toEqual(ids);expect(result.elements.filter(e=>e.type==='text').map(e=>e.text)).toEqual([]);
-    expect(()=>applyLayout(result,defaultLayout(1))).toThrow('需要 1 张');
+    expect(applyLayout(result,defaultLayout(1)).elements.filter(e=>e.type==='image').map(e=>e.assetId)).toEqual([ids[0]]);
+    expect(applyLayout(result,defaultLayout(3)).elements.filter(e=>e.type==='image').map(e=>e.assetId)).toEqual([ids[0],ids[1],ids[0]]);
     expect(()=>defaultLayout(10)).toThrow('最多放 9 张');
   });
   it('retains all photos during generation',()=>{const book=autoLayout(newBook('Test','scrapbook',assets),assets);expect(book.pages).toHaveLength(6);expect(book.pages.slice(1).flatMap(p=>p.elements.filter(e=>e.type==='image').map(e=>e.assetId))).toEqual(assets.map(a=>a.id));});

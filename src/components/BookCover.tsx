@@ -1,5 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import type {Book,Element} from '../domain/model';
+import {dragCrop} from '../domain/crop';
 import {repository} from '../db/repository';
 import {useEditor} from '../store/editor';
 
@@ -72,10 +73,10 @@ export function BookCoverEditor({
   const select=useEditor(state=>state.select);
   const [previewCrop,setPreviewCrop]=useState<Element['crop']>();
   const drag=useRef<{pointerId:number;x:number;y:number;crop:{x:number;y:number;zoom:number};moved:boolean}|null>(null);
-  const clamp=(value:number)=>Math.max(0,Math.min(1,value));
+  const asset=book.assets.find(asset=>asset.id===image?.assetId);
 
   function beginPhoto(e:React.PointerEvent<HTMLButtonElement>){
-    if(e.button!==0||!image)return;
+    if(e.button!==0||!image||drag.current)return;
     const crop=image.crop??{x:.5,y:.5,zoom:1};
     drag.current={pointerId:e.pointerId,x:e.clientX,y:e.clientY,crop,moved:false};
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -88,12 +89,7 @@ export function BookCoverEditor({
     const rect=e.currentTarget.getBoundingClientRect();
     const dx=e.clientX-start.x,dy=e.clientY-start.y;
     if(Math.abs(dx)+Math.abs(dy)>3)start.moved=true;
-    const zoom=Math.max(1,start.crop.zoom);
-    setPreviewCrop({
-      zoom:start.crop.zoom,
-      x:clamp(start.crop.x-dx/Math.max(1,rect.width)/zoom),
-      y:clamp(start.crop.y-dy/Math.max(1,rect.height)/zoom),
-    });
+    if(asset&&start.moved)setPreviewCrop(dragCrop(rect,asset,start.crop,dx,dy));
     e.stopPropagation();
   }
   function endPhoto(e:React.PointerEvent<HTMLButtonElement>){
@@ -101,7 +97,7 @@ export function BookCoverEditor({
     if(!start||start.pointerId!==e.pointerId)return;
     if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
     drag.current=null;
-    if(start.moved&&previewCrop&&image)update(image.id,{crop:previewCrop});
+    if(start.moved&&image&&asset){const rect=e.currentTarget.getBoundingClientRect();const crop=dragCrop(rect,asset,start.crop,e.clientX-start.x,e.clientY-start.y);if(crop.x!==start.crop.x||crop.y!==start.crop.y)update(image.id,{crop});}
     setPreviewCrop(undefined);
     e.stopPropagation();
     if(!start.moved)onImageSelect();

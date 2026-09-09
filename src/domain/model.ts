@@ -1,3 +1,4 @@
+import type {Layout} from './layouts';
 export type ThemeId = 'scrapbook' | 'editorial';
 export interface Asset {
   id: string; name: string; mimeType: string; width: number; height: number;
@@ -24,7 +25,7 @@ export interface Book {
   coverPageId: string; pages: Page[]; assets: Asset[]; createdAt: number; updatedAt: number;
   version: number; workspaceBackground: string; coverTemplate: 'basic' | 'cutout';
   defaultPageBackground?: string;
-  customLayouts?: {id:string;name:string;minImages:number;maxImages:number;slots:{x:number;y:number;width:number;height:number;shape?:'ellipse'}[]}[];
+  customLayouts?: Layout[];
 }
 export interface StoredAsset extends Asset { original: Blob; preview: Blob; thumbnail: Blob }
 export const W = 1200;

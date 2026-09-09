@@ -4,8 +4,9 @@ import Konva from 'konva';
 import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
 import {useEditor} from '../store/editor';
+import {dragCrop,centeredCrop,type Crop} from '../domain/crop';
 import {frameIsFixed} from '../domain/layouts';
-import {elementProps,textProps,photoProps,loadAssetImage,loadStaticImage,frameClip,imageCrop,loadPageFonts} from './renderer';
+import {elementProps,textProps,photoProps,loadAssetImage,loadStaticImage,frameClip,loadPageFonts} from './renderer';
 export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackgroundClick}:{page:Page;width:number;onTextEdit:()=>void;onCrop:()=>void;onImageSelect?:()=>void;onBackgroundClick?:()=>void}){
   const transformer=useRef<Konva.Transformer>(null);const stage=useRef<Konva.Stage>(null);const selected=useEditor(s=>s.selected);const select=useEditor(s=>s.select);const update=useEditor(s=>s.updateElement);const scale=width/W;
   const [guides,setGuides]=useState<{x?:number;y?:number}>({});
@@ -31,11 +32,33 @@ function Overlay({url}:{url:string}){const [image,setImage]=useState<HTMLImageEl
 function FixedPhoto({element,image,selected,onSelect,onActivate,onDoubleClick}:{element:Element;image?:HTMLImageElement;selected:boolean;onSelect:()=>void;onActivate:()=>void;onDoubleClick:()=>void}){
   const update=useEditor(s=>s.updateElement);const group=useRef<Konva.Group>(null);
   const [preview,setPreview]=useState<Element['crop']>();
-  const drag=useRef<{x:number;y:number;crop:NonNullable<Element['crop']>}|null>(null);
+  const drag=useRef<{pointerId:number;x:number;y:number;clientX:number;clientY:number;crop:Crop;moved:boolean;target:Konva.Shape}|null>(null);
+  const suppressClick=useRef(false);
   const shown={...element,crop:preview??element.crop};
   const point=()=>group.current?.getRelativePointerPosition();
-  function begin(e:Konva.KonvaEventObject<PointerEvent>){if(e.evt.button!==0)return;const p=point();if(!p)return;onSelect();drag.current={...p,crop:element.crop??{x:.5,y:.5,zoom:1}};(e.target as Konva.Shape).setPointerCapture(e.evt.pointerId);e.cancelBubble=true;}
-  function move(){const start=drag.current,p=point();if(!start||!p||!image)return;const crop=imageCrop({...element,crop:start.crop},image);const clamp=(v:number)=>Math.max(0,Math.min(1,v));setPreview({zoom:start.crop.zoom,x:clamp(start.crop.x-(p.x-start.x)*crop.width/element.width/Math.max(1,image.naturalWidth-crop.width)),y:clamp(start.crop.y-(p.y-start.y)*crop.height/element.height/Math.max(1,image.naturalHeight-crop.height))});}
-  function finish(e:Konva.KonvaEventObject<PointerEvent>){if(!drag.current)return;(e.target as Konva.Shape).releaseCapture(e.evt.pointerId);drag.current=null;if(preview)update(element.id,{crop:preview});setPreview(undefined);}
-  return <Group ref={group} id={element.id} x={element.x} y={element.y} clipFunc={frameClip(element)} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={()=>{drag.current=null;setPreview(undefined);}} onClick={()=>{onSelect();onActivate();}} onTap={()=>{onSelect();onActivate();}} onDblClick={onDoubleClick} onDblTap={onDoubleClick} onWheel={e=>{if(!selected)return;e.evt.preventDefault();e.evt.stopPropagation();e.cancelBubble=true;const crop=element.crop??{x:.5,y:.5,zoom:1};update(element.id,{crop:{...crop,zoom:Math.max(1,Math.min(4,crop.zoom-e.evt.deltaY*.002))}});}}>{image?<CanvasImage {...photoProps({...shown,x:0,y:0,rotation:0,id:element.id+'-photo'},image)}/>:<Rect width={element.width} height={element.height} fill="#ddd"/>}{selected&&<Rect width={element.width} height={element.height} stroke="#3185ff" strokeWidth={5} listening={false}/>}</Group>;
+  function begin(e:Konva.KonvaEventObject<PointerEvent>){
+    if(e.evt.button!==0||drag.current)return;
+    const p=point();if(!p)return;
+    suppressClick.current=false;onSelect();
+    const target=e.target as Konva.Shape;
+    drag.current={...p,pointerId:e.evt.pointerId,clientX:e.evt.clientX,clientY:e.evt.clientY,crop:element.crop??centeredCrop,moved:false,target};
+    target.setPointerCapture(e.evt.pointerId);e.cancelBubble=true;
+  }
+  function nextCrop(e:Konva.KonvaEventObject<PointerEvent>){
+    const start=drag.current,p=point();if(!start||start.pointerId!==e.evt.pointerId||!p||!image)return;
+    if(Math.hypot(e.evt.clientX-start.clientX,e.evt.clientY-start.clientY)>3)start.moved=true;
+    if(!start.moved)return;
+    return dragCrop(element,{width:image.naturalWidth,height:image.naturalHeight},start.crop,p.x-start.x,p.y-start.y);
+  }
+  function move(e:Konva.KonvaEventObject<PointerEvent>){const crop=nextCrop(e);if(crop)setPreview(crop);e.cancelBubble=true;}
+  function finish(e:Konva.KonvaEventObject<PointerEvent>){
+    const start=drag.current;if(!start||start.pointerId!==e.evt.pointerId)return;
+    const crop=nextCrop(e);
+    start.target.releaseCapture(e.evt.pointerId);drag.current=null;suppressClick.current=start.moved;
+    if(crop&&(crop.x!==start.crop.x||crop.y!==start.crop.y))update(element.id,{crop});
+    setPreview(undefined);e.cancelBubble=true;
+  }
+  function cancel(e:Konva.KonvaEventObject<PointerEvent>){const start=drag.current;if(!start||start.pointerId!==e.evt.pointerId)return;start.target.releaseCapture(e.evt.pointerId);drag.current=null;suppressClick.current=true;setPreview(undefined);}
+  function activate(){if(suppressClick.current)return;onSelect();onActivate();}
+  return <Group ref={group} id={element.id} x={element.x} y={element.y} clipFunc={frameClip(element)} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={cancel} onClick={activate} onTap={activate} onDblClick={onDoubleClick} onDblTap={onDoubleClick} onWheel={e=>{if(!selected)return;e.evt.preventDefault();e.evt.stopPropagation();e.cancelBubble=true;const crop=element.crop??{x:.5,y:.5,zoom:1};update(element.id,{crop:{...crop,zoom:Math.max(1,Math.min(4,crop.zoom-e.evt.deltaY*.002))}});}}>{image?<CanvasImage {...photoProps({...shown,x:0,y:0,rotation:0,id:element.id+'-photo'},image)}/>:<Rect width={element.width} height={element.height} fill="#ddd"/>}{selected&&<Rect width={element.width} height={element.height} stroke="#3185ff" strokeWidth={5} listening={false}/>}</Group>;
 }
