@@ -1040,3 +1040,10 @@
 .cover-editor-text-hit{
   z-index:12;
 }
+
+/* Keep the template library below the workspace toolbar/save controls. */
+@media(min-width:850px){
+  .studio.expanded .editor-panel.panel-right{
+    top:132px!important;
+  }
+}
