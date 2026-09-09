@@ -9,7 +9,7 @@ export interface Element {
   id: string; type: 'image' | 'text' | 'sticker' | 'shape';
   x: number; y: number; width: number; height: number; rotation: number; opacity: number;
   locked?: boolean; assetId?: string; text?: string; color?: string; fontFamily?: string;
-  fontSize?: number; fontWeight?: number; align?: 'left' | 'center' | 'right';
+  fontSize?: number; fontWeight?: number; fontStyle?: 'normal' | 'italic'; align?: 'left' | 'center' | 'right';
   fit?: 'cover' | 'contain'; crop?: { x: number; y: number; zoom: number };
   border?: number; borderColor?: string; shadow?: boolean; cornerRadius?: number;
   frameLocked?: boolean; frameShape?: 'ellipse'; templateTextKey?: string;
