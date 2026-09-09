@@ -56,7 +56,7 @@ export function Editor(){
   const focusWindowWidth=pageCanvasWidth*(neighborPage||showSingleAdd?1+peek:1);
   const focusTrackWidth=pageCanvasWidth*(neighborPage||showSingleAdd?2:1);
   const focusedShift=(neighborPage||showSingleAdd)&&visualReverse?-pageCanvasWidth*(1-peek):0;
-  const tools=([['photos',Images,'素材库'],['layouts',Grid2X2,'模版'],['text',Type,'文字'],['stickers',Sticker,'贴纸'],['adjust',Sun,'调整']] as const).filter(([id])=>page.type!=='cover'||!['layouts','stickers'].includes(id));
+  const tools=([['photos',Images,'素材库'],['layouts',Grid2X2,'模版'],['text',Type,'文字'],['stickers',Sticker,'贴纸'],['adjust',Sun,'调整']] as const);
 
   function jumpToPage(index:number){flipBook.current?.turnTo(index);s.setPage(index);}
   function selectPage(index:number){if(index>=0&&index<book.pages.length&&index!==useEditor.getState().pageIndex)useEditor.getState().setPage(index);}
@@ -137,7 +137,7 @@ export function Editor(){
   function openTool(next:PanelId){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
     if(next==='photos'&&currentPage?.type==='cover')setPhotoDraft(currentPage.elements.filter(e=>e.type==='image'&&e.assetId).map(e=>e.assetId!));
-    const sideLibraries=wide&&viewWidth>=700&&currentPage?.type!=='cover';
+    const sideLibraries=wide&&viewWidth>=700;
     if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(true);return;}
     if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(true);return;}
     if(next!=='photos'&&next!=='layouts'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
@@ -146,7 +146,7 @@ export function Editor(){
   function toggleTool(next:PanelId){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
     if(next==='photos'&&currentPage?.type==='cover')setPhotoDraft(currentPage.elements.filter(e=>e.type==='image'&&e.assetId).map(e=>e.assetId!));
-    const sideLibraries=wide&&viewWidth>=700&&currentPage?.type!=='cover';
+    const sideLibraries=wide&&viewWidth>=700;
     if(sideLibraries&&next==='photos'){
       setPanel(null);
       setPhotoLibraryOpen(open=>!open);
@@ -172,7 +172,7 @@ export function Editor(){
     requestAnimationFrame(()=>requestAnimationFrame(()=>{flipBook.current?.turnTo(useEditor.getState().pageIndex);window.setTimeout(()=>{suppressSpreadClick.current=false;},0);}));
   }
 
-  const sideLibraries=wide&&viewWidth>=700&&page.type!=='cover';
+  const sideLibraries=wide&&viewWidth>=700;
   const photoSideOpen=sideLibraries&&(photoLibraryOpen||panel==='photos');
   const templateSideOpen=sideLibraries&&(templateLibraryOpen||panel==='layouts');
   const bothSideOpen=photoSideOpen&&templateSideOpen;
@@ -230,7 +230,7 @@ export function Editor(){
     <nav className="editor-tools">{tools.map(([id,Icon,label])=>{const selectedTool=id==='photos'?(photoSideOpen||compactPanel==='photos'):id==='layouts'?(templateSideOpen||compactPanel==='layouts'):compactPanel===id;return <button key={id} className={selectedTool?'selected':''} onClick={()=>toggleTool(id)}><Icon size={21} strokeWidth={1.6}/><span>{label}</span></button>;})}</nav>
     {photoSideOpen&&<EditorPanel key={`${page.id}:photos`} panel="photos" placement="left" paired={bothSideOpen} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setPhotoLibraryOpen(false);if(panel==='photos')setPanel(null);}}/>}
     {templateSideOpen&&<EditorPanel key={`${page.id}:layouts`} panel="layouts" placement="right" paired={bothSideOpen} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setTemplateLibraryOpen(false);if(panel==='layouts')setPanel(null);}}/>}
-    {compactPanel&&<EditorPanel key={`${page.id}:${compactPanel}`} panel={page.type==='cover'&&(compactPanel==='layouts'||compactPanel==='page-background')?'cover':page.type!=='cover'&&compactPanel==='cover'?'layouts':compactPanel} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}}/>}
+    {compactPanel&&<EditorPanel key={`${page.id}:${compactPanel}`} panel={page.type!=='cover'&&compactPanel==='cover'?'layouts':compactPanel} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}}/>}
     <ExportDialog book={book} open={exporting} onClose={()=>setExporting(false)}/>
   </main>;
 }
