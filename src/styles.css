@@ -256,3 +256,28 @@
 .turn-static-spread,.turn-static-page{
   contain:paint;
 }
+
+/* Editor book: real page turning is delegated to react-pageflip/StPageFlip. */
+.native-book-stage{overflow:visible}
+.editor-pageflip-shell{position:relative;display:flex;align-items:center;justify-content:center;overflow:visible;transition:transform .28s cubic-bezier(.2,.72,.2,1)}
+.editor-pageflip-shell.is-cover .editor-flip-book{transform:translateX(-25%)}
+.editor-flip-book{transition:transform .28s cubic-bezier(.2,.72,.2,1);filter:drop-shadow(0 18px 20px #00000028)}
+.editor-flip-page{position:relative;width:100%;height:100%;overflow:hidden;background:#fff}
+.editor-flip-page>img,.editor-flip-page>.thumbnail-placeholder{width:100%;height:100%;min-height:0;object-fit:fill}
+.editor-flip-cover{overflow:visible;background:transparent}
+.editor-flip-cover .editor-flip-cover-visual{width:100%;height:100%;max-width:none;aspect-ratio:1200/1696}
+.editor-flip-cover .editor-flip-cover-visual:hover{transform:perspective(1400px) rotateY(-2deg)}
+.editor-flip-focus-hit{position:absolute;z-index:4;left:14%;right:14%;top:10%;bottom:10%;padding:0;border:0;background:transparent;cursor:zoom-in}
+.editor-flip-add,.editor-flip-blank,.editor-flip-back{display:grid;place-items:center;background:#fff}
+.editor-flip-add button{width:52px;height:52px;display:grid;place-items:center;border:1px solid #dedede;border-radius:50%;background:#fff;color:#777;box-shadow:0 4px 14px #0000000b}
+.editor-flip-add button:hover{background:#f5f5f5;color:#222}
+.editor-flip-blank{background:#fafafa}
+.editor-flip-back{background:#f2efe4}
+.focused-book-shell{position:relative;overflow:hidden;border-radius:7px;box-shadow:0 18px 34px #0002}
+.focused-book-track{height:100%}
+.focus-edge-turn{position:absolute;top:0;bottom:0;width:min(72px,15%);z-index:12;touch-action:none;cursor:grab}
+.focus-edge-turn.previous{left:0}
+.focus-edge-turn.next{right:0}
+.focus-edge-turn.disabled{pointer-events:none}
+.editor-cover-actions{z-index:20}
+@media(prefers-reduced-motion:reduce){.editor-pageflip-shell,.editor-flip-book{transition-duration:.01ms!important}}
