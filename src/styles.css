@@ -821,3 +821,64 @@
     width:min(760px,calc(100% - 630px))!important;
   }
 }
+
+/* Independent material/template side panels */
+@media(min-width:850px){
+  .studio.expanded.photo-library-open,
+  .studio.expanded.template-library-open{
+    --editor-left-library:0px;
+    --editor-right-library:0px;
+  }
+  .studio.expanded.photo-library-open{--editor-left-library:300px}
+  .studio.expanded.template-library-open{--editor-right-library:300px}
+  .studio.expanded.photo-library-open.template-library-open{
+    --editor-left-library:300px;
+    --editor-right-library:300px;
+  }
+  .studio.expanded.photo-library-open .editor-workspace,
+  .studio.expanded.template-library-open .editor-workspace{
+    margin-left:0!important;
+  }
+  .studio.expanded .editor-panel.panel-left{
+    top:58px;
+    bottom:75px;
+    left:0;
+    right:auto;
+    width:290px;
+    height:auto;
+    max-height:none;
+    border-radius:0;
+    animation:none;
+    box-shadow:5px 0 20px #00000010;
+    border-right:1px solid #eee;
+  }
+  .studio.expanded .editor-panel.panel-right{
+    top:58px;
+    bottom:75px;
+    left:auto;
+    right:0;
+    width:290px;
+    height:auto;
+    max-height:none;
+    border-radius:0;
+    animation:none;
+    box-shadow:-5px 0 20px #00000010;
+    border-left:1px solid #eee;
+  }
+  .studio.expanded.photo-library-open .spread-area{left:300px}
+  .studio.expanded.template-library-open .spread-area{right:300px}
+  .studio.expanded.photo-library-open.template-library-open .spread-area{left:300px;right:300px}
+
+  .studio.expanded.photo-library-open:not(.template-library-open) .clean-page-strip{
+    left:calc(50% + 150px)!important;
+    width:min(760px,calc(100% - 330px))!important;
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) .clean-page-strip{
+    left:calc(50% - 150px)!important;
+    width:min(760px,calc(100% - 330px))!important;
+  }
+  .studio.expanded.photo-library-open.template-library-open .clean-page-strip{
+    left:50%!important;
+    width:min(760px,calc(100% - 630px))!important;
+  }
+}
