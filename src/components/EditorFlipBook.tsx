@@ -26,6 +26,7 @@ type LeafProps={
   onCrop:()=>void;
   onImageSelect:()=>void;
   onBlankPage:()=>void;
+  onOpenCover:()=>void;
   scale:number;
 };
 
@@ -42,7 +43,7 @@ function LiveEditorSurface({children}:{children:ReactNode}){
 }
 
 function FlipLeafInner(
-  {book,index,kind,active,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,scale}:LeafProps,
+  {book,index,kind,active,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
   if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-hidden/>;
@@ -57,7 +58,7 @@ function FlipLeafInner(
   return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''}`} data-density={index===0?'hard':'soft'}>
     {index===0
       ?active
-        ?<LiveEditorSurface><BookCoverEditor book={book} width={width} onTextEdit={onTextEdit} onImageSelect={onImageSelect}/></LiveEditorSurface>
+        ?<LiveEditorSurface><BookCoverEditor book={book} width={width} onTextEdit={onTextEdit} onImageSelect={onImageSelect} onOpen={onOpenCover}/></LiveEditorSurface>
         :<BookCoverVisual book={book} className="editor-flip-cover-visual"/>
       :active
         ?<LiveEditorSurface>
@@ -104,7 +105,7 @@ function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTex
   const pageHeight=Math.round(pageWidth*1696/1200);
   if(activeIndex===0){
     return <div className="editor-pageflip-shell static-book-fallback is-cover" style={{width:pageWidth*2,height:pageHeight}}>
-      <div className="editor-fallback-cover" style={{width:pageWidth,height:pageHeight}}><BookCoverEditor book={book} width={pageWidth} onTextEdit={onTextEdit} onImageSelect={onImageSelect}/></div>
+      <div className="editor-fallback-cover" style={{width:pageWidth,height:pageHeight}}><BookCoverEditor book={book} width={pageWidth} onTextEdit={onTextEdit} onImageSelect={onImageSelect} onOpen={()=>onSelect(Math.min(1,book.pages.length-1))}/></div>
     </div>;
   }
   const leftIndex=activeIndex%2===1?activeIndex:activeIndex-1;
@@ -151,7 +152,8 @@ function EditorFlipBookInner(
   }),[lastReal]);
 
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
-  const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,scale:imageScale};
+  const openCover=()=>flip.current?.pageFlip?.().flipNext?.();
+  const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover:openCover,scale:imageScale};
 
   const fallback=<StaticBookFallback
     book={book}
