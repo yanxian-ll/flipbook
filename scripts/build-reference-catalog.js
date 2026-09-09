@@ -3,7 +3,6 @@ import fs from 'node:fs';
 import vm from 'node:vm';
 import * as parser from '@babel/parser';
 import path from 'node:path';
-import {execFileSync} from 'node:child_process';
 const input = path.resolve('scripts/reference-templates.txt');
 const source = fs.readFileSync(input, 'utf8');
 const ast = parser.parseExpression(source);
@@ -17,7 +16,7 @@ function audit(node) {
 audit(ast);
 const helpers = `
 const _renderText=()=>'',_fmtNum=n=>String(n).padStart(2,'0');
-const _img=n=>'<img data-photo="'+n+'" src="/reference/flipin-here-toast.jpg" style="width:100%;height:100%;object-fit:cover;display:block">';
+const _img=n=>'<img data-photo="'+n+'" src="/reference/style01.jpg" style="width:100%;height:100%;object-fit:cover;display:block">';
 const _tplNumWithBrackets=(p,i,n)=>'['+String(n).padStart(2,'0')+']';
 const _tplNumNoBrackets=(p,i,n)=>String(n).padStart(2,'0');
 const _ttAttrs=(key)=>'data-text-key="'+key+'"';
@@ -30,7 +29,7 @@ const references = [...new Set(catalog.flatMap(t=>[...t.html.matchAll(/images\/t
 fs.mkdirSync('public/reference/templates', {recursive: true});
 for (const ref of references) {
   const name=ref.split('/').pop().split('?')[0], output='public/reference/templates/'+name;
-  if(!fs.existsSync(output)) execFileSync('curl.exe',['--fail','-sS','-L','--max-time','25','https://flipin.pages.dev/'+ref,'-o',output],{stdio:'inherit'});
+  if(!fs.existsSync(output)) throw new Error(`Missing local template overlay: ${output}`);
 }
 const html = `<!doctype html><html><head><meta charset="utf-8"><style>@font-face{font-family:'Mendl Sans Dusk';src:url('/reference/MendlSans_Dusk_Rg.otf')}@font-face{font-family:'Mendl Sans Dusk Medium';src:url('/reference/MendlSans_Dusk_Md.otf');font-weight:500}@font-face{font-family:FZLanTingHei;src:url('/reference/FZLanTingHei-subset.woff2');font-weight:100 900}@font-face{font-family:Domine;src:url('/reference/Domine-Regular.ttf')}*{box-sizing:border-box}body{margin:0;background:#ddd;font-family:Arial}.catalog{display:grid;grid-template-columns:repeat(4,320px);gap:25px}.reference-page{position:relative;width:320px;height:452px;overflow:hidden}.label{font:12px Arial;padding:5px}</style></head><body><div class="catalog">`+catalog.map(t=>`<section><div class="label">${t.id} · ${t.name} · ${t.count} 图</div><div class="reference-page" data-id="${t.id}" data-name="${t.name}" data-count="${t.count}" data-family="${t.bookTpl??''}">${t.html.replaceAll(/images\/templates\/([a-z0-9_]+\.png)\?v=[a-z0-9]+/g,'/reference/templates/$1')}</div></section>`).join('')+'</div></body></html>';
 fs.writeFileSync('public/reference-catalog.html', html);
