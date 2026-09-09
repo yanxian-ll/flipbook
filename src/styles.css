@@ -331,18 +331,6 @@
   bottom:7%;
   cursor:pointer;
 }
-.editor-flip-page.is-active-editor-page:not(.editor-flip-cover):after{
-  content:'';
-  position:absolute;
-  inset:5px;
-  z-index:5;
-  border:2px solid #222;
-  border-radius:3px;
-  box-shadow:inset 0 0 0 1px #ffffffcc;
-  pointer-events:none;
-}
-.editor-flip-page.is-active-editor-page .editor-flip-focus-hit{z-index:6}
-
 /* Single-page mode uses nearly all available workspace height. */
 .studio .spread-area.zoom-page{top:98px;bottom:10px}
 .studio.expanded .spread-area.zoom-page{top:96px;bottom:10px}
@@ -468,4 +456,196 @@
   justify-content:center;
   white-space:nowrap;
   font-size:10px;
+}
+
+/* Editable spread pages: current page is a real Konva canvas, not a thumbnail. */
+.editor-flip-live{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#fff;
+  z-index:3;
+}
+.editor-flip-live .page-canvas{
+  width:100%;
+  height:100%;
+  line-height:0;
+}
+.editor-flip-live canvas{
+  display:block;
+}
+.editor-flip-select-page{
+  position:absolute;
+  inset:0;
+  z-index:4;
+  border:0;
+  padding:0;
+  background:transparent;
+  cursor:pointer;
+}
+.editor-flip-page:has(.editor-flip-live){
+  cursor:default;
+}
+
+/* Keep a subtle physical-book impression without marking the active page. */
+.editor-pageflip-shell{
+  perspective:1800px;
+  overflow:visible;
+}
+.editor-pageflip-shell:before,
+.editor-pageflip-shell:after{
+  content:'';
+  position:absolute;
+  left:6%;
+  right:6%;
+  height:8px;
+  bottom:-7px;
+  border-radius:0 0 8px 8px;
+  pointer-events:none;
+}
+.editor-pageflip-shell:before{
+  background:#d9d5c9;
+  transform:translateY(2px) scaleX(.985);
+  opacity:.72;
+}
+.editor-pageflip-shell:after{
+  background:#c7c1b4;
+  transform:translateY(5px) scaleX(.965);
+  opacity:.42;
+}
+.editor-pageflip-shell.is-cover:before,
+.editor-pageflip-shell.is-cover:after{
+  left:27%;
+  right:27%;
+}
+.editor-flip-book{
+  transform-style:preserve-3d;
+  filter:drop-shadow(0 14px 14px #00000025) drop-shadow(0 28px 26px #00000014);
+}
+.editor-flip-nav-zone{
+  position:absolute;
+  top:14%;
+  bottom:14%;
+  width:24px;
+  z-index:20;
+  border:0;
+  background:transparent;
+  cursor:pointer;
+}
+.editor-flip-nav-zone.previous{left:-28px}
+.editor-flip-nav-zone.next{right:-28px}
+.editor-flip-nav-zone:hover{background:#ffffff22}
+
+/* Static fallback keeps old books editable if StPageFlip fails to mount. */
+.static-book-fallback{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+.editor-fallback-spread{
+  position:relative;
+  display:flex;
+  align-items:stretch;
+  width:100%;
+  height:100%;
+  filter:drop-shadow(0 14px 16px #00000024);
+}
+.editor-fallback-page{
+  position:relative;
+  flex:0 0 50%;
+  overflow:hidden;
+  background:#fff;
+}
+.editor-fallback-page.left{border-radius:7px 0 0 7px}
+.editor-fallback-page.right{border-radius:0 7px 7px 0}
+.editor-fallback-page>img,
+.editor-fallback-page>.thumbnail-placeholder{
+  width:100%;
+  height:100%;
+  object-fit:fill;
+}
+.editor-fallback-cover{
+  position:relative;
+  filter:drop-shadow(0 18px 22px #0000002a);
+}
+.editor-fallback-cover>.book-cover{
+  width:100%;
+  height:100%;
+  max-width:none;
+}
+.editor-fallback-add{
+  position:absolute;
+  right:9%;
+  top:50%;
+  transform:translateY(-50%);
+  z-index:5;
+  width:48px;
+  height:48px;
+  display:grid;
+  place-items:center;
+  border:1px solid #ddd;
+  border-radius:50%;
+  background:#fff;
+  color:#777;
+}
+
+/* Single-page mode again shows the neighboring page and the spine, while staying large. */
+.studio .spread-area.zoom-page{
+  top:94px;
+  bottom:10px;
+}
+.studio.expanded .spread-area.zoom-page{
+  top:92px;
+  bottom:10px;
+}
+.single-page-editor-shell{
+  position:relative;
+  overflow:hidden;
+  border-radius:8px;
+  background:transparent;
+  box-shadow:0 18px 38px #00000020,0 4px 10px #00000016;
+  perspective:1600px;
+}
+.single-page-editor-shell:before{
+  content:'';
+  position:absolute;
+  left:2%;
+  right:2%;
+  bottom:-5px;
+  height:8px;
+  z-index:0;
+  border-radius:0 0 8px 8px;
+  background:#d7d2c5;
+  box-shadow:0 4px 9px #00000020;
+}
+.single-page-editor-shell .focused-book-track{
+  position:relative;
+  z-index:1;
+  height:100%;
+  transform-style:preserve-3d;
+}
+.single-page-editor-shell .active-page,
+.single-page-editor-shell .paired-page{
+  height:100%;
+}
+.single-page-editor-shell .page-canvas{
+  line-height:0;
+}
+.single-page-editor-shell .paired-page{
+  opacity:.98;
+}
+.single-page-editor-shell .paired-page:hover{
+  opacity:1;
+}
+.single-page-editor-shell .spine-shadow{
+  width:18px;
+  background:linear-gradient(90deg,transparent,#0000000e 42%,#00000022 50%,#ffffff22 58%,transparent);
+}
+.single-page-editor-shell .page-pan-zone{
+  z-index:14;
+}
+@media(max-width:699px){
+  .studio .spread-area.zoom-page{top:96px;bottom:8px}
 }
