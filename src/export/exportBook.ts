@@ -126,7 +126,8 @@ async function exportMp4(book:Book,indices:number[],quality:number,onProgress:(n
     if(recorder.state!=='inactive')recorder.stop();
   }
 }
-function escapeHtml(value:string){return value.replace(/[&<>"']/g,char=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[char]??char));}
+const HTML_ENTITIES:Record<string,string>={'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'};
+function escapeHtml(value:string){return value.replace(/[&<>"']/g,char=>HTML_ENTITIES[char]??char);}
 async function exportSharePage(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void){
   const scale=clamp(quality,1,1.6);
   const blobs=await renderJpegs(book,indices,scale,n=>onProgress(n*.75),1);
