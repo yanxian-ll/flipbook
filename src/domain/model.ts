@@ -18,7 +18,7 @@ export interface Element {
 export interface Page {
   id: string; type: 'cover' | 'normal'; background: string; pattern?: string;
   elements: Element[]; layoutId?: string; order: number;
-  templateOverlay?: string; templateBackground?: string;
+  templateOverlay?: string; templateBackground?: string; templateTextSchema?: number;
 }
 export interface CoverTemplate {id:string;name:string;slot:Slot}
 export interface Book {
