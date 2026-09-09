@@ -57,11 +57,13 @@ export function BookCoverEditor({
   width,
   onTextEdit,
   onImageSelect,
+  onOpen,
 }:{
   book:Book;
   width:number;
   onTextEdit:()=>void;
   onImageSelect:()=>void;
+  onOpen:()=>void;
 }){
   const cover=book.pages[0];
   const image=cover.elements.find(element=>element.type==='image');
@@ -110,6 +112,13 @@ export function BookCoverEditor({
     style={{width,height:width*1696/1200}}
   >
     <BookCoverVisual book={book} className="book-cover-editor-visual" cropOverride={previewCrop}/>
+    <button
+      type="button"
+      className="cover-editor-open-hit"
+      aria-label="打开画册"
+      title="打开画册"
+      onClick={e=>{e.stopPropagation();onOpen();}}
+    />
     {image&&<button
       type="button"
       className="cover-editor-photo-hit"
