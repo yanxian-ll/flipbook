@@ -20,7 +20,21 @@ let saveQueue:Promise<void>=Promise.resolve();
 function schedule(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{void useEditor.getState().flush().catch(()=>{});},900);}
 export const useEditor=create<EditorState>((set,get)=>({
   book:null,pageIndex:0,selected:[],past:[],future:[],status:'saved',error:'',revision:0,clipboard:[],
-  load(book){clearTimeout(saveTimer);set({book,pageIndex:0,selected:[],past:[],future:[],status:'saved',error:'',revision:0});},
+  load(book){
+    clearTimeout(saveTimer);
+    const normalized=structuredClone(book);
+    normalized.defaultPageBackground??=normalized.pages.find(page=>page.type==='normal'&&!page.layoutId)?.background??'#eeeae3';
+    for(const page of normalized.pages){
+      if(page.type!=='normal'||!page.layoutId||page.templateBackground)continue;
+      const layout=[...layouts,...(normalized.customLayouts??[])].find(item=>item.id===page.layoutId);
+      const templateBg=layout?.background?.startsWith('rgba(')?'#ffffff':layout?.background;
+      if(templateBg&&page.background===templateBg){
+        page.background=normalized.defaultPageBackground;
+        page.templateBackground=templateBg;
+      }
+    }
+    set({book:normalized,pageIndex:0,selected:[],past:[],future:[],status:'saved',error:'',revision:0});
+  },
   change(recipe){const current=get().book;if(!current)return;const next=produce(current,draft=>{recipe(draft);draft.updatedAt=Date.now();});set(s=>({book:next,past:[...s.past.slice(-79),current],future:[],status:'saving',revision:s.revision+1}));schedule();},
   select(id,multi=false){set(s=>({selected:id?(multi?(s.selected.includes(id)?s.selected.filter(x=>x!==id):[...s.selected,id]):[id]):[]}));},
   setPage(index){set({pageIndex:Math.max(0,Math.min(index,(get().book?.pages.length??1)-1)),selected:[]});},
@@ -35,11 +49,8 @@ export const useEditor=create<EditorState>((set,get)=>({
   addPage(){
     const index=get().pageIndex+1;
     get().change(b=>{
-      const currentPage=b.pages[get().pageIndex];
-      const referencePage=currentPage?.type==='normal'
-        ?currentPage
-        :b.pages.find(page=>page.type==='normal');
-      const background=referencePage?.background??blankPage(index).background;
+      const background=b.defaultPageBackground??'#eeeae3';
+      b.defaultPageBackground=background;
       b.pages.splice(index,0,blankPage(index,background));
       b.pages.forEach((p,i)=>p.order=i);
     });
