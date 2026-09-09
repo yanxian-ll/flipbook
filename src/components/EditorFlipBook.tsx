@@ -1,4 +1,4 @@
-import {Component,forwardRef,useImperativeHandle,useRef,type ForwardedRef,type ReactNode,type SyntheticEvent} from 'react';
+import {Component,forwardRef,useEffect,useImperativeHandle,useRef,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import type {Book} from '../domain/model';
 import {BookCoverVisual} from './BookCover';
@@ -27,7 +27,17 @@ type LeafProps={
   scale:number;
 };
 
-function stopEditorEvent(e:SyntheticEvent){e.stopPropagation();}
+function LiveEditorSurface({children}:{children:ReactNode}){
+  const surface=useRef<HTMLDivElement>(null);
+  useEffect(()=>{
+    const node=surface.current;if(!node)return;
+    const stop=(event:Event)=>event.stopPropagation();
+    const events=['mousedown','pointerdown','touchstart','wheel'] as const;
+    for(const type of events)node.addEventListener(type,stop,{passive:false});
+    return()=>{for(const type of events)node.removeEventListener(type,stop);};
+  },[]);
+  return <div ref={surface} className="editor-flip-live">{children}</div>;
+}
 
 function FlipLeafInner(
   {book,index,kind,active,width,onSelect,onAddPage,onTextEdit,onCrop,scale}:LeafProps,
@@ -46,15 +56,9 @@ function FlipLeafInner(
     {index===0
       ?<BookCoverVisual book={book} className="editor-flip-cover-visual"/>
       :active
-        ?<div
-          className="editor-flip-live"
-          onPointerDown={stopEditorEvent}
-          onMouseDown={stopEditorEvent}
-          onTouchStart={stopEditorEvent}
-          onWheel={stopEditorEvent}
-        >
+        ?<LiveEditorSurface>
           <EditorCanvas page={page} width={width} onTextEdit={onTextEdit} onCrop={onCrop}/>
-        </div>
+        </LiveEditorSurface>
         :<>
           <PageThumbnail page={page} scale={scale} immediate/>
           <button
