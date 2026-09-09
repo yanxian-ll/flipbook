@@ -39,19 +39,20 @@ export const useEditor=create<EditorState>((set,get)=>({
   reorderSpread(fromStart,toStart){
     if(fromStart<1||toStart<1||fromStart===toStart)return;
     const book=get().book;if(!book)return;
-    const last=book.pages.length-1;
-    const from=Math.max(1,Math.min(fromStart,last)),to=Math.max(1,Math.min(toStart,last));
-    const fromCount=Math.min(2,last-from+1);
-    const targetStart=to;
+    const groupCount=Math.ceil(Math.max(0,book.pages.length-1)/2);
+    const fromGroup=Math.max(0,Math.min(groupCount-1,Math.floor((fromStart-1)/2)));
+    const toGroup=Math.max(0,Math.min(groupCount-1,Math.floor((toStart-1)/2)));
+    if(fromGroup===toGroup)return;
     get().change(b=>{
-      const moved=b.pages.splice(from,fromCount);
-      let insertAt=targetStart;
-      if(from<targetStart)insertAt=Math.max(1,targetStart-fromCount);
-      b.pages.splice(insertAt,0,...moved);
+      const content=b.pages.slice(1);
+      const groups=[] as typeof content[];
+      for(let i=0;i<content.length;i+=2)groups.push(content.slice(i,i+2));
+      const [moved]=groups.splice(fromGroup,1);
+      groups.splice(toGroup,0,moved);
+      b.pages.splice(1,b.pages.length-1,...groups.flat());
       b.pages.forEach((p,i)=>p.order=i);
     });
-    const nextStart=from<targetStart?Math.max(1,targetStart-fromCount):targetStart;
-    get().setPage(nextStart);
+    get().setPage(1+toGroup*2);
   },
   layout(id){const layout=[...layouts,...(get().book?.customLayouts??[])].find(l=>l.id===id);if(!layout)return;get().change(b=>{b.pages[get().pageIndex]=applyLayout(b.pages[get().pageIndex],layout);});set({selected:[]});},
   setPhotos(ids){const layout=defaultLayout(ids.length);get().change(b=>{const page=b.pages[get().pageIndex];if(page.type==='cover'){const image=page.elements.find(e=>e.type==='image');if(ids[0]){if(image){image.assetId=ids[0];image.crop={x:.5,y:.5,zoom:1};}else page.elements.unshift({id:uid(),type:'image',assetId:ids[0],x:414,y:360,width:372,height:498,rotation:0,opacity:1,frameLocked:true,crop:{x:.5,y:.5,zoom:1}});}return;}b.pages[get().pageIndex]=applyLayout(page,layout,ids);});set({selected:[]});},
