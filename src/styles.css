@@ -408,3 +408,64 @@
 .asset-batch .asset-grid{
   margin-top:0;
 }
+
+/* Photo library selection priority and bottom actions */
+.asset-batch-selected{
+  padding:10px;
+  margin:-2px -4px 0;
+  border:1px solid #dedede;
+  border-radius:10px;
+  background:#f8f8f7;
+}
+.asset-batch-selected+.asset-batch{
+  padding-top:16px;
+  border-top:0;
+}
+.asset-batch-selected .asset-batch-header b{
+  color:#222;
+  font-weight:600;
+}
+.asset-grid button.asset-tile-selected{
+  outline:2px solid #202020;
+  outline-offset:2px;
+}
+.asset-grid .asset-selection-index{
+  position:absolute;
+  top:5px;
+  right:5px;
+  left:auto;
+  bottom:auto;
+  display:grid;
+  place-items:center;
+  width:23px;
+  height:23px;
+  border:2px solid #fff;
+  border-radius:50%;
+  background:#202020;
+  color:#fff;
+  font-size:11px;
+  font-weight:700;
+  line-height:1;
+  box-shadow:0 2px 7px #0005;
+}
+.photo-library-actions{
+  position:sticky;
+  bottom:-1px;
+  z-index:8;
+  display:grid;
+  grid-template-columns:1.1fr .85fr 1.15fr;
+  gap:7px;
+  margin:18px -16px -20px;
+  padding:10px 16px 14px;
+  border-top:1px solid #ececec;
+  background:#fffffff5;
+  backdrop-filter:blur(12px);
+}
+.photo-library-actions .btn{
+  min-width:0;
+  padding:9px 7px;
+  gap:5px;
+  justify-content:center;
+  white-space:nowrap;
+  font-size:10px;
+}
