@@ -14,23 +14,39 @@ export function preloadPageThumbnail(page:Page,scale=.12):Promise<Blob>{
   const task=renderQueue(()=>renderPage(page,{scale,quality:scale<=.2?'thumbnail':'preview'})).then(blob=>store(page,scale,blob)).finally(()=>pending.get(page)?.delete(scale));
   pending.get(page)!.set(scale,task);return task;
 }
-export function PageThumbnail({page,alt='页面预览',scale=.12,immediate=false}:{page:Page;alt?:string;scale?:number;immediate?:boolean}){
-  const [url,setUrl]=useState(''),[visible,setVisible]=useState(immediate);const host=useRef<HTMLDivElement>(null);
+type ThumbnailProps={page:Page;alt?:string;scale?:number;immediate?:boolean};
+// Book leaves never mount the observer-driven component: transforms must not
+// decide whether the other half of an open spread has content.
+export function PageThumbnail({immediate=false,...props}:ThumbnailProps){
+  return immediate?<RenderedThumbnail {...props}/>:<LazyThumbnail {...props}/>;
+}
+function LazyThumbnail(props:ThumbnailProps){
+  const host=useRef<HTMLDivElement>(null),[visible,setVisible]=useState(false);
   useEffect(()=>{
-    if(immediate){setVisible(true);return;}
     const node=host.current;if(!node)return;
     const observer=new IntersectionObserver(entries=>setVisible(entries[0].isIntersecting),{rootMargin:'120px'});
     observer.observe(node);
     return()=>observer.disconnect();
-  },[immediate]);
-  const shouldRender=immediate||visible;
-  useLayoutEffect(()=>{if(!shouldRender){setUrl('');return;}let alive=true,objectUrl='',timer:ReturnType<typeof setTimeout>|undefined;
-    const show=(blob:Blob)=>{if(!alive)return;objectUrl=URL.createObjectURL(blob);setUrl(objectUrl);};
+  },[]);
+  return <div ref={host} className="page-thumbnail-host" style={{width:'100%',height:'100%'}}>{visible?<RenderedThumbnail {...props} delay={200}/>:<div className="thumbnail-placeholder" style={{background:visualPageBackground(props.page)}}/>}</div>;
+}
+function RenderedThumbnail({page,alt='页面预览',scale=.12,delay=0}:ThumbnailProps&{delay?:number}){
+  const [url,setUrl]=useState(''),[error,setError]=useState(''),[retry,setRetry]=useState(0);
+  const currentUrl=useRef('');
+  useEffect(()=>()=>{if(currentUrl.current)URL.revokeObjectURL(currentUrl.current);},[]);
+  useLayoutEffect(()=>{
+    let alive=true,timer:ReturnType<typeof setTimeout>|undefined;
+    setError('');
+    const show=(blob:Blob)=>{
+      if(!alive)return;
+      const next=URL.createObjectURL(blob),previous=currentUrl.current;
+      currentUrl.current=next;setUrl(next);
+      if(previous)URL.revokeObjectURL(previous);
+    };
+    const load=()=>void preloadPageThumbnail(page,scale).then(show).catch(e=>{if(alive)setError(e instanceof Error?e.message:'页面加载失败');});
     const hit=cached(page,scale);
-    if(hit)show(hit);
-    else if(immediate)void preloadPageThumbnail(page,scale).then(show).catch(()=>{});
-    else timer=setTimeout(()=>{void preloadPageThumbnail(page,scale).then(show).catch(()=>{});},200);
-    return()=>{alive=false;if(timer)clearTimeout(timer);if(objectUrl)URL.revokeObjectURL(objectUrl);};
-  },[page,scale,immediate,shouldRender]);
-  return <div ref={host} className="page-thumbnail-host" style={{width:'100%',height:'100%'}}>{url?<img src={url} alt={alt} decoding="async"/>:<div className="thumbnail-placeholder" style={{background:visualPageBackground(page)}}/>}</div>;
+    if(hit)show(hit);else if(delay)timer=setTimeout(load,delay);else load();
+    return()=>{alive=false;if(timer)clearTimeout(timer);};
+  },[page,scale,delay,retry]);
+  return <div className="page-thumbnail-host" style={{width:'100%',height:'100%'}}>{error?<button className="thumbnail-retry" title={error} onClick={e=>{e.stopPropagation();setRetry(n=>n+1);}}>页面加载失败，点击重试</button>:url?<img src={url} alt={alt} decoding="async"/>:<div className="thumbnail-placeholder" aria-label="正在加载页面" style={{background:visualPageBackground(page)}}/>}</div>;
 }

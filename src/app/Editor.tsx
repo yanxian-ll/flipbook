@@ -1,3 +1,4 @@
+import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
 import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent,type WheelEvent as ReactWheelEvent} from 'react';
 import {useNavigate,useParams} from 'react-router-dom';
 import {ChevronLeft,ChevronsLeft,ChevronsRight,Undo2,Redo2,Eye,Upload,Images,Grid2X2,Type,Sun,Plus,Sticker,Maximize2,Minimize2,Copy,Trash2,BookOpen,Palette,Check} from 'lucide-react';
@@ -13,14 +14,18 @@ import {ExportDialog} from '../export/ExportDialog';
 import {frameIsFixed} from '../domain/layouts';
 
 export function Editor(){
+  const workspaceStyle=useWorkspaceBackground(useEditor(s=>s.book));
   const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();
   const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[dragSpread,setDragSpread]=useState<number|null>(null),[dragOverSpread,setDragOverSpread]=useState<number|null>(null),[photoDraft,setPhotoDraft]=useState<string[]>([]),[photoLibraryOpen,setPhotoLibraryOpen]=useState(false),[templateLibraryOpen,setTemplateLibraryOpen]=useState(false);
+  const [spreadRoom,setSpreadRoom]=useState({width:0,height:0});
+  const spreadStage=useRef<HTMLDivElement>(null);
   const workspace=useRef<HTMLDivElement>(null),flipBook=useRef<EditorFlipBookHandle>(null),focusTrack=useRef<HTMLDivElement>(null),previewStrip=useRef<HTMLDivElement>(null),suppressSpreadClick=useRef(false);
   const panGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean}|null>(null);
   const wheelAccumulator=useRef(0),wheelLocked=useRef(false),wheelTimer=useRef<number|null>(null);
 
   useEffect(()=>{let live=true;setLoading(true);void repository.get(bookId!).then(book=>{if(!live)return;s.load(book);setLoading(false);}).catch(e=>{setError(friendlyError(e));setLoading(false);});return()=>{live=false;void useEditor.getState().flush().catch(()=>{});clearImageCache();};},[bookId]);
   useEffect(()=>{if(!workspace.current)return;const observer=new ResizeObserver(entries=>{setViewWidth(entries[0].contentRect.width);setViewHeight(entries[0].contentRect.height);});observer.observe(workspace.current);return()=>observer.disconnect();},[loading,wide,panel]);
+  useEffect(()=>{const node=spreadStage.current;if(!node)return;const observer=new ResizeObserver(entries=>{const {width,height}=entries[0].contentRect;setSpreadRoom({width,height});});observer.observe(node);return()=>observer.disconnect();},[loading]);
   useEffect(()=>{const state=useEditor.getState(),page=state.book?.pages[state.pageIndex];if(!page)return;setPhotoDraft([...new Set(page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id))]);},[s.pageIndex,s.book?.pages[s.pageIndex]?.id]);
   useEffect(()=>()=>{if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);},[]);
   useEffect(()=>{const strip=previewStrip.current;if(!strip)return;const selected=strip.querySelector<HTMLElement>('.selected');if(!selected)return;const left=selected.getBoundingClientRect().left-strip.getBoundingClientRect().left+strip.scrollLeft-(strip.clientWidth-selected.offsetWidth)/2;strip.scrollTo({left:Math.max(0,left),behavior:Math.abs(left-strip.scrollLeft)>strip.clientWidth?'auto':'smooth'});},[s.pageIndex,zoomMode,s.book?.pages.length]);
@@ -40,7 +45,7 @@ export function Editor(){
   const neighborPage=neighborIndex>=0?book.pages[neighborIndex]:undefined;
   const showSingleAdd=s.pageIndex>0&&!neighborPage;
   const peek=.13;
-  const spreadUnitWidth=Math.min(wide?390:170,(viewWidth-54)/2,Math.max(120,viewHeight-215)/1.4133);
+  const spreadUnitWidth=Math.max(40,Math.min(wide?390:170,((spreadRoom.width||viewWidth)-32)/2,Math.max(60,(spreadRoom.height||viewHeight-215)-20)/1.4133333333));
   const singleWidthRoom=(viewWidth*.94)/(neighborPage||showSingleAdd?1+peek:1);
   const singleHeightRoom=Math.max(240,viewHeight-174)/1.4133333333;
   const pageCanvasWidth=Math.max(180,Math.min(wide?720:620,singleWidthRoom,singleHeightRoom));
@@ -131,6 +136,7 @@ export function Editor(){
   function cancelPan(e:ReactPointerEvent<HTMLDivElement>){const g=panGesture.current;if(!g||g.pointerId!==e.pointerId)return;if(g.started)finishPan(false);else panGesture.current=null;}
   function openTool(next:PanelId){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
+    if(next==='photos'&&currentPage?.type==='cover')setPhotoDraft(currentPage.elements.filter(e=>e.type==='image'&&e.assetId).map(e=>e.assetId!));
     const sideLibraries=wide&&viewWidth>=700&&currentPage?.type!=='cover';
     if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(true);return;}
     if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(true);return;}
@@ -139,6 +145,7 @@ export function Editor(){
   }
   function toggleTool(next:PanelId){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
+    if(next==='photos'&&currentPage?.type==='cover')setPhotoDraft(currentPage.elements.filter(e=>e.type==='image'&&e.assetId).map(e=>e.assetId!));
     const sideLibraries=wide&&viewWidth>=700&&currentPage?.type!=='cover';
     if(sideLibraries&&next==='photos'){
       setPanel(null);
@@ -171,12 +178,12 @@ export function Editor(){
   const bothSideOpen=photoSideOpen&&templateSideOpen;
   const compactPanel=sideLibraries?(panel&&panel!=='photos'&&panel!=='layouts'?panel:null):(panel??(photoLibraryOpen?'photos':templateLibraryOpen?'layouts':null));
   return <main className={`phone-shell studio ${wide?'expanded':''} ${bothSideOpen?'libraries-open':''} ${photoSideOpen?'photo-library-open':''} ${templateSideOpen?'template-library-open':''}`}><header className="studio-header"><IconButton label="返回书架" onClick={()=>void leave('/')}><ChevronLeft size={21}/></IconButton><input className="editor-title" aria-label="画册名称" value={book.title} onChange={e=>s.change(b=>{b.title=e.target.value;})}/><IconButton label={wide?'收起工作区':'展开工作区'} onClick={()=>setWide(!wide)}>{wide?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</IconButton></header><ErrorMessage message={error||s.error}/>
-    <div className="editor-workspace" ref={workspace} style={{backgroundColor:book.workspaceBackground}}>
+    <div className="editor-workspace" ref={workspace} style={workspaceStyle}>
       <div className="workspace-toolbar"><div className="toolbar-pill"><IconButton label="撤销" disabled={!s.past.length} onClick={s.undo}><Undo2 size={16}/></IconButton><IconButton label="重做" disabled={!s.future.length} onClick={s.redo}><Redo2 size={16}/></IconButton></div><div className="toolbar-pill">{page.type==='cover'&&<IconButton label="封面设置" onClick={()=>toggleTool('cover')}><BookOpen size={16}/></IconButton>}<IconButton label="垫底背景" onClick={()=>toggleTool('background')}><Palette size={16}/></IconButton><IconButton label="翻页预览" onClick={()=>void leave(`/preview/${book.id}`)}><Eye size={16}/></IconButton><IconButton label="导出 Flipbook" onClick={()=>setExporting(true)}><Upload size={16}/></IconButton></div></div>
       <div className="view-mode-switch" role="group" aria-label="页面显示模式"><button type="button" className={zoomMode==='spread'?'active':''} aria-pressed={zoomMode==='spread'} onClick={()=>changeViewMode('spread')}>双页</button><button type="button" className={zoomMode==='page'?'active':''} aria-pressed={zoomMode==='page'} onClick={()=>changeViewMode('page')}>单页</button></div>
       <div className="save-status" role="status">{s.status==='saved'?<><Check size={10}/>已保存</>:s.status==='saving'?'保存中…':<button onClick={()=>void s.flush().catch(()=>{})}>保存失败，点此重试</button>}</div>
       {selected&&!frameIsFixed(page,selected)&&<div className="context-toolbar"><IconButton label="复制元素" onClick={s.duplicateSelected}><Copy size={16}/></IconButton><IconButton label="删除元素" onClick={s.deleteSelected}><Trash2 size={16}/></IconButton></div>}
-      <div className={`spread-area native-book-stage ${panel||photoSideOpen||templateSideOpen?'panel-open':''} zoom-${zoomMode}`} onWheelCapture={handlePageWheel} title={zoomMode==='spread'?'滚轮切换跨页；点击另一页切换编辑页；拖书角或两侧翻页':'滚轮逐页切换；单页编辑；旁边保留同跨页预览'}>
+      <div ref={spreadStage} className={`spread-area native-book-stage ${panel||photoSideOpen||templateSideOpen?'panel-open':''} zoom-${zoomMode}`} onWheelCapture={handlePageWheel} title={zoomMode==='spread'?'滚轮切换跨页；点击另一页切换编辑页；拖书角或两侧翻页':'滚轮逐页切换；单页编辑；旁边保留同跨页预览'}>
         {zoomMode==='spread'
           ?<EditorFlipBook
             ref={flipBook}
@@ -208,7 +215,7 @@ export function Editor(){
             :<div className="focused-book-shell single-page-editor-shell" style={{width:focusWindowWidth,height:pageHeight}}>
               <div ref={focusTrack} className="spread book-track focused-book-track" style={{width:focusTrackWidth,flexDirection:visualReverse?'row-reverse':'row',transform:`translateX(${focusedShift}px)`}}>
                 <div className={`active-page book-page book-page-${activeSide}`}><EditorCanvas page={page} width={pageCanvasWidth} onTextEdit={()=>openTool('text')} onCrop={()=>openTool('photos')} onImageSelect={()=>openTool('photos')} onBackgroundClick={()=>openTool('photos')}/></div>
-                {neighborPage&&<button className={`paired-page book-page book-page-${pairSide}`} aria-label={`编辑第 ${neighborIndex} 页`} style={{width:pageCanvasWidth}} onClick={()=>{selectPage(neighborIndex);if(!neighborPage.elements.some(element=>element.type==='image'))requestAnimationFrame(()=>openTool('photos'));}}><PageThumbnail page={neighborPage} scale={.5}/></button>}
+                {neighborPage&&<button className={`paired-page book-page book-page-${pairSide}`} aria-label={`编辑第 ${neighborIndex} 页`} style={{width:pageCanvasWidth}} onClick={()=>{selectPage(neighborIndex);if(!neighborPage.elements.some(element=>element.type==='image'))requestAnimationFrame(()=>openTool('photos'));}}><PageThumbnail page={neighborPage} scale={.5} immediate/></button>}
                 {showSingleAdd&&<button className="paired-page book-page book-page-right empty-spread-page" aria-label="添加下一页" style={{width:pageCanvasWidth}} onClick={addPageAndOpenPhotos}><Plus size={28}/></button>}
                 {(neighborPage||showSingleAdd)&&<div className="spine-shadow"/>}
               </div>
@@ -223,7 +230,7 @@ export function Editor(){
     <nav className="editor-tools">{tools.map(([id,Icon,label])=>{const selectedTool=id==='photos'?(photoSideOpen||compactPanel==='photos'):id==='layouts'?(templateSideOpen||compactPanel==='layouts'):compactPanel===id;return <button key={id} className={selectedTool?'selected':''} onClick={()=>toggleTool(id)}><Icon size={21} strokeWidth={1.6}/><span>{label}</span></button>;})}</nav>
     {photoSideOpen&&<EditorPanel key={`${page.id}:photos`} panel="photos" placement="left" paired={bothSideOpen} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setPhotoLibraryOpen(false);if(panel==='photos')setPanel(null);}}/>}
     {templateSideOpen&&<EditorPanel key={`${page.id}:layouts`} panel="layouts" placement="right" paired={bothSideOpen} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setTemplateLibraryOpen(false);if(panel==='layouts')setPanel(null);}}/>}
-    {compactPanel&&<EditorPanel key={`${page.id}:${compactPanel}`} panel={page.type==='cover'&&compactPanel==='layouts'?'cover':page.type!=='cover'&&compactPanel==='cover'?'layouts':compactPanel} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}}/>}
+    {compactPanel&&<EditorPanel key={`${page.id}:${compactPanel}`} panel={page.type==='cover'&&(compactPanel==='layouts'||compactPanel==='page-background')?'cover':page.type!=='cover'&&compactPanel==='cover'?'layouts':compactPanel} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}}/>}
     <ExportDialog book={book} open={exporting} onClose={()=>setExporting(false)}/>
   </main>;
 }

@@ -135,7 +135,7 @@ function EditorFlipBookInner(
   ref:ForwardedRef<EditorFlipBookHandle>
 ){
   const flip=useRef<any>(null);
-  const safeWidth=Math.max(120,Math.round(pageWidth));
+  const safeWidth=Math.max(40,Math.floor(pageWidth));
   const pageHeight=Math.round(safeWidth*1696/1200);
   const imageScale=Math.max(.24,Math.min(.5,safeWidth/1200*1.15));
   const lastReal=Math.max(0,book.pages.length-1);

@@ -40,7 +40,7 @@ function CoverContents({book,cropOverride,quality='thumbnail'}:{book:Book;cropOv
     <span className="cover-grain"/>
     <span className="cover-spine"/>
     {src&&<span className="cover-window"><img className="cover-window-image" src={src} alt="画册封面照片" style={coverCropStyle(shownImage)}/></span>}
-    <span className="cover-caption">{cover.elements.find(element=>element.type==='text')?.text??'TIME TO FLIPBOOK'}</span>
+    <span className="cover-caption" style={{color:cover.elements.find(element=>element.type==='text')?.color}}>{cover.elements.find(element=>element.type==='text')?.text??'TIME TO FLIPBOOK'}</span>
   </>;
 }
 

@@ -86,7 +86,7 @@ export const useEditor=create<EditorState>((set,get)=>({
         if(ids[0]){
           if(image){
             if(image.assetId!==ids[0])image.assetId=ids[0];
-          }else page.elements.unshift({id:uid(),type:'image',assetId:ids[0],x:414,y:360,width:372,height:498,rotation:0,opacity:1,frameLocked:true,crop:{x:.5,y:.5,zoom:1}});
+          }else page.elements.unshift(imageElement(ids[0],{...(b.coverTemplate==='basic'?{x:80,y:100,width:1040,height:1300}:{x:414,y:360,width:372,height:498}),frameLocked:true}));
         }
         return;
       }
@@ -127,6 +127,7 @@ export const useEditor=create<EditorState>((set,get)=>({
     const removeSet=new Set(removing);
     const next=produce(currentBook,draft=>{
       draft.assets=draft.assets.filter(asset=>!removeSet.has(asset.id));
+      if(draft.workspaceImageId&&removeSet.has(draft.workspaceImageId))draft.workspaceImageId=undefined;
       for(const page of draft.pages){
         page.elements=page.elements.filter(element=>!(element.type==='image'&&element.assetId&&removeSet.has(element.assetId)));
       }

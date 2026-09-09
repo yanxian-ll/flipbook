@@ -25,6 +25,7 @@ export interface Book {
   coverPageId: string; pages: Page[]; assets: Asset[]; createdAt: number; updatedAt: number;
   version: number; workspaceBackground: string; coverTemplate: 'basic' | 'cutout';
   defaultPageBackground?: string;
+  workspacePattern?: string; workspaceImageId?: string;
   customLayouts?: Layout[];
 }
 export interface StoredAsset extends Asset { original: Blob; preview: Blob; thumbnail: Blob }
