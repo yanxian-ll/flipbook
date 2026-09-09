@@ -34,14 +34,17 @@ const FlipLeaf=forwardRef<HTMLDivElement,LeafProps>(({book,index,kind,active,onS
 });
 FlipLeaf.displayName='FlipLeaf';
 
-export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
+type EditorFlipBookProps={
   book:Book;
   pageWidth:number;
   activeIndex:number;
   onFlip:(index:number)=>void;
   onSelect:(index:number)=>void;
   onAddPage:()=>void;
-}>(({book,pageWidth,activeIndex,onFlip,onSelect,onAddPage},ref)=>{
+};
+
+export const EditorFlipBook=forwardRef<EditorFlipBookHandle,EditorFlipBookProps>(
+  ({book,pageWidth,activeIndex,onFlip,onSelect,onAddPage},ref)=>{
   const flip=useRef<any>(null);
   const pageHeight=Math.round(pageWidth*1696/1200);
   const imageScale=Math.max(.24,Math.min(.5,pageWidth/1200*1.15));
@@ -97,5 +100,6 @@ export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
       {synthetic}
     </HTMLFlipBook>
   </div>;
-});
+  }
+);
 EditorFlipBook.displayName='EditorFlipBook';
