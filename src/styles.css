@@ -1088,3 +1088,137 @@
     right:319px;
   }
 }
+
+/* Large-desktop density: make browser 100% match the comfortable zoomed editor scale. */
+@media(min-width:1500px){
+  .studio.expanded{
+    max-width:min(1520px,96vw);
+  }
+
+  /* Side libraries grow with the desktop canvas instead of staying phone-sized. */
+  .studio.expanded .editor-panel.panel-left,
+  .studio.expanded .editor-panel.panel-right{
+    width:360px;
+  }
+  .studio.expanded.photo-library-open{--editor-left-library:370px}
+  .studio.expanded.template-library-open{--editor-right-library:370px}
+  .studio.expanded.photo-library-open.template-library-open{
+    --editor-left-library:370px;
+    --editor-right-library:370px;
+  }
+  .studio.expanded.photo-library-open .spread-area{left:370px}
+  .studio.expanded.template-library-open .spread-area{right:370px}
+  .studio.expanded.photo-library-open.template-library-open .spread-area{left:370px;right:370px}
+
+  /* Template-open toolbar remains immediately to the left of the wider right panel. */
+  .studio.expanded.template-library-open .workspace-toolbar{right:386px}
+  .studio.expanded.template-library-open .save-status{right:389px}
+
+  /* Preview rail follows the same enlarged desktop geometry. */
+  .studio .clean-page-strip{
+    width:min(950px,calc(100% - 40px))!important;
+    padding:9px 12px!important;
+  }
+  .studio.expanded.photo-library-open:not(.template-library-open) .clean-page-strip{
+    left:calc(50% + 185px)!important;
+    width:min(950px,calc(100% - 410px))!important;
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) .clean-page-strip{
+    left:calc(50% - 185px)!important;
+    width:min(950px,calc(100% - 410px))!important;
+  }
+  .studio.expanded.photo-library-open.template-library-open .clean-page-strip,
+  .studio.expanded.libraries-open .clean-page-strip{
+    left:50%!important;
+    width:min(950px,calc(100% - 770px))!important;
+  }
+  .studio .clean-page-strip .page-strip-track{gap:9px}
+  .studio .clean-page-strip .page-strip-track>button{height:55px}
+  .studio .clean-page-strip .page-strip-track>.cover-spread-thumb{width:39px;min-width:39px}
+
+  /* Editor chrome and panel typography match the zoomed visual density. */
+  .studio .editor-title{font-size:16px}
+  .studio.expanded .editor-tools{gap:50px}
+  .studio .editor-tools button{
+    min-width:62px;
+    gap:7px;
+    padding:9px;
+    font-size:12.5px;
+  }
+  .studio .editor-tools button svg{width:25px;height:25px}
+
+  .studio.expanded .editor-panel header{padding:10px 22px}
+  .studio.expanded .editor-panel header h2{font-size:17px}
+  .studio.expanded .editor-panel header .icon-btn{width:36px;height:36px}
+  .studio.expanded .editor-panel header .icon-btn svg{width:21px;height:21px}
+  .studio.expanded .panel-body{padding:0 20px 24px}
+
+  .studio.expanded .muted{font-size:13px}
+  .studio.expanded .field{font-size:13px}
+  .studio.expanded .field select{font-size:13px}
+  .studio.expanded .field-label{font-size:12px}
+
+  .studio.expanded .asset-batches{gap:22px;margin-top:18px}
+  .studio.expanded .asset-batch-header{
+    margin-bottom:11px;
+    font-size:12px;
+  }
+  .studio.expanded .asset-batch-header small{font-size:11px}
+  .studio.expanded .asset-grid{gap:10px}
+  .studio.expanded .asset-batch-selected{
+    padding:12px;
+    border-radius:12px;
+  }
+  .studio.expanded .asset-grid .asset-selection-index{
+    width:28px;
+    height:28px;
+    font-size:14px;
+  }
+
+  .studio.expanded .photo-library-actions{
+    gap:9px;
+    margin:22px -20px -24px;
+    padding:12px 20px 16px;
+  }
+  .studio.expanded .photo-library-actions .btn{
+    padding:11px 8px;
+    font-size:13px;
+  }
+  .studio.expanded .photo-library-actions svg{width:18px;height:18px}
+
+  .studio.expanded .template-count-tabs{
+    gap:6px;
+    margin:12px 0 15px;
+  }
+  .studio.expanded .template-count-tabs button{
+    padding:8px 5px;
+    border-radius:7px;
+    font-size:12px;
+  }
+  .studio.expanded .panel-right .layout-grid{gap:11px}
+  .studio.expanded .layout-grid button{padding:5px}
+  .studio.expanded .layout-grid small,
+  .studio.expanded .layout-card-meta small{font-size:10px}
+  .studio.expanded .layout-card-meta em{font-size:10px}
+
+  .studio .view-mode-switch{
+    padding:4px;
+    border-radius:12px;
+  }
+  .studio .view-mode-switch button{
+    min-width:68px;
+    height:35px;
+    padding:0 15px;
+    border-radius:9px;
+    font-size:13px;
+  }
+
+  .studio .workspace-toolbar{top:20px}
+  .studio .toolbar-pill{padding:3px}
+  .studio .toolbar-pill .icon-btn{width:40px;height:37px}
+  .studio .toolbar-pill .icon-btn svg{width:20px;height:20px}
+  .studio .save-status{
+    top:72px;
+    font-size:11px;
+  }
+}
