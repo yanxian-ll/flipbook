@@ -17,18 +17,19 @@ type LeafProps={
   book:Book;
   index:number;
   kind:'page'|'add'|'blank'|'back';
-  onFocus:(index:number)=>void;
+  active:boolean;
+  onSelect:(index:number)=>void;
   onAddPage:()=>void;
   scale:number;
 };
 
-const FlipLeaf=forwardRef<HTMLDivElement,LeafProps>(({book,index,kind,onFocus,onAddPage,scale},ref)=>{
+const FlipLeaf=forwardRef<HTMLDivElement,LeafProps>(({book,index,kind,active,onSelect,onAddPage,scale},ref)=>{
   if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-hidden/>;
   if(kind==='blank')return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
   if(kind==='add')return <div ref={ref} className="editor-flip-page editor-flip-add"><button aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={28}/></button></div>;
   const page=book.pages[index];
-  return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''}`} data-density={index===0?'hard':'soft'}>
-    {index===0?<BookCoverVisual book={book} className="editor-flip-cover-visual"/>:<><PageThumbnail page={page} scale={scale} immediate/><button className="editor-flip-focus-hit" aria-label={`放大并编辑第 ${index} 页`} onClick={()=>onFocus(index)}/></>}
+  return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''} ${active?'is-active-editor-page':''}`} data-density={index===0?'hard':'soft'}>
+    {index===0?<BookCoverVisual book={book} className="editor-flip-cover-visual"/>:<><PageThumbnail page={page} scale={scale} immediate/><button className="editor-flip-focus-hit" aria-label={`选择第 ${index} 页进行编辑`} aria-pressed={active} onClick={()=>onSelect(index)}/></>}
   </div>;
 });
 FlipLeaf.displayName='FlipLeaf';
@@ -38,9 +39,9 @@ export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
   pageWidth:number;
   activeIndex:number;
   onFlip:(index:number)=>void;
-  onFocus:(index:number)=>void;
+  onSelect:(index:number)=>void;
   onAddPage:()=>void;
-}>(({book,pageWidth,activeIndex,onFlip,onFocus,onAddPage},ref)=>{
+}>(({book,pageWidth,activeIndex,onFlip,onSelect,onAddPage},ref)=>{
   const flip=useRef<any>(null);
   const pageHeight=Math.round(pageWidth*1696/1200);
   const imageScale=Math.max(.24,Math.min(.5,pageWidth/1200*1.15));
@@ -48,6 +49,7 @@ export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
   const plusIndex=book.pages.length;
   const needsFiller=lastReal%2===0;
   const backIndex=plusIndex+(needsFiller?2:1);
+
   useImperativeHandle(ref,()=>({
     flipNext:()=>flip.current?.pageFlip().flipNext(),
     flipPrev:()=>flip.current?.pageFlip().flipPrev(),
@@ -56,14 +58,15 @@ export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
     current:()=>flip.current?.pageFlip().getCurrentPageIndex?.()??0,
   }),[lastReal]);
 
-  const synthetic=[];
-  synthetic.push(<FlipLeaf key="__add__" book={book} index={plusIndex} kind="add" onFocus={onFocus} onAddPage={onAddPage} scale={imageScale}/>);
-  if(needsFiller)synthetic.push(<FlipLeaf key="__blank__" book={book} index={plusIndex+1} kind="blank" onFocus={onFocus} onAddPage={onAddPage} scale={imageScale}/>);
-  synthetic.push(<FlipLeaf key="__back__" book={book} index={backIndex} kind="back" onFocus={onFocus} onAddPage={onAddPage} scale={imageScale}/>);
+  const synthetic=[
+    <FlipLeaf key="__add__" book={book} index={plusIndex} kind="add" active={false} onSelect={onSelect} onAddPage={onAddPage} scale={imageScale}/>,
+    ...(needsFiller?[<FlipLeaf key="__blank__" book={book} index={plusIndex+1} kind="blank" active={false} onSelect={onSelect} onAddPage={onAddPage} scale={imageScale}/>:[]),
+    <FlipLeaf key="__back__" book={book} index={backIndex} kind="back" active={false} onSelect={onSelect} onAddPage={onAddPage} scale={imageScale}/>,
+  ];
 
   return <div className={`editor-pageflip-shell ${activeIndex===0?'is-cover':''}`} style={{width:pageWidth*2,height:pageHeight}}>
     <HTMLFlipBook
-      key={`${book.id}:${book.pages.map(page=>page.id).join('.') }:${Math.round(pageWidth)}`}
+      key={`${book.id}:${book.pages.map(page=>page.id).join('.')}:${Math.round(pageWidth)}`}
       ref={flip}
       width={Math.round(pageWidth)}
       height={pageHeight}
@@ -90,7 +93,7 @@ export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
       style={{}}
       onFlip={(e:any)=>{const index=Number(e.data);if(Number.isFinite(index)&&index<=lastReal)onFlip(index);}}
     >
-      {book.pages.map((_,index)=><FlipLeaf key={book.pages[index].id} book={book} index={index} kind="page" onFocus={onFocus} onAddPage={onAddPage} scale={imageScale}/>)}
+      {book.pages.map((_,index)=><FlipLeaf key={book.pages[index].id} book={book} index={index} kind="page" active={activeIndex===index} onSelect={onSelect} onAddPage={onAddPage} scale={imageScale}/>)}
       {synthetic}
     </HTMLFlipBook>
   </div>;
