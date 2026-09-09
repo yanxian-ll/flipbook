@@ -12,7 +12,7 @@ interface EditorState {
   setPage:(index:number)=>void; updateElement:(id:string,patch:Partial<Element>)=>void;
   addElement:(element:Element)=>void; deleteSelected:()=>void; duplicateSelected:()=>void;
   copy:()=>void; paste:()=>void; undo:()=>void; redo:()=>void;
-  addPage:()=>void; removePage:()=>void; duplicatePage:()=>void; reorderPage:(from:number,to:number)=>void;
+  addPage:()=>void; removePage:()=>void; duplicatePage:()=>void; reorderPage:(from:number,to:number)=>void; reorderSpread:(fromStart:number,toStart:number)=>void;
   layout:(id:string)=>void; setPhotos:(ids:string[])=>void; addAssets:(assets:StoredAsset[])=>Promise<void>; flush:()=>Promise<void>;
 }
 let saveTimer:ReturnType<typeof setTimeout>|undefined;
@@ -36,6 +36,23 @@ export const useEditor=create<EditorState>((set,get)=>({
   removePage(){if(get().pageIndex===0)return;const index=get().pageIndex;get().change(b=>{b.pages.splice(index,1);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index-1);},
   duplicatePage(){const index=get().pageIndex;if(index===0)return;get().change(b=>{const page=structuredClone(current(b.pages[index]));page.id=uid();page.elements=page.elements.map(e=>({...e,id:uid()}));b.pages.splice(index+1,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index+1);},
   reorderPage(from,to){if(from===0||to===0||from===to)return;get().change(b=>{const [page]=b.pages.splice(from,1);b.pages.splice(to,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(to);},
+  reorderSpread(fromStart,toStart){
+    if(fromStart<1||toStart<1||fromStart===toStart)return;
+    const book=get().book;if(!book)return;
+    const last=book.pages.length-1;
+    const from=Math.max(1,Math.min(fromStart,last)),to=Math.max(1,Math.min(toStart,last));
+    const fromCount=Math.min(2,last-from+1);
+    const targetStart=to;
+    get().change(b=>{
+      const moved=b.pages.splice(from,fromCount);
+      let insertAt=targetStart;
+      if(from<targetStart)insertAt=Math.max(1,targetStart-fromCount);
+      b.pages.splice(insertAt,0,...moved);
+      b.pages.forEach((p,i)=>p.order=i);
+    });
+    const nextStart=from<targetStart?Math.max(1,targetStart-fromCount):targetStart;
+    get().setPage(nextStart);
+  },
   layout(id){const layout=[...layouts,...(get().book?.customLayouts??[])].find(l=>l.id===id);if(!layout)return;get().change(b=>{b.pages[get().pageIndex]=applyLayout(b.pages[get().pageIndex],layout);});set({selected:[]});},
   setPhotos(ids){const layout=defaultLayout(ids.length);get().change(b=>{const page=b.pages[get().pageIndex];if(page.type==='cover'){const image=page.elements.find(e=>e.type==='image');if(ids[0]){if(image){image.assetId=ids[0];image.crop={x:.5,y:.5,zoom:1};}else page.elements.unshift({id:uid(),type:'image',assetId:ids[0],x:414,y:360,width:372,height:498,rotation:0,opacity:1,frameLocked:true,crop:{x:.5,y:.5,zoom:1}});}return;}b.pages[get().pageIndex]=applyLayout(page,layout,ids);});set({selected:[]});},
   async addAssets(assets){await repository.putAssets(assets);get().change(b=>{b.assets.push(...assets.map(assetMetadata));});},
