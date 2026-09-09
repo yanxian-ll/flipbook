@@ -83,10 +83,18 @@ export const useEditor=create<EditorState>((set,get)=>({
       const page=b.pages[get().pageIndex];
       if(page.type==='cover'){
         const image=page.elements.find(e=>e.type==='image');
-        if(ids[0]){
-          if(image){
-            if(image.assetId!==ids[0])image.assetId=ids[0];
-          }else page.elements.unshift(imageElement(ids[0],{...(b.coverTemplate==='basic'?{x:80,y:100,width:1040,height:1300}:{x:414,y:360,width:372,height:498}),frameLocked:true}));
+        if(!ids[0]){
+          page.elements=page.elements.filter(e=>e.type!=='image');
+          return;
+        }
+        if(image){
+          if(image.assetId!==ids[0])image.assetId=ids[0];
+        }else{
+          const custom=b.customCoverTemplates?.find(template=>template.id===b.coverTemplate);
+          const slot=custom?.slot??(b.coverTemplate==='basic'
+            ?{x:80/W,y:100/H,width:1040/W,height:1300/H}
+            :{x:414/W,y:360/H,width:372/W,height:498/H});
+          page.elements.unshift(imageElement(ids[0],{x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape}));
         }
         return;
       }
