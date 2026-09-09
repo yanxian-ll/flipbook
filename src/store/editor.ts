@@ -1,7 +1,7 @@
 import {create} from 'zustand';
 import {produce,current} from 'immer';
 import {repository,friendlyError} from '../db/repository';
-import {type Book,type Element,type StoredAsset,blankPage,imageElement,uid,W,H} from '../domain/model';
+import {type Book,type Element,type StoredAsset,blankPage,imageElement,textElement,uid,W,H} from '../domain/model';
 import {assetMetadata} from '../domain/assets';
 import {applyLayout,layouts,defaultLayout,fitAssetIds,frameIsFixed} from '../domain/layouts';
 type Status='saved'|'saving'|'error';
@@ -24,16 +24,30 @@ export const useEditor=create<EditorState>((set,get)=>({
     clearTimeout(saveTimer);
     const normalized=structuredClone(book);
     normalized.defaultPageBackground??=normalized.pages.find(page=>page.type==='normal'&&!page.layoutId)?.background??'#eeeae3';
+    let migratedTemplateTexts=false;
     for(const page of normalized.pages){
-      if(page.type!=='normal'||!page.layoutId||page.templateBackground)continue;
+      if(page.type!=='normal'||!page.layoutId)continue;
       const layout=[...layouts,...(normalized.customLayouts??[])].find(item=>item.id===page.layoutId);
-      const templateBg=layout?.background?.startsWith('rgba(')?'#ffffff':layout?.background;
-      if(templateBg&&page.background===templateBg){
-        page.background=normalized.defaultPageBackground;
-        page.templateBackground=templateBg;
+      if(!page.templateBackground){
+        const templateBg=layout?.background?.startsWith('rgba(')?'#ffffff':layout?.background;
+        if(templateBg&&page.background===templateBg){
+          page.background=normalized.defaultPageBackground;
+          page.templateBackground=templateBg;
+        }
+      }
+      for(const text of layout?.texts??[]){
+        if(page.elements.some(element=>element.type==='text'&&element.templateTextKey===text.key))continue;
+        page.elements.push(textElement(text.text,{
+          x:text.x*W,y:text.y*H,width:Math.max(text.width*W,10),height:Math.max(text.height*H+4,10),
+          fontSize:text.fontSize*W,fontFamily:text.fontFamily,fontWeight:text.fontWeight,fontStyle:text.fontStyle,
+          color:text.color,align:text.align==='center'?'center':text.align==='right'?'right':'left',
+          lineHeight:text.lineHeight,letterSpacing:text.letterSpacing*W/320,templateTextKey:text.key
+        }));
+        migratedTemplateTexts=true;
       }
     }
-    set({book:normalized,pageIndex:0,selected:[],past:[],future:[],status:'saved',error:'',revision:0});
+    set({book:normalized,pageIndex:0,selected:[],past:[],future:[],status:migratedTemplateTexts?'saving':'saved',error:'',revision:migratedTemplateTexts?1:0});
+    if(migratedTemplateTexts)schedule();
   },
   change(recipe){const current=get().book;if(!current)return;const next=produce(current,draft=>{recipe(draft);draft.updatedAt=Date.now();});set(s=>({book:next,past:[...s.past.slice(-79),current],future:[],status:'saving',revision:s.revision+1}));schedule();},
   select(id,multi=false){set(s=>({selected:id?(multi?(s.selected.includes(id)?s.selected.filter(x=>x!==id):[...s.selected,id]):[id]):[]}));},
