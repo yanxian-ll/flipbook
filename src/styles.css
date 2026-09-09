@@ -341,12 +341,7 @@
   box-shadow:0 20px 38px #00000022;
   background:#fff;
 }
-.single-page-editor-shell .active-page,
-.single-page-editor-shell .page-canvas,
-.single-page-editor-shell canvas{
-  width:100%;
-  height:100%;
-}
+.single-page-editor-shell .page-canvas{height:100%;}
 .single-page-editor-shell .active-page{cursor:default}
 @media(max-width:699px){
   .view-mode-switch{top:58px}
