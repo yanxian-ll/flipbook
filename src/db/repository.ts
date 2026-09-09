@@ -15,6 +15,15 @@ export const repository = {
   async duplicate(id:string){const book=await this.get(id);const copy=structuredClone(book);copy.id=uid();copy.title+=' 副本';copy.createdAt=copy.updatedAt=Date.now();await this.save(copy);return copy;},
   getAsset:(id:string)=>db.assets.get(id),
   putAssets:(assets:StoredAsset[])=>db.assets.bulkPut(assets),
+  async removeAssets(ids:string[]){
+    const unique=[...new Set(ids)];
+    if(!unique.length)return;
+    await db.transaction('rw',db.books,db.assets,async()=>{
+      const books=await db.books.toArray();
+      const used=new Set(books.flatMap(book=>book.assets.map(asset=>asset.id)));
+      await db.assets.bulkDelete(unique.filter(id=>!used.has(id)));
+    });
+  },
   async initialized(){return !!(await db.settings.get('initialized'));},
   async markInitialized(){await db.settings.put({key:'initialized',value:true});},
 };
