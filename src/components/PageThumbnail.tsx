@@ -3,6 +3,7 @@ import {useEffect,useLayoutEffect,useRef,useState} from 'react';
 import {visualPageBackground,type Page} from '../domain/model';
 import {renderPage} from '../editor/renderer';
 const renderQueue=createWorkQueue(2);
+const visibleRenderQueue=createWorkQueue(2);
 const cache=new WeakMap<Page,Map<number,Blob>>();
 const pending=new WeakMap<Page,Map<number,Promise<Blob>>>();
 const immediatePending=new WeakMap<Page,Map<number,Promise<Blob>>>();
@@ -22,7 +23,7 @@ function preloadImmediatePageThumbnail(page:Page,scale:number):Promise<Blob>{
   const hit=cached(page,scale);if(hit)return Promise.resolve(hit);
   if(!immediatePending.has(page))immediatePending.set(page,new Map());
   const existing=immediatePending.get(page)!.get(scale);if(existing)return existing;
-  const task=renderPage(page,{scale,quality:scale<=.2?'thumbnail':'preview'})
+  const task=visibleRenderQueue(()=>renderPage(page,{scale,quality:scale<=.2?'thumbnail':'preview'}))
     .then(blob=>store(page,scale,blob))
     .finally(()=>immediatePending.get(page)?.delete(scale));
   immediatePending.get(page)!.set(scale,task);
