@@ -1,8 +1,16 @@
 import {type Asset,type Page,type Book,type ThemeId,blankPage,imageElement,textElement,W,H} from './model';
 import catalog from './templates/reference-layouts.json';
+import overlayTexts from './templates/overlay-texts.json';
 export interface Slot {x:number;y:number;width:number;height:number;shape?:'ellipse'}
-export interface Layout {id:string;name:string;minImages:number;maxImages:number;slots:Slot[];family?:string;background?:string;overlay?:string;texts?:{x:number;y:number;width:number;height:number;key:string;text:string;fontFamily:string;fontSize:number;fontWeight:number;color:string;align:string;lineHeight:number;letterSpacing:number}[]}
-export const layouts=catalog as Layout[];
+export interface LayoutText {x:number;y:number;width:number;height:number;key:string;text:string;fontFamily:string;fontSize:number;fontWeight:number;fontStyle?:'normal'|'italic';color:string;align:string;lineHeight:number;letterSpacing:number}
+export interface Layout {id:string;name:string;minImages:number;maxImages:number;slots:Slot[];family?:string;background?:string;overlay?:string;texts?:LayoutText[]}
+const auditedOverlayTexts=overlayTexts as Record<string,LayoutText[]>;
+export const layouts=(catalog as Layout[]).map(layout=>{
+  const extra=auditedOverlayTexts[layout.id]??[];
+  if(!extra.length)return layout;
+  const existing=new Set((layout.texts??[]).map(text=>text.key));
+  return {...layout,texts:[...(layout.texts??[]),...extra.filter(text=>!existing.has(text.key))]};
+});
 const hidden=new Set(['empty','textOnly','quad4Zigzag','penta5Cascade','seven7Cascade','nineGrid','nine9GridNum','tpl2_p2_right','tpl2_p5_left']);
 export function layoutsForTheme(theme:ThemeId):Layout[]{
   const family=theme==='scrapbook'?'tpl1':'tpl2';
@@ -41,7 +49,7 @@ export function applyLayout(page:Page,layout:Layout,assetIds?:string[]):Page {
     const id=ids[i];if(!id)return [];
     return [imageElement(id,{id:oldImages[i]?.id??crypto.randomUUID(),x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape})];
   });
-  const texts=(layout.texts??[]).map(t=>textElement(t.text,{x:t.x*W,y:t.y*H,width:Math.max(t.width*W,10),height:Math.max(t.height*H+4,10),fontSize:t.fontSize*W,fontFamily:t.fontFamily,fontWeight:t.fontWeight,color:t.color,align:t.align==='center'?'center':t.align==='right'?'right':'left',lineHeight:t.lineHeight,letterSpacing:t.letterSpacing*W/320,templateTextKey:t.key}));
+  const texts=(layout.texts??[]).map(t=>textElement(t.text,{x:t.x*W,y:t.y*H,width:Math.max(t.width*W,10),height:Math.max(t.height*H+4,10),fontSize:t.fontSize*W,fontFamily:t.fontFamily,fontWeight:t.fontWeight,fontStyle:t.fontStyle,color:t.color,align:t.align==='center'?'center':t.align==='right'?'right':'left',lineHeight:t.lineHeight,letterSpacing:t.letterSpacing*W/320,templateTextKey:t.key}));
   return {...page,layoutId:layout.id,templateOverlay:layout.overlay,templateBackground:layoutVisualBackground(layout),pattern:undefined,elements:[...images,...texts]};
 }
 export function autoLayout(book:Book,assets:Asset[]):Book {
