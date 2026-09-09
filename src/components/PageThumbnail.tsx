@@ -1,5 +1,5 @@
 import {useLayoutEffect,useState} from 'react';
-import type {Page} from '../domain/model';
+import {visualPageBackground,type Page} from '../domain/model';
 import {renderPage} from '../editor/renderer';
 const cache=new WeakMap<Page,Map<number,Blob>>();
 const pending=new WeakMap<Page,Map<number,Promise<Blob>>>();
@@ -22,5 +22,5 @@ export function PageThumbnail({page,alt='页面预览',scale=.12,immediate=false
     else timer=setTimeout(()=>{void preloadPageThumbnail(page,scale).then(show).catch(()=>{});},200);
     return()=>{alive=false;if(timer)clearTimeout(timer);if(objectUrl)URL.revokeObjectURL(objectUrl);};
   },[page,scale,immediate]);
-  return url?<img src={url} alt={alt}/>:<div className="thumbnail-placeholder" style={{background:page.background}}/>;
+  return url?<img src={url} alt={alt}/>:<div className="thumbnail-placeholder" style={{background:visualPageBackground(page)}}/>;
 }
