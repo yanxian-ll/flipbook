@@ -3,7 +3,7 @@ import {produce,current} from 'immer';
 import {repository,friendlyError} from '../db/repository';
 import {type Book,type Element,type StoredAsset,blankPage,imageElement,textElement,uid,W,H} from '../domain/model';
 import {assetMetadata} from '../domain/assets';
-import {applyLayout,layouts,defaultLayout,fitAssetIds,frameIsFixed} from '../domain/layouts';
+import {applyLayout,layouts,defaultLayout,fitAssetIds,frameIsFixed,isSinglePhotoTemplateCaption,singlePhotoTemplateCaption} from '../domain/layouts';
 type Status='saved'|'saving'|'error';
 interface EditorState {
   book:Book|null; pageIndex:number; selected:string[]; past:Book[]; future:Book[];
@@ -131,6 +131,10 @@ export const useEditor=create<EditorState>((set,get)=>({
         });
         const nonTemplateElements=page.elements.filter(element=>element.type!=='image'||element.freeImage);
         page.elements=[...frames,...nonTemplateElements];
+        if(page.layoutId==='tpl2_p3_right'&&fitted[0]){
+          const caption=page.elements.find(element=>element.type==='text'&&element.templateTextKey==='caption');
+          if(caption&&isSinglePhotoTemplateCaption(caption.text??''))caption.text=singlePhotoTemplateCaption(fitted[0],page.id);
+        }
         return;
       }
 
