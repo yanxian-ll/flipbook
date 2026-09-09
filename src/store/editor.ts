@@ -32,7 +32,19 @@ export const useEditor=create<EditorState>((set,get)=>({
   duplicateSelected(){get().copy();get().paste();},
   undo(){const s=get();if(!s.past.length||!s.book)return;set({book:s.past.at(-1)!,past:s.past.slice(0,-1),future:[s.book,...s.future],selected:[],status:'saving',pageIndex:Math.min(s.pageIndex,s.past.at(-1)!.pages.length-1),revision:s.revision+1});schedule();},
   redo(){const s=get();if(!s.future.length||!s.book)return;set({book:s.future[0],past:[...s.past,s.book],future:s.future.slice(1),selected:[],status:'saving',revision:s.revision+1});schedule();},
-  addPage(){const index=get().pageIndex+1;get().change(b=>{b.pages.splice(index,0,blankPage(index));b.pages.forEach((p,i)=>p.order=i);});get().setPage(index);},
+  addPage(){
+    const index=get().pageIndex+1;
+    get().change(b=>{
+      const currentPage=b.pages[get().pageIndex];
+      const referencePage=currentPage?.type==='normal'
+        ?currentPage
+        :b.pages.find(page=>page.type==='normal');
+      const background=referencePage?.background??blankPage(index).background;
+      b.pages.splice(index,0,blankPage(index,background));
+      b.pages.forEach((p,i)=>p.order=i);
+    });
+    get().setPage(index);
+  },
   removePage(){if(get().pageIndex===0)return;const index=get().pageIndex;get().change(b=>{b.pages.splice(index,1);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index-1);},
   duplicatePage(){const index=get().pageIndex;if(index===0)return;get().change(b=>{const page=structuredClone(current(b.pages[index]));page.id=uid();page.elements=page.elements.map(e=>({...e,id:uid()}));b.pages.splice(index+1,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index+1);},
   reorderPage(from,to){if(from===0||to===0||from===to)return;get().change(b=>{const [page]=b.pages.splice(from,1);b.pages.splice(to,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(to);},
