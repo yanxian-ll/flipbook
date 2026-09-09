@@ -727,3 +727,97 @@
     padding-bottom:18px;
   }
 }
+
+/* Template count categories */
+.template-count-tabs{
+  display:grid;
+  grid-template-columns:repeat(5,minmax(0,1fr));
+  gap:5px;
+  margin:10px 0 12px;
+}
+.template-count-tabs button{
+  min-width:0;
+  padding:6px 4px;
+  border:0;
+  border-radius:6px;
+  background:transparent;
+  color:#999;
+  font-size:10px;
+}
+.template-count-tabs button:hover:not(:disabled){background:#f2f2f2;color:#333}
+.template-count-tabs button.active{background:#222;color:#fff}
+.template-count-tabs button:disabled{opacity:.28}
+
+/* Stable centered preview rails. Outer rail owns scrolling; inner track owns intrinsic width. */
+.studio .clean-page-strip{
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  width:min(760px,calc(100% - 32px))!important;
+  max-width:none!important;
+  justify-content:flex-start!important;
+  overflow-x:auto!important;
+  overflow-y:hidden!important;
+  padding:7px 10px!important;
+}
+.studio .clean-page-strip .page-strip-track{
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:7px;
+  width:max-content;
+  min-width:min-content;
+  margin:0 auto;
+}
+.studio .clean-page-strip .page-strip-track>button{
+  position:relative;
+  height:44px;
+  min-width:0;
+  flex:0 0 auto;
+  padding:0;
+  border:1.5px solid transparent;
+  border-radius:4px;
+  overflow:hidden;
+  background:transparent;
+}
+.studio .clean-page-strip .page-strip-track>button.selected{
+  border-color:#202020;
+  box-shadow:0 0 0 1px #fff;
+}
+.studio .clean-page-strip .page-strip-track>.cover-spread-thumb{width:31px;min-width:31px}
+.studio .clean-page-strip .page-strip-track>.spread-thumb{width:62px;min-width:62px}
+.studio .clean-page-strip .page-strip-track>.single-page-thumb{width:31px;min-width:31px}
+.studio .clean-page-strip .page-strip-track>.single-page-thumb img,
+.studio .clean-page-strip .page-strip-track>.single-page-thumb .thumbnail-placeholder{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+.studio .clean-page-strip .page-strip-track>.thumbnail-add-page{
+  display:grid;
+  place-items:center;
+  width:34px;
+  min-width:34px;
+  height:34px;
+  margin:0 2px;
+  border-radius:50%;
+  background:#fff;
+  color:#777;
+  border:1px solid #e2e2e2;
+  box-shadow:0 1px 4px #0000000d;
+}
+.studio .clean-page-strip .page-strip-track>.thumbnail-add-page:hover{background:#f5f5f5;color:#222;border-color:#ccc}
+
+/* Single-page preview rail needs reserved space below the larger page. */
+.studio .spread-area.zoom-page{bottom:78px}
+.studio.expanded .spread-area.zoom-page{bottom:78px}
+@media(max-height:670px){.studio .spread-area.zoom-page{bottom:70px}}
+
+/* Side libraries must not override the centered rail geometry. */
+@media(min-width:850px){
+  .studio.expanded.libraries-open .clean-page-strip{
+    left:50%!important;
+    right:auto!important;
+    width:min(760px,calc(100% - 630px))!important;
+  }
+}
