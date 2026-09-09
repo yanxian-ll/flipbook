@@ -5,7 +5,7 @@ export interface Slot {x:number;y:number;width:number;height:number;shape?:'elli
 export interface LayoutText {x:number;y:number;width:number;height:number;key:string;text:string;fontFamily:string;fontSize:number;fontWeight:number;fontStyle?:'normal'|'italic';color:string;align:string;lineHeight:number;letterSpacing:number}
 export interface Layout {id:string;name:string;minImages:number;maxImages:number;slots:Slot[];family?:string;background?:string;overlay?:string;texts?:LayoutText[]}
 const auditedOverlayTexts=overlayTexts as Record<string,LayoutText[]>;
-export const TEMPLATE_TEXT_SCHEMA=1;
+export const TEMPLATE_TEXT_SCHEMA=2;
 const hasAuditedOverlay=(id:string)=>Object.prototype.hasOwnProperty.call(auditedOverlayTexts,id);
 const cleanedOverlay=(layout:Layout)=>hasAuditedOverlay(layout.id)&&layout.overlay
   ?`/reference/templates-clean/${layout.id}.webp`
@@ -40,6 +40,10 @@ export function migrateBookTemplateTexts(value:Book){
     if(!needsSchema&&!needsOverlay)continue;
     const page=writable().pages[index];
     if(needsSchema){
+      if(source.layoutId==='tpl2_p1_left'){
+        const title=page.elements.find(element=>element.type==='text'&&element.templateTextKey==='title');
+        if(title&&['FLIPBOOK\nMOMENTS','FLIP IN\nMOMENTS'].includes(title.text??''))title.text='LIFE IN\nPAGES';
+      }
       const existing=new Set(page.elements.filter(element=>element.type==='text'&&element.templateTextKey).map(element=>element.templateTextKey!));
       for(const text of layout.texts??[])if(!existing.has(text.key))page.elements.push(layoutTextElement(text));
       page.templateTextSchema=TEMPLATE_TEXT_SCHEMA;
