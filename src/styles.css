@@ -1285,3 +1285,28 @@
   min-height:38px;
   resize:vertical;
 }
+
+
+/* Flipin-style export format chooser */
+.export-format-list{display:flex;flex-direction:column;gap:10px;margin-top:18px}
+.export-format-card{width:100%;min-height:58px;display:flex;align-items:center;gap:13px;padding:12px 16px;border-radius:13px;background:#f4f4f4;text-align:left;transition:background .15s,transform .15s}
+.export-format-card:hover{background:#ececec}
+.export-format-card:active{transform:scale(.985)}
+.export-format-card>svg{flex:0 0 auto;color:#444}
+.export-format-card>span{display:flex;flex-direction:column;gap:3px;min-width:0}
+.export-format-card b{font-size:13px;font-weight:700;color:#333}
+.export-format-card small{font-size:10px;color:#999;line-height:1.45}
+.export-back{display:inline-flex;align-items:center;gap:3px;margin:0 0 12px;color:#777;font-size:10px}
+.export-back:hover{color:#222}
+.export-current-format{display:flex;align-items:center;gap:10px;padding:11px 12px;margin-bottom:8px;border-radius:11px;background:#f7f7f7}
+.export-current-format>svg{flex:0 0 auto}
+.export-current-format>div{display:flex;min-width:0;flex-direction:column;gap:2px}
+.export-current-format b{font-size:12px}
+.export-current-format small{font-size:9px;line-height:1.45;color:#999}
+.export-collage-count{margin:15px 0 4px;padding:12px;border:1px solid #ececec;border-radius:12px;background:#fafafa}
+.export-collage-count>div:first-child{display:flex;flex-direction:column;gap:4px}
+.export-collage-count b{font-size:11px}
+.export-collage-count small{font-size:9px;color:#999}
+.export-collage-count .segments{margin:10px 0 0}
+.export-collage-count .btn{padding:9px 10px;font-size:10px}
+.export-hint{margin:12px 1px 0;color:#999;font-size:9px;line-height:1.65}
