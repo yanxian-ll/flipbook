@@ -9,7 +9,7 @@ export function imageCrop(element:Element,image:HTMLImageElement){
   return cropRect(element,{width:image.naturalWidth,height:image.naturalHeight},element.crop);
 }
 export function elementProps(e:Element){return {id:e.id,x:e.x,y:e.y,width:e.width,height:e.height,rotation:e.rotation,opacity:e.opacity,fill:e.color??'#252525',stroke:e.borderColor??'#fff',strokeWidth:e.border??0,shadowEnabled:!!e.shadow,shadowColor:'#000',shadowBlur:e.shadow?22:0,shadowOpacity:.18,shadowOffsetY:8};}
-export function textProps(e:Element){return {...elementProps(e),text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:e.fontWeight===700?'bold':'normal',align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
+export function textProps(e:Element){const style=[e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';return {...elementProps(e),text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:style,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
 export function frameClip(e:Element){return (ctx:Konva.Context)=>{ctx.beginPath();if(e.frameShape==='ellipse')ctx.ellipse(e.width/2,e.height/2,e.width/2,e.height/2,0,0,Math.PI*2);else ctx.rect(0,0,e.width,e.height);ctx.closePath();};}
 export function photoProps(e:Element,image:HTMLImageElement){const common={...elementProps(e),image,strokeWidth:0,strokeEnabled:false};if(e.fit==='contain'){const ratio=Math.min(e.width/image.naturalWidth,e.height/image.naturalHeight);return {...common,width:image.naturalWidth*ratio,height:image.naturalHeight*ratio};}return {...common,crop:imageCrop(e,image)};}
 const images=new Map<string,Promise<HTMLImageElement>>();
@@ -28,7 +28,7 @@ export function loadAssetImage(id:string,quality:'thumbnail'|'preview'|'original
 export function clearImageCache(){images.clear();imageBytes.clear();}
 const staticImages=new Map<string,Promise<HTMLImageElement>>();
 export function loadStaticImage(url:string){if(!staticImages.has(url))staticImages.set(url,fetch(url).then(response=>{if(!response.ok)throw new Error('背景素材加载失败');return response.blob();}).then(decodeImage).catch(e=>{staticImages.delete(url);throw e;}));return staticImages.get(url)!;}
-export async function loadPageFonts(page:Page){await Promise.all(page.elements.filter(e=>e.type==='text').map(e=>document.fonts.load(`${e.fontWeight===700?'bold ':''}${e.fontSize??60}px ${e.fontFamily??'Domine'}`).catch(()=>[])));}
+export async function loadPageFonts(page:Page){await Promise.all(page.elements.filter(e=>e.type==='text').map(e=>document.fonts.load(`${e.fontStyle==='italic'?'italic ':''}${e.fontWeight===700?'bold ':''}${e.fontSize??60}px ${e.fontFamily??'Domine'}`).catch(()=>[])));}
 export async function renderPage(page:Page,options:{scale?:number;quality?:'thumbnail'|'preview'|'original';mimeType?:'image/png'|'image/jpeg'}={}):Promise<Blob>{
   await loadPageFonts(page);
   const holder=document.createElement('div');const stage=new Konva.Stage({container:holder,width:W,height:H});const layer=new Konva.Layer();stage.add(layer);
