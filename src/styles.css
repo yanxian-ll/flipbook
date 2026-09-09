@@ -281,3 +281,9 @@
 .focus-edge-turn.disabled{pointer-events:none}
 .editor-cover-actions{z-index:20}
 @media(prefers-reduced-motion:reduce){.editor-pageflip-shell,.editor-flip-book{transition-duration:.01ms!important}}
+
+/* Spread thumbnail drag sorting */
+.studio .clean-page-strip .spread-thumb{cursor:grab;transition:transform .14s ease,opacity .14s ease,box-shadow .14s ease,border-color .14s ease}
+.studio .clean-page-strip .spread-thumb:active{cursor:grabbing}
+.studio .clean-page-strip .spread-thumb.dragging{opacity:.38;transform:scale(.94)}
+.studio .clean-page-strip .spread-thumb.drag-over{transform:translateY(-3px);border-color:#222;box-shadow:0 4px 12px #00000018}
