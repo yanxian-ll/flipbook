@@ -1,7 +1,7 @@
 import {Component,forwardRef,useEffect,useImperativeHandle,useRef,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import type {Book} from '../domain/model';
-import {BookCoverVisual} from './BookCover';
+import {BookCoverEditor,BookCoverVisual} from './BookCover';
 import {PageThumbnail} from './PageThumbnail';
 import {EditorCanvas} from '../editor/EditorCanvas';
 import {Plus} from 'lucide-react';
@@ -55,7 +55,9 @@ function FlipLeafInner(
 
   return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''}`} data-density={index===0?'hard':'soft'}>
     {index===0
-      ?<BookCoverVisual book={book} className="editor-flip-cover-visual"/>
+      ?active
+        ?<LiveEditorSurface><BookCoverEditor book={book} width={width} onTextEdit={onTextEdit} onImageSelect={onImageSelect}/></LiveEditorSurface>
+        :<BookCoverVisual book={book} className="editor-flip-cover-visual"/>
       :active
         ?<LiveEditorSurface>
           <EditorCanvas page={page} width={width} onTextEdit={onTextEdit} onCrop={onCrop} onImageSelect={onImageSelect}/>
@@ -100,7 +102,7 @@ function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTex
   const pageHeight=Math.round(pageWidth*1696/1200);
   if(activeIndex===0){
     return <div className="editor-pageflip-shell static-book-fallback is-cover" style={{width:pageWidth*2,height:pageHeight}}>
-      <div className="editor-fallback-cover" style={{width:pageWidth,height:pageHeight}}><BookCoverVisual book={book} className="editor-flip-cover-visual"/></div>
+      <div className="editor-fallback-cover" style={{width:pageWidth,height:pageHeight}}><BookCoverEditor book={book} width={pageWidth} onTextEdit={onTextEdit} onImageSelect={onImageSelect}/></div>
     </div>;
   }
   const leftIndex=activeIndex%2===1?activeIndex:activeIndex-1;
