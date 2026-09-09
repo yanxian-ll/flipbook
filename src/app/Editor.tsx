@@ -131,8 +131,8 @@ export function Editor(){
   function openTool(next:PanelId){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
     const sideLibraries=wide&&viewWidth>=700&&currentPage?.type!=='cover';
-    if(sideLibraries&&next==='photos'){setPhotoLibraryOpen(true);if(panel==='photos')setPanel(null);return;}
-    if(sideLibraries&&next==='layouts'){setTemplateLibraryOpen(true);if(panel==='layouts')setPanel(null);return;}
+    if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(true);return;}
+    if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(true);return;}
     if(next!=='photos'&&next!=='layouts'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
     setPanel(next);
   }
@@ -140,13 +140,13 @@ export function Editor(){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
     const sideLibraries=wide&&viewWidth>=700&&currentPage?.type!=='cover';
     if(sideLibraries&&next==='photos'){
+      setPanel(null);
       setPhotoLibraryOpen(open=>!open);
-      if(panel==='photos')setPanel(null);
       return;
     }
     if(sideLibraries&&next==='layouts'){
+      setPanel(null);
       setTemplateLibraryOpen(open=>!open);
-      if(panel==='layouts')setPanel(null);
       return;
     }
     if(next!=='photos'&&next!=='layouts'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
