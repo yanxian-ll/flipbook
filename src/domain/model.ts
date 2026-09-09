@@ -71,6 +71,7 @@ export function migrateLegacyBrandBook(value:Book){
     return next;
   };
   book.title=update(book.title);
+  for(const asset of book.assets)asset.name=update(asset.name);
   for(const page of book.pages){
     for(const element of page.elements){
       if(element.text)element.text=update(element.text);
