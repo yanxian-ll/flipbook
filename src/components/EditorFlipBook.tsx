@@ -24,6 +24,7 @@ type LeafProps={
   onAddPage:()=>void;
   onTextEdit:()=>void;
   onCrop:()=>void;
+  onImageSelect:()=>void;
   scale:number;
 };
 
@@ -40,7 +41,7 @@ function LiveEditorSurface({children}:{children:ReactNode}){
 }
 
 function FlipLeafInner(
-  {book,index,kind,active,width,onSelect,onAddPage,onTextEdit,onCrop,scale}:LeafProps,
+  {book,index,kind,active,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
   if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-hidden/>;
@@ -57,7 +58,7 @@ function FlipLeafInner(
       ?<BookCoverVisual book={book} className="editor-flip-cover-visual"/>
       :active
         ?<LiveEditorSurface>
-          <EditorCanvas page={page} width={width} onTextEdit={onTextEdit} onCrop={onCrop}/>
+          <EditorCanvas page={page} width={width} onTextEdit={onTextEdit} onCrop={onCrop} onImageSelect={onImageSelect}/>
         </LiveEditorSurface>
         :<>
           <PageThumbnail page={page} scale={scale} immediate/>
@@ -82,6 +83,7 @@ type EditorFlipBookProps={
   onAddPage:()=>void;
   onTextEdit:()=>void;
   onCrop:()=>void;
+  onImageSelect:()=>void;
 };
 
 type BoundaryProps={resetKey:string;fallback:ReactNode;children:ReactNode};
@@ -94,7 +96,7 @@ class FlipBookBoundary extends Component<BoundaryProps,{failed:boolean}>{
   render(){return this.state.failed?this.props.fallback:this.props.children;}
 }
 
-function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTextEdit,onCrop}:Omit<EditorFlipBookProps,'onFlip'>){
+function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect}:Omit<EditorFlipBookProps,'onFlip'>){
   const pageHeight=Math.round(pageWidth*1696/1200);
   if(activeIndex===0){
     return <div className="editor-pageflip-shell static-book-fallback is-cover" style={{width:pageWidth*2,height:pageHeight}}>
@@ -109,7 +111,7 @@ function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTex
     const active=index===activeIndex;
     return <div className={`editor-fallback-page ${side}`} style={{width:pageWidth,height:pageHeight}}>
       {active
-        ?<EditorCanvas page={page} width={pageWidth} onTextEdit={onTextEdit} onCrop={onCrop}/>
+        ?<EditorCanvas page={page} width={pageWidth} onTextEdit={onTextEdit} onCrop={onCrop} onImageSelect={onImageSelect}/>
         :<><PageThumbnail page={page} scale={.4} immediate/><button className="editor-flip-select-page" aria-label={`编辑第 ${index} 页`} onClick={()=>onSelect(index)}/></>}
     </div>;
   };
@@ -124,7 +126,7 @@ function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTex
 }
 
 function EditorFlipBookInner(
-  {book,pageWidth,activeIndex,onFlip,onSelect,onAddPage,onTextEdit,onCrop}:EditorFlipBookProps,
+  {book,pageWidth,activeIndex,onFlip,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect}:EditorFlipBookProps,
   ref:ForwardedRef<EditorFlipBookHandle>
 ){
   const flip=useRef<any>(null);
@@ -145,7 +147,7 @@ function EditorFlipBookInner(
   }),[lastReal]);
 
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
-  const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,scale:imageScale};
+  const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,scale:imageScale};
 
   const fallback=<StaticBookFallback
     book={book}
@@ -155,6 +157,7 @@ function EditorFlipBookInner(
     onAddPage={onAddPage}
     onTextEdit={onTextEdit}
     onCrop={onCrop}
+    onImageSelect={onImageSelect}
   />;
 
   if(!book.pages.length)return fallback;
