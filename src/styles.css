@@ -1047,3 +1047,18 @@
     top:132px!important;
   }
 }
+
+/* Reorder selected page photos by dragging their numbered tiles. */
+.asset-batch-selected .asset-grid button[draggable="true"]{
+  cursor:grab;
+  transition:transform .12s ease,opacity .12s ease,box-shadow .12s ease;
+}
+.asset-batch-selected .asset-grid button[draggable="true"]:active{cursor:grabbing}
+.asset-batch-selected .asset-grid button.asset-tile-dragging{
+  opacity:.35;
+  transform:scale(.94);
+}
+.asset-batch-selected .asset-grid button.asset-tile-drag-over{
+  transform:translateY(-3px);
+  box-shadow:0 0 0 2px #222,0 5px 12px #0002;
+}
