@@ -380,7 +380,7 @@
         "key": "body",
         "letterSpacing": 0.3,
         "lineHeight": 1.8,
-        "text": "Daily Flipin 𐃆·̩͙₊˚⊹\nFlip in my feelings and\nmemories.",
+        "text": "Daily Flipbook 𐃆·̩͙₊˚⊹\nFlip in my feelings and\nmemories.",
         "width": 0.5400390625,
         "x": 0.0599609375,
         "y": 0.2799709623893805
@@ -422,7 +422,7 @@
     "id": "dual2Music",
     "maxImages": 2,
     "minImages": 2,
-    "name": "并排Flipin",
+    "name": "并排Flipbook",
     "slots": [
       {
         "height": 0.29998617256637167,
@@ -448,7 +448,7 @@
         "key": "music",
         "letterSpacing": 0.4,
         "lineHeight": 1.2,
-        "text": "Flipin*",
+        "text": "Flipbook*",
         "width": 0.090869140625,
         "x": 0.799169921875,
         "y": 0.21999446902654868
@@ -609,7 +609,7 @@
         "key": "label",
         "letterSpacing": 0.4,
         "lineHeight": 1.2,
-        "text": "Time To Flipin*",
+        "text": "Time To Flipbook*",
         "width": 0.18173828125,
         "x": 0.76826171875,
         "y": 0.04998617256637168
@@ -624,7 +624,7 @@
         "key": "body",
         "letterSpacing": 0.3,
         "lineHeight": 1.8,
-        "text": "Daily Flipin⋆⭒˚.⋆",
+        "text": "Daily Flipbook⋆⭒˚.⋆",
         "width": 0.177392578125,
         "x": 0.05,
         "y": 0.319966814159292
@@ -868,7 +868,7 @@
         "key": "ball",
         "letterSpacing": 0.4,
         "lineHeight": 1.2,
-        "text": "Flipin ݁₊ ⊹ ⋆ ˚",
+        "text": "Flipbook ݁₊ ⊹ ⋆ ˚",
         "width": 0.15908203125,
         "x": 0.039990234375,
         "y": 0.2599903207964602
@@ -1363,7 +1363,7 @@
         "key": "credit",
         "letterSpacing": 0.3,
         "lineHeight": 1.2,
-        "text": "©Flipin Collection",
+        "text": "©Flipbook Collection",
         "width": 0.236474609375,
         "x": 0.713525390625,
         "y": 0.9301023230088497
@@ -1688,7 +1688,7 @@
         "key": "credit",
         "letterSpacing": 0.2,
         "lineHeight": 1.2,
-        "text": "©Flipin Collection",
+        "text": "©Flipbook Collection",
         "width": 0.630029296875,
         "x": 0.05,
         "y": 0.5199806415929203
@@ -1965,7 +1965,7 @@
         "key": "credit",
         "letterSpacing": 0.3,
         "lineHeight": 1.2,
-        "text": "©Flipin Collection",
+        "text": "©Flipbook Collection",
         "width": 0.236474609375,
         "x": 0.713525390625,
         "y": 0.9301023230088497
