@@ -13,7 +13,7 @@ interface EditorState {
   addElement:(element:Element)=>void; deleteSelected:()=>void; duplicateSelected:()=>void;
   copy:()=>void; paste:()=>void; undo:()=>void; redo:()=>void;
   addPage:()=>void; removePage:()=>void; duplicatePage:()=>void; reorderPage:(from:number,to:number)=>void; reorderSpread:(fromStart:number,toStart:number)=>void;
-  layout:(id:string)=>void; setPhotos:(ids:string[])=>void; addAssets:(assets:StoredAsset[])=>Promise<void>; flush:()=>Promise<void>;
+  layout:(id:string,assetIds?:string[])=>void; setPhotos:(ids:string[])=>void; addAssets:(assets:StoredAsset[])=>Promise<void>; flush:()=>Promise<void>;
 }
 let saveTimer:ReturnType<typeof setTimeout>|undefined;
 let saveQueue:Promise<void>=Promise.resolve();
@@ -54,7 +54,7 @@ export const useEditor=create<EditorState>((set,get)=>({
     });
     get().setPage(1+toGroup*2);
   },
-  layout(id){const layout=[...layouts,...(get().book?.customLayouts??[])].find(l=>l.id===id);if(!layout)return;get().change(b=>{b.pages[get().pageIndex]=applyLayout(b.pages[get().pageIndex],layout);});set({selected:[]});},
+  layout(id,assetIds){const layout=[...layouts,...(get().book?.customLayouts??[])].find(l=>l.id===id);if(!layout)return;get().change(b=>{b.pages[get().pageIndex]=applyLayout(b.pages[get().pageIndex],layout,assetIds);});set({selected:[]});},
   setPhotos(ids){const layout=defaultLayout(ids.length);get().change(b=>{const page=b.pages[get().pageIndex];if(page.type==='cover'){const image=page.elements.find(e=>e.type==='image');if(ids[0]){if(image){image.assetId=ids[0];image.crop={x:.5,y:.5,zoom:1};}else page.elements.unshift({id:uid(),type:'image',assetId:ids[0],x:414,y:360,width:372,height:498,rotation:0,opacity:1,frameLocked:true,crop:{x:.5,y:.5,zoom:1}});}return;}b.pages[get().pageIndex]=applyLayout(page,layout,ids);});set({selected:[]});},
   async addAssets(assets){await repository.putAssets(assets);get().change(b=>{b.assets.push(...assets.map(assetMetadata));});},
   async flush(){clearTimeout(saveTimer);const s=get();if(!s.book||s.status==='saved')return;const book=structuredClone(s.book),revision=s.revision;const task=saveQueue.catch(()=>{}).then(()=>repository.save(book));saveQueue=task;try{await task;if(get().book?.id===book.id&&get().revision===revision)set({status:'saved',error:''});}catch(e){set({status:'error',error:friendlyError(e)});throw e;}}
