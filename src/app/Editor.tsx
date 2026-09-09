@@ -7,7 +7,6 @@ import {EditorCanvas} from '../editor/EditorCanvas';
 import {clearImageCache} from '../editor/renderer';
 import {PageThumbnail} from '../components/PageThumbnail';
 import {EditorFlipBook,type EditorFlipBookHandle} from '../components/EditorFlipBook';
-import {BookCoverEditor} from '../components/BookCover';
 import {Button,IconButton,Loading,ErrorMessage} from '../components/ui';
 import {EditorPanel,type PanelId} from '../panels/EditorPanel';
 import {ExportDialog} from '../export/ExportDialog';
@@ -192,7 +191,19 @@ export function Editor(){
             onBlankPage={()=>openTool('photos')}
           />
           :s.pageIndex===0
-            ?<div className="single-cover-editor-stage" style={{width:pageCanvasWidth,height:pageHeight}}><BookCoverEditor book={book} width={pageCanvasWidth} onTextEdit={()=>openTool('text')} onImageSelect={()=>openTool('photos')}/></div>
+            ?<EditorFlipBook
+              ref={flipBook}
+              book={book}
+              pageWidth={spreadUnitWidth}
+              activeIndex={0}
+              onFlip={index=>{if(index<book.pages.length)s.setPage(index);}}
+              onSelect={selectPage}
+              onAddPage={addPageAndOpenPhotos}
+              onTextEdit={()=>openTool('text')}
+              onCrop={()=>openTool('photos')}
+              onImageSelect={()=>openTool('photos')}
+              onBlankPage={()=>openTool('photos')}
+            />
             :<div className="focused-book-shell single-page-editor-shell" style={{width:focusWindowWidth,height:pageHeight}}>
               <div ref={focusTrack} className="spread book-track focused-book-track" style={{width:focusTrackWidth,flexDirection:visualReverse?'row-reverse':'row',transform:`translateX(${focusedShift}px)`}}>
                 <div className={`active-page book-page book-page-${activeSide}`}><EditorCanvas page={page} width={pageCanvasWidth} onTextEdit={()=>openTool('text')} onCrop={()=>openTool('photos')} onImageSelect={()=>openTool('photos')} onBackgroundClick={()=>openTool('photos')}/></div>
@@ -203,7 +214,7 @@ export function Editor(){
               {(neighborPage||showSingleAdd)&&<div className={`page-pan-zone ${visualReverse?'previous':'next'}`} style={{width:Math.max(72,pageCanvasWidth*.22)}} onPointerDown={e=>startPan(visualReverse?'prev':'next',e)} onPointerMove={movePan} onPointerUp={endPan} onPointerCancel={cancelPan} title={showSingleAdd?'拖动添加下一页':visualReverse?'拖动回到同一跨页左页':'拖动到同一跨页右页'}/>}
             </div>
         }
-        {s.pageIndex===0&&<div className="cover-quick-actions editor-cover-actions" style={{top:`calc(50% + ${(zoomMode==='spread'?spreadUnitWidth:pageCanvasWidth)*1.4133333333/2+28}px)`}}><button onClick={()=>toggleTool('cover')}><Images size={15}/>换个封面</button><i/><button onClick={()=>toggleTool('background')}><Palette size={15}/>换个背景</button></div>}
+        {s.pageIndex===0&&<div className="cover-quick-actions editor-cover-actions" style={{top:`calc(50% + ${(zoomMode==='spread'||s.pageIndex===0?spreadUnitWidth:pageCanvasWidth)*1.4133333333/2+28}px)`}}><button onClick={()=>toggleTool('cover')}><Images size={15}/>换个封面</button><i/><button onClick={()=>toggleTool('background')}><Palette size={15}/>换个背景</button></div>}
       </div>
       {zoomMode==='spread'&&s.pageIndex!==0&&<div ref={previewStrip} className="page-strip clean-page-strip spread-preview-strip" aria-label="双页预览"><div className="page-strip-track"><button className="cover-spread-thumb" aria-label="封面" onClick={()=>flipBook.current?.flipTo(0)}><PageThumbnail page={book.pages[0]}/></button>{thumbnailSpreads.map(start=>{const left=book.pages[start],right=book.pages[start+1],selectedSpread=s.pageIndex===start||s.pageIndex===start+1;return <button key={left.id} draggable className={`spread-thumb ${selectedSpread?'selected':''} ${dragSpread===start?'dragging':''} ${dragOverSpread===start&&dragSpread!==start?'drag-over':''}`} aria-label={right?`第 ${start}–${start+1} 页，可拖动排序；选中后按 Delete 或 Backspace 删除当前页`:`第 ${start} 页，可拖动排序；选中后按 Delete 或 Backspace 删除`} onClick={()=>{if(suppressSpreadClick.current)return;flipBook.current?.flipTo(start);s.setPage(start);}} onDragStart={e=>{suppressSpreadClick.current=true;setDragSpread(start);setDragOverSpread(start);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(start));}} onDragEnter={e=>{e.preventDefault();if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}} onDrop={e=>{e.preventDefault();dropSpread(start);}} onDragEnd={()=>{setDragSpread(null);setDragOverSpread(null);window.setTimeout(()=>{suppressSpreadClick.current=false;},0);}}><div className="spread-thumb-page"><PageThumbnail page={left}/></div><div className={`spread-thumb-page ${right?'':'blank'}`}>{right&&<PageThumbnail page={right}/>}</div></button>;})}<button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={addPageAndOpenPhotos}><Plus size={17}/></button></div></div>}
       {zoomMode==='page'&&s.pageIndex!==0&&<div ref={previewStrip} className="page-strip clean-page-strip single-preview-strip" aria-label="单页预览"><div className="page-strip-track">{book.pages.map((thumb,index)=><button key={thumb.id} className={`single-page-thumb ${s.pageIndex===index?'selected':''}`} aria-label={index===0?'封面':`第 ${index} 页，选中后按 Delete 或 Backspace 删除`} onClick={()=>s.setPage(index)}><PageThumbnail page={thumb}/></button>)}<button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={addPageAndOpenPhotos}><Plus size={17}/></button></div></div>}
