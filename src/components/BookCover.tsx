@@ -1,6 +1,7 @@
 import {useEffect,useState} from 'react';
 import type {Book} from '../domain/model';
 import {repository} from '../db/repository';
+import {EditorCanvas} from '../editor/EditorCanvas';
 
 function useCoverImage(book:Book){
   const [src,setSrc]=useState('');const cover=book.pages[0];const image=cover.elements.find(e=>e.type==='image');
@@ -21,4 +22,34 @@ export function BookCoverVisual({book,className=''}:{book:Book;className?:string
 export function BookCover({book,onClick}:{book:Book;onClick?:()=>void}){
   const cover=book.pages[0];
   return <button className={`book-cover ${book.coverTemplate}`} style={{backgroundColor:cover.background}} onClick={onClick} aria-label={`打开 ${book.title}`}><CoverContents book={book}/></button>;
+}
+
+
+export function BookCoverEditor({
+  book,
+  width,
+  onTextEdit,
+  onImageSelect,
+}:{
+  book:Book;
+  width:number;
+  onTextEdit:()=>void;
+  onImageSelect:()=>void;
+}){
+  const cover=book.pages[0];
+  const editableCover={...cover,pattern:undefined};
+  return <div
+    className={`book-cover-editor ${book.coverTemplate}`}
+    style={{width,height:width*1696/1200,backgroundColor:cover.background}}
+  >
+    <EditorCanvas
+      page={editableCover}
+      width={width}
+      onTextEdit={onTextEdit}
+      onCrop={onImageSelect}
+      onImageSelect={onImageSelect}
+    />
+    <span className="cover-grain"/>
+    <span className="cover-spine"/>
+  </div>;
 }
