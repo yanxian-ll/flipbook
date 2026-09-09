@@ -19,6 +19,7 @@ type LeafProps={
   index:number;
   kind:'page'|'add'|'blank'|'back';
   active:boolean;
+  priority:boolean;
   width:number;
   onSelect:(index:number)=>void;
   onAddPage:()=>void;
@@ -43,7 +44,7 @@ function LiveEditorSurface({children}:{children:ReactNode}){
 }
 
 function FlipLeafInner(
-  {book,index,kind,active,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,scale}:LeafProps,
+  {book,index,kind,active,priority,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
   if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-hidden/>;
@@ -65,7 +66,7 @@ function FlipLeafInner(
           <EditorCanvas page={page} width={width} onTextEdit={onTextEdit} onCrop={onCrop} onImageSelect={onImageSelect} onBackgroundClick={onBlankPage}/>
         </LiveEditorSurface>
         :<>
-          <PageThumbnail page={page} scale={scale} immediate/>
+          <PageThumbnail page={page} scale={scale} immediate={priority}/>
           <button
             className="editor-flip-select-page"
             aria-label={`编辑第 ${index} 页`}
@@ -203,10 +204,10 @@ function EditorFlipBookInner(
         }}
       >
         {Children.toArray([
-          ...book.pages.map((_,index)=><FlipLeaf key={book.pages[index].id} {...leafProps} index={index} kind="page" active={activeIndex===index}/>),
-          <FlipLeaf key="__add__" {...leafProps} index={plusIndex} kind="add" active={false}/>,
-          needsFiller?<FlipLeaf key="__blank__" {...leafProps} index={plusIndex+1} kind="blank" active={false}/>:null,
-          <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false}/>
+          ...book.pages.map((_,index)=><FlipLeaf key={book.pages[index].id} {...leafProps} index={index} kind="page" active={activeIndex===index} priority={Math.abs(index-activeIndex)<=3}/>),
+          <FlipLeaf key="__add__" {...leafProps} index={plusIndex} kind="add" active={false} priority={false}/>,
+          needsFiller?<FlipLeaf key="__blank__" {...leafProps} index={plusIndex+1} kind="blank" active={false} priority={false}/>:null,
+          <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false} priority={false}/>
         ])}
       </HTMLFlipBook>
       {activeIndex>0&&<button className="editor-flip-nav-zone previous" aria-label="翻到上一跨页" onClick={()=>flip.current?.pageFlip?.().flipPrev?.()}/>}
