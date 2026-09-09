@@ -53,13 +53,14 @@ export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose
   const available=book.pages.map((page,i)=>({page,i})).filter(({i})=>format!=='collage'||i>0);
   const selectedCount=selected.filter(i=>available.some(item=>item.i===i)).length;
   const selectedFormat=formats.find(([value])=>value===format);
+  const SelectedFormatIcon=selectedFormat?.[1];
   return <Modal open={open} onClose={()=>{if(!busy)onClose();}} title="导出 Flipbook" description={format?'选择页面和导出参数':'选一种格式导出'} wide>
     <ErrorMessage message={error}/>
     {!format?
       <div className="export-format-list">{formats.map(([value,Icon,label,description])=><button key={value} type="button" className="export-format-card" onClick={()=>chooseFormat(value)}><Icon size={19}/><span><b>{label}</b><small>{description}</small></span></button>)}</div>
       :<>
         <button type="button" className="export-back" disabled={busy} onClick={()=>setFormat(null)}><ChevronLeft size={15}/>返回格式选择</button>
-        <div className="export-current-format">{selectedFormat&&<><selectedFormat.1 size={18}/><div><b>{selectedFormat[2]}</b><small>{selectedFormat[3]}</small></div></>}</div>
+        <div className="export-current-format">{selectedFormat&&SelectedFormatIcon&&<><SelectedFormatIcon size={18}/><div><b>{selectedFormat[2]}</b><small>{selectedFormat[3]}</small></div></>}</div>
         <fieldset disabled={busy}>
           {format==='collage'&&<div className="export-collage-count"><div><b>一张图里放几个页面？</b><small>只导出内页，按选择顺序自动排版</small></div><div className="segments">{[2,4,6,8].map(value=><Button key={value} type="button" className={pagesPerCollage===value?'primary':''} onClick={()=>setPagesPerCollage(value)}>{value} 页</Button>)}</div></div>}
           <label className="field">清晰度<select value={quality} onChange={e=>setQuality(Number(e.target.value))}><option value={1}>标准 · 1200 × 1696</option><option value={2}>高清 · 2400 × 3392</option><option value={3}>超清 · 3600 × 5088</option></select></label>
