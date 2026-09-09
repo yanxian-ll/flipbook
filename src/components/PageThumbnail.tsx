@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useLayoutEffect,useState} from 'react';
 import type {Page} from '../domain/model';
 import {renderPage} from '../editor/renderer';
 const cache=new WeakMap<Page,Map<number,Blob>>();
@@ -14,7 +14,7 @@ export function preloadPageThumbnail(page:Page,scale=.12):Promise<Blob>{
 }
 export function PageThumbnail({page,alt='页面预览',scale=.12,immediate=false}:{page:Page;alt?:string;scale?:number;immediate?:boolean}){
   const [url,setUrl]=useState('');
-  useEffect(()=>{let alive=true,objectUrl='',timer:ReturnType<typeof setTimeout>|undefined;
+  useLayoutEffect(()=>{let alive=true,objectUrl='',timer:ReturnType<typeof setTimeout>|undefined;
     const show=(blob:Blob)=>{if(!alive)return;objectUrl=URL.createObjectURL(blob);setUrl(objectUrl);};
     const hit=cached(page,scale);
     if(hit)show(hit);
