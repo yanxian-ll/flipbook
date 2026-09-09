@@ -63,7 +63,7 @@ export const EditorFlipBook=forwardRef<EditorFlipBookHandle,{
 
   return <div className={`editor-pageflip-shell ${activeIndex===0?'is-cover':''}`} style={{width:pageWidth*2,height:pageHeight}}>
     <HTMLFlipBook
-      key={`${book.id}:${book.pages.length}:${Math.round(pageWidth)}`}
+      key={`${book.id}:${book.pages.map(page=>page.id).join('.') }:${Math.round(pageWidth)}`}
       ref={flip}
       width={Math.round(pageWidth)}
       height={pageHeight}
