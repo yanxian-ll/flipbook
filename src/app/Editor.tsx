@@ -1,4 +1,4 @@
-import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent} from 'react';
+import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent,type WheelEvent as ReactWheelEvent} from 'react';
 import {useNavigate,useParams} from 'react-router-dom';
 import {ChevronLeft,Undo2,Redo2,Eye,Upload,Images,Grid2X2,Type,Sun,Plus,Sticker,Maximize2,Minimize2,Copy,Trash2,BookOpen,Palette,Check} from 'lucide-react';
 import {repository,friendlyError} from '../db/repository';
@@ -15,12 +15,15 @@ import {frameIsFixed} from '../domain/layouts';
 export function Editor(){
   const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();
   const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[dragSpread,setDragSpread]=useState<number|null>(null),[dragOverSpread,setDragOverSpread]=useState<number|null>(null),[photoDraft,setPhotoDraft]=useState<string[]>([]);
-  const workspace=useRef<HTMLDivElement>(null),flipBook=useRef<EditorFlipBookHandle>(null),focusTrack=useRef<HTMLDivElement>(null),suppressSpreadClick=useRef(false);
+  const workspace=useRef<HTMLDivElement>(null),flipBook=useRef<EditorFlipBookHandle>(null),focusTrack=useRef<HTMLDivElement>(null),previewStrip=useRef<HTMLDivElement>(null),suppressSpreadClick=useRef(false);
   const panGesture=useRef<{pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean}|null>(null);
+  const wheelAccumulator=useRef(0),wheelLocked=useRef(false),wheelTimer=useRef<number|null>(null);
 
   useEffect(()=>{let live=true;setLoading(true);void repository.get(bookId!).then(book=>{if(!live)return;s.load(book);setLoading(false);}).catch(e=>{setError(friendlyError(e));setLoading(false);});return()=>{live=false;void useEditor.getState().flush().catch(()=>{});clearImageCache();};},[bookId]);
   useEffect(()=>{if(!workspace.current)return;const observer=new ResizeObserver(entries=>{setViewWidth(entries[0].contentRect.width);setViewHeight(entries[0].contentRect.height);});observer.observe(workspace.current);return()=>observer.disconnect();},[loading,wide,panel]);
   useEffect(()=>{const state=useEditor.getState(),page=state.book?.pages[state.pageIndex];if(!page)return;setPhotoDraft([...new Set(page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id))]);},[s.pageIndex,s.book?.pages[s.pageIndex]?.id]);
+  useEffect(()=>()=>{if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);},[]);
+  useEffect(()=>{const strip=previewStrip.current;if(!strip)return;const selected=strip.querySelector<HTMLElement>('.selected');if(!selected)return;const left=selected.offsetLeft-(strip.clientWidth-selected.offsetWidth)/2;strip.scrollTo({left:Math.max(0,left),behavior:'smooth'});},[s.pageIndex,zoomMode,s.book?.pages.length]);
   useEffect(()=>{function key(e:KeyboardEvent){if((e.target as HTMLElement).closest('input,textarea,select,[contenteditable=true]')||document.querySelector('[role=dialog]'))return;const state=useEditor.getState();const mod=e.ctrlKey||e.metaKey;const key=e.key.toLowerCase();if(mod&&key==='z'){e.preventDefault();if(e.shiftKey)state.redo();else state.undo();}else if(mod&&['c','v','d'].includes(key)){e.preventDefault();if(key==='c')state.copy();if(key==='v')state.paste();if(key==='d')state.duplicateSelected();}else if(key==='delete'||key==='backspace'){e.preventDefault();state.deleteSelected();}else if(key==='escape'){state.select(null);setPanel(null);}else if(e.key.startsWith('Arrow')&&state.selected.length){e.preventDefault();const d=e.shiftKey?10:1;state.change(b=>{for(const element of b.pages[state.pageIndex].elements){if(state.selected.includes(element.id)&&!element.locked&&!frameIsFixed(b.pages[state.pageIndex],element)){element.x+=e.key==='ArrowLeft'?-d:e.key==='ArrowRight'?d:0;element.y+=e.key==='ArrowUp'?-d:e.key==='ArrowDown'?d:0;}}});}}
     function exit(e:BeforeUnloadEvent){if(useEditor.getState().status!=='saved'){void useEditor.getState().flush().catch(()=>{});e.preventDefault();}}
     function visibility(){if(document.visibilityState==='hidden')void useEditor.getState().flush().catch(()=>{});}
@@ -51,6 +54,22 @@ export function Editor(){
   const tools=([['photos',Images,'素材库'],['layouts',Grid2X2,'模版'],['text',Type,'文字'],['stickers',Sticker,'贴纸'],['adjust',Sun,'调整']] as const).filter(([id])=>page.type!=='cover'||!['layouts','stickers'].includes(id));
 
   function selectPage(index:number){if(index>=0&&index<book.pages.length&&index!==useEditor.getState().pageIndex)useEditor.getState().setPage(index);}
+  function handlePageWheel(e:ReactWheelEvent<HTMLDivElement>){
+    if(Math.abs(e.deltaY)<2||wheelLocked.current)return;
+    e.preventDefault();
+    wheelAccumulator.current+=e.deltaY;
+    if(Math.abs(wheelAccumulator.current)<28)return;
+    const direction=wheelAccumulator.current>0?'next':'prev';
+    wheelAccumulator.current=0;wheelLocked.current=true;
+    if(zoomMode==='spread'){
+      if(direction==='next')flipBook.current?.flipNext();else flipBook.current?.flipPrev();
+    }else{
+      const state=useEditor.getState(),step=direction==='next'?1:-1,target=state.pageIndex+step;
+      if(target>=0&&target<(state.book?.pages.length??0))state.setPage(target);
+    }
+    if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);
+    wheelTimer.current=window.setTimeout(()=>{wheelLocked.current=false;},360);
+  }
   function changeViewMode(mode:'spread'|'page'){
     if(mode===zoomMode)return;
     setZoomMode(mode);
@@ -116,7 +135,7 @@ export function Editor(){
       <div className="view-mode-switch" role="group" aria-label="页面显示模式"><button type="button" className={zoomMode==='spread'?'active':''} aria-pressed={zoomMode==='spread'} onClick={()=>changeViewMode('spread')}>双页</button><button type="button" className={zoomMode==='page'?'active':''} aria-pressed={zoomMode==='page'} onClick={()=>changeViewMode('page')}>单页</button></div>
       <div className="save-status" role="status">{s.status==='saved'?<><Check size={10}/>已保存</>:s.status==='saving'?'保存中…':<button onClick={()=>void s.flush().catch(()=>{})}>保存失败，点此重试</button>}</div>
       {selected&&!frameIsFixed(page,selected)&&<div className="context-toolbar"><IconButton label="复制元素" onClick={s.duplicateSelected}><Copy size={16}/></IconButton><IconButton label="删除元素" onClick={s.deleteSelected}><Trash2 size={16}/></IconButton></div>}
-      <div className={`spread-area native-book-stage ${panel?'panel-open':''} zoom-${zoomMode}`} title={zoomMode==='spread'?'点击另一页切换编辑页；拖书角或两侧翻页':'单页编辑；旁边保留同跨页预览'}>
+      <div className={`spread-area native-book-stage ${panel?'panel-open':''} zoom-${zoomMode}`} onWheel={handlePageWheel} title={zoomMode==='spread'?'滚轮切换跨页；点击另一页切换编辑页；拖书角或两侧翻页':'滚轮逐页切换；单页编辑；旁边保留同跨页预览'}>
         {zoomMode==='spread'
           ?<EditorFlipBook
             ref={flipBook}
@@ -142,7 +161,8 @@ export function Editor(){
         }
         {zoomMode==='spread'&&s.pageIndex===0&&<div className="cover-quick-actions editor-cover-actions" style={{top:`calc(50% + ${spreadUnitWidth*1.4133333333/2+28}px)`}}><button onClick={()=>setPanel(panel==='cover'?null:'cover')}><Images size={15}/>换个封面</button><i/><button onClick={()=>setPanel(panel==='background'?null:'background')}><Palette size={15}/>换个背景</button></div>}
       </div>
-      {zoomMode==='spread'&&s.pageIndex!==0&&<div className="page-strip clean-page-strip" aria-label="页面预览"><button className="cover-spread-thumb" aria-label="封面" onClick={()=>flipBook.current?.flipTo(0)}><PageThumbnail page={book.pages[0]}/></button>{thumbnailSpreads.map(start=>{const left=book.pages[start],right=book.pages[start+1],selectedSpread=s.pageIndex===start||s.pageIndex===start+1;return <button key={left.id} draggable className={`spread-thumb ${selectedSpread?'selected':''} ${dragSpread===start?'dragging':''} ${dragOverSpread===start&&dragSpread!==start?'drag-over':''}`} aria-label={right?`第 ${start}–${start+1} 页，可拖动排序`:`第 ${start} 页，可拖动排序`} onClick={()=>{if(suppressSpreadClick.current)return;flipBook.current?.flipTo(start);s.setPage(start);}} onDragStart={e=>{suppressSpreadClick.current=true;setDragSpread(start);setDragOverSpread(start);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(start));}} onDragEnter={e=>{e.preventDefault();if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}} onDrop={e=>{e.preventDefault();dropSpread(start);}} onDragEnd={()=>{setDragSpread(null);setDragOverSpread(null);window.setTimeout(()=>{suppressSpreadClick.current=false;},0);}}><div className="spread-thumb-page"><PageThumbnail page={left}/></div><div className={`spread-thumb-page ${right?'':'blank'}`}>{right&&<PageThumbnail page={right}/>}</div></button>;})}<button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={()=>s.addPage()}><Plus size={17}/></button></div>}
+      {zoomMode==='spread'&&s.pageIndex!==0&&<div ref={previewStrip} className="page-strip clean-page-strip spread-preview-strip" aria-label="双页预览"><div className="page-strip-track"><button className="cover-spread-thumb" aria-label="封面" onClick={()=>flipBook.current?.flipTo(0)}><PageThumbnail page={book.pages[0]}/></button>{thumbnailSpreads.map(start=>{const left=book.pages[start],right=book.pages[start+1],selectedSpread=s.pageIndex===start||s.pageIndex===start+1;return <button key={left.id} draggable className={`spread-thumb ${selectedSpread?'selected':''} ${dragSpread===start?'dragging':''} ${dragOverSpread===start&&dragSpread!==start?'drag-over':''}`} aria-label={right?`第 ${start}–${start+1} 页，可拖动排序`:`第 ${start} 页，可拖动排序`} onClick={()=>{if(suppressSpreadClick.current)return;flipBook.current?.flipTo(start);s.setPage(start);}} onDragStart={e=>{suppressSpreadClick.current=true;setDragSpread(start);setDragOverSpread(start);e.dataTransfer.effectAllowed='move';e.dataTransfer.setData('text/plain',String(start));}} onDragEnter={e=>{e.preventDefault();if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}} onDragOver={e=>{e.preventDefault();e.dataTransfer.dropEffect='move';if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}} onDrop={e=>{e.preventDefault();dropSpread(start);}} onDragEnd={()=>{setDragSpread(null);setDragOverSpread(null);window.setTimeout(()=>{suppressSpreadClick.current=false;},0);}}><div className="spread-thumb-page"><PageThumbnail page={left}/></div><div className={`spread-thumb-page ${right?'':'blank'}`}>{right&&<PageThumbnail page={right}/>}</div></button>;})}<button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={()=>s.addPage()}><Plus size={17}/></button></div></div>}
+      {zoomMode==='page'&&<div ref={previewStrip} className="page-strip clean-page-strip single-preview-strip" aria-label="单页预览"><div className="page-strip-track">{book.pages.map((thumb,index)=><button key={thumb.id} className={`single-page-thumb ${s.pageIndex===index?'selected':''}`} aria-label={index===0?'封面':`第 ${index} 页`} onClick={()=>s.setPage(index)}><PageThumbnail page={thumb}/></button>)}<button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={()=>s.addPage()}><Plus size={17}/></button></div></div>}
     </div>
     <nav className="editor-tools">{tools.map(([id,Icon,label])=><button key={id} className={panel===id?'selected':''} onClick={()=>setPanel(panel===id?null:id)}><Icon size={21} strokeWidth={1.6}/><span>{label}</span></button>)}</nav>
     {pairedLibraries?<><EditorPanel key={`${page.id}:photos`} panel="photos" placement="left" paired photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={setPanel} onClose={()=>setPanel(null)}/><EditorPanel key={`${page.id}:layouts`} panel="layouts" placement="right" paired photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={setPanel} onClose={()=>setPanel(null)}/></>:panel&&<EditorPanel key={`${page.id}:${panel}`} panel={page.type==='cover'&&panel==='layouts'?'cover':page.type!=='cover'&&panel==='cover'?'layouts':panel} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={setPanel} onClose={()=>setPanel(null)}/>}
