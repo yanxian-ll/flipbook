@@ -42,7 +42,7 @@ export function Editor(){
   const peek=.13;
   const spreadUnitWidth=Math.min(wide?390:170,(viewWidth-54)/2,Math.max(120,viewHeight-215)/1.4133);
   const singleWidthRoom=(viewWidth*.94)/(neighborPage||showSingleAdd?1+peek:1);
-  const singleHeightRoom=Math.max(260,viewHeight-108)/1.4133333333;
+  const singleHeightRoom=Math.max(240,viewHeight-174)/1.4133333333;
   const pageCanvasWidth=Math.max(180,Math.min(wide?720:620,singleWidthRoom,singleHeightRoom));
   const pageHeight=pageCanvasWidth*1.4133333333;
   const visualReverse=s.pageIndex>0&&s.pageIndex%2===0;
@@ -55,8 +55,9 @@ export function Editor(){
 
   function selectPage(index:number){if(index>=0&&index<book.pages.length&&index!==useEditor.getState().pageIndex)useEditor.getState().setPage(index);}
   function handlePageWheel(e:ReactWheelEvent<HTMLDivElement>){
-    if(Math.abs(e.deltaY)<2||wheelLocked.current)return;
+    if(Math.abs(e.deltaY)<2)return;
     e.preventDefault();
+    if(wheelLocked.current)return;
     wheelAccumulator.current+=e.deltaY;
     if(Math.abs(wheelAccumulator.current)<28)return;
     const direction=wheelAccumulator.current>0?'next':'prev';
