@@ -2,6 +2,7 @@ export type ThemeId = 'scrapbook' | 'editorial';
 export interface Asset {
   id: string; name: string; mimeType: string; width: number; height: number;
   orientation: 'portrait' | 'landscape' | 'square'; storageKey: string; createdAt: number;
+  uploadBatchId?: string; uploadBatchAt?: number;
 }
 export interface Element {
   id: string; type: 'image' | 'text' | 'sticker' | 'shape';
