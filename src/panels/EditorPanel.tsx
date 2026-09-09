@@ -99,9 +99,9 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const preferredLayoutCount=Math.max(1,Math.min(9,photoIds.length||[...new Set(pagePhotoIds)].length||1));
   const [layoutCount,setLayoutCount]=useState(preferredLayoutCount);
   useEffect(()=>{setLayoutCount(preferredLayoutCount);},[preferredLayoutCount,page.id]);
-  const allLayouts=useMemo(()=>[...layoutsForTheme(book.themeId),...(book.customLayouts??[])],[book.themeId,book.customLayouts]);
+  const allLayouts=useMemo(()=>page.type==='cover'?[]:[...layoutsForTheme(book.themeId),...(book.customLayouts??[])],[page.type,book.themeId,book.customLayouts]);
   const layoutCounts=useMemo(()=>new Set(allLayouts.map(layout=>layout.slots.length)),[allLayouts]);
-  const variants=useMemo(()=>allLayouts
+  const variants=useMemo(()=>page.type==='cover'?[]:allLayouts
     .filter(layout=>layout.slots.length===layoutCount)
     .sort((a,b)=>Number(b.id===page.layoutId)-Number(a.id===page.layoutId))
     .map(layout=>({layout,preview:applyLayout(page,layout,fitAssetIds(previewSourceIds,layout.slots.length))})),
