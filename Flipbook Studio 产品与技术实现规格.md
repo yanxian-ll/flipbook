@@ -2,7 +2,7 @@
 
 > Version: 1.0  
 > Product Type: Digital Photo Book / Scrapbook Editor  
-> Reference Experience: FLIPIN 类数字画册产品  
+> Reference Experience: FLIPBOOK 类数字画册产品  
 > Target: Web + Desktop  
 > Primary Goal: 用户可以快速上传照片，自动生成一本数字画册，并通过可视化编辑器继续调整，最终翻页预览、导出和分享。
 
