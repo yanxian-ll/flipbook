@@ -1019,3 +1019,20 @@
   width:auto;
   min-width:0;
 }
+
+/* Single-page cover is the same closed cover visual as spread mode, without preview rail. */
+.single-cover-editor-stage{
+  position:relative;
+  display:flex;
+  align-items:stretch;
+  justify-content:stretch;
+  overflow:visible;
+  background:transparent;
+}
+.single-cover-editor-stage>.book-cover-editor{
+  width:100%!important;
+  height:100%!important;
+}
+.studio .zoom-page:has(.single-cover-editor-stage){
+  bottom:12px;
+}
