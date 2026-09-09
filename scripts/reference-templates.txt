@@ -108,7 +108,7 @@ memories.`;return`<div style="position:absolute;inset:0;background:${e};font-fam
         <div style="position:absolute;left:5%;top:35%;width:43%;height:24%;overflow:hidden;">${n[2]?_img(n[2]):""}</div>
         <div style="position:absolute;right:5%;top:35%;width:43%;height:24%;overflow:hidden;">${n[3]?_img(n[3]):""}</div>
         <div ${_ttAttrs("ball","[ball]",8)} style="position:absolute;left:5%;bottom:8%;font-size:${_ttSize(t,"ball",8)}px;font-weight:400;color:#888;letter-spacing:0.4px;">${_ttText(t,"ball","[ball]")}</div>
-      </div>`}},quad4Mixed:{name:"混排文字",icon:"◲",minImages:4,maxImages:4,render(t){const e=t.bgColor||"#FFFFFF",n=t.images||[],o="'Domine',Georgia,serif",i="Flip in my feelings and memories. ˖°𓇼";return`<div style="position:absolute;inset:0;background:${e};font-family:${o};-webkit-font-smoothing:antialiased;">
+      </div>`}},quad4Mixed:{name:"混排文字",icon:"◲",minImages:4,maxImages:4,render(t){const e=t.bgColor||"#FFFFFF",n=t.images||[],o="'Domine',Georgia,serif",i="Keep my feelings and memories. ˖°𓇼";return`<div style="position:absolute;inset:0;background:${e};font-family:${o};-webkit-font-smoothing:antialiased;">
         <div style="position:absolute;left:4%;top:3%;width:23%;height:21%;overflow:hidden;">${n[0]?_img(n[0]):""}</div>
         <div style="position:absolute;left:30%;top:3%;width:25%;height:21%;overflow:hidden;">${n[1]?_img(n[1]):""}</div>
         <div ${_ttAttrs("ball","Flipbook  ݁₊ ⊹ ⋆ ˚",8)} style="position:absolute;left:4%;top:26%;font-size:${_ttSize(t,"ball",8)}px;font-weight:400;color:#888;letter-spacing:0.4px;white-space:nowrap;">${_ttText(t,"ball","Flipbook  ݁₊ ⊹ ⋆ ˚")}</div>
