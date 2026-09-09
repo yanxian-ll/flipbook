@@ -13,7 +13,7 @@ export interface Element {
   fit?: 'cover' | 'contain'; crop?: { x: number; y: number; zoom: number };
   border?: number; borderColor?: string; shadow?: boolean; cornerRadius?: number;
   frameLocked?: boolean; frameShape?: 'ellipse'; templateTextKey?: string;
-  freeImage?: boolean; lineHeight?: number; letterSpacing?: number;
+  freeImage?: boolean; lineHeight?: number; letterSpacing?: number; blur?: number;
 }
 export interface Page {
   id: string; type: 'cover' | 'normal'; background: string; pattern?: string;
