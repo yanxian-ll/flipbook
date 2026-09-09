@@ -1067,3 +1067,24 @@
 .template-canvas{container-type:inline-size}.template-text-preview{position:absolute;white-space:pre-wrap;pointer-events:none;z-index:4}
 
 .shelf-header-actions{display:flex;align-items:center;gap:8px}
+
+/* Align the template library with the material library and keep top-right tools clear. */
+@media(min-width:850px){
+  .studio.expanded .editor-panel.panel-right{
+    top:58px!important;
+  }
+
+  .studio.expanded .workspace-toolbar{
+    transition:right .2s ease;
+  }
+  .studio.expanded.template-library-open .workspace-toolbar{
+    right:316px;
+  }
+
+  .studio.expanded .save-status{
+    transition:right .2s ease;
+  }
+  .studio.expanded.template-library-open .save-status{
+    right:319px;
+  }
+}
