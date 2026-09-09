@@ -29,21 +29,22 @@ function coverCropStyle(image?:Element){
   };
 }
 
-function CoverContents({book}:{book:Book}){
+function CoverContents({book,cropOverride}:{book:Book;cropOverride?:Element['crop']}){
   const src=useCoverImage(book);
   const cover=book.pages[0];
   const image=cover.elements.find(element=>element.type==='image');
+  const shownImage=image&&cropOverride?{...image,crop:cropOverride}:image;
   return <>
     <span className="cover-grain"/>
     <span className="cover-spine"/>
-    {src&&<span className="cover-window"><img className="cover-window-image" src={src} alt="画册封面照片" style={coverCropStyle(image)}/></span>}
+    {src&&<span className="cover-window"><img className="cover-window-image" src={src} alt="画册封面照片" style={coverCropStyle(shownImage)}/></span>}
     <span className="cover-caption">{cover.elements.find(element=>element.type==='text')?.text??'TIME TO FLIPIN'}</span>
   </>;
 }
 
-export function BookCoverVisual({book,className=''}:{book:Book;className?:string}){
+export function BookCoverVisual({book,className='',cropOverride}:{book:Book;className?:string;cropOverride?:Element['crop']}){
   const cover=book.pages[0];
-  return <div className={`book-cover ${book.coverTemplate} ${className}`.trim()} style={{backgroundColor:cover.background}}><CoverContents book={book}/></div>;
+  return <div className={`book-cover ${book.coverTemplate} ${className}`.trim()} style={{backgroundColor:cover.background}}><CoverContents book={book} cropOverride={cropOverride}/></div>;
 }
 
 export function BookCover({book,onClick}:{book:Book;onClick?:()=>void}){
@@ -67,6 +68,7 @@ export function BookCoverEditor({
   const text=cover.elements.find(element=>element.type==='text');
   const update=useEditor(state=>state.updateElement);
   const select=useEditor(state=>state.select);
+  const [previewCrop,setPreviewCrop]=useState<Element['crop']>();
   const drag=useRef<{pointerId:number;x:number;y:number;crop:{x:number;y:number;zoom:number};moved:boolean}|null>(null);
   const clamp=(value:number)=>Math.max(0,Math.min(1,value));
 
@@ -85,11 +87,11 @@ export function BookCoverEditor({
     const dx=e.clientX-start.x,dy=e.clientY-start.y;
     if(Math.abs(dx)+Math.abs(dy)>3)start.moved=true;
     const zoom=Math.max(1,start.crop.zoom);
-    update(image.id,{crop:{
+    setPreviewCrop({
       zoom:start.crop.zoom,
       x:clamp(start.crop.x-dx/Math.max(1,rect.width)/zoom),
       y:clamp(start.crop.y-dy/Math.max(1,rect.height)/zoom),
-    }});
+    });
     e.stopPropagation();
   }
   function endPhoto(e:React.PointerEvent<HTMLButtonElement>){
@@ -97,6 +99,8 @@ export function BookCoverEditor({
     if(!start||start.pointerId!==e.pointerId)return;
     if(e.currentTarget.hasPointerCapture(e.pointerId))e.currentTarget.releasePointerCapture(e.pointerId);
     drag.current=null;
+    if(start.moved&&previewCrop&&image)update(image.id,{crop:previewCrop});
+    setPreviewCrop(undefined);
     e.stopPropagation();
     if(!start.moved)onImageSelect();
   }
@@ -105,7 +109,7 @@ export function BookCoverEditor({
     className={`book-cover-editor ${book.coverTemplate}`}
     style={{width,height:width*1696/1200}}
   >
-    <BookCoverVisual book={book} className="book-cover-editor-visual"/>
+    <BookCoverVisual book={book} className="book-cover-editor-visual" cropOverride={previewCrop}/>
     {image&&<button
       type="button"
       className="cover-editor-photo-hit"
@@ -113,7 +117,7 @@ export function BookCoverEditor({
       onPointerDown={beginPhoto}
       onPointerMove={movePhoto}
       onPointerUp={endPhoto}
-      onPointerCancel={()=>{drag.current=null;}}
+      onPointerCancel={()=>{drag.current=null;setPreviewCrop(undefined);}}
       onWheel={e=>{
         e.preventDefault();
         e.stopPropagation();
