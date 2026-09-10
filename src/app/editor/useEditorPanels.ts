@@ -20,7 +20,8 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
   useEffect(()=>{
     if(selectedIds.length!==1)return;
     const selected=book?.pages[pageIndex]?.elements.find(element=>element.id===selectedIds[0]);
-    if(selected?.type==='sticker')openTool('stickers');
+    const paperTape=selected?.type==='shape'&&!selected.shadow&&selected.width/Math.max(1,selected.height)>=3;
+    if(selected?.type==='sticker'||paperTape)openTool('stickers');
   },[selectedIds,pageIndex,book?.pages[pageIndex]?.id]);
 
   const sideLibraries=wide&&viewWidth>=DESKTOP_SIDE_LIBRARY_MIN_WIDTH;
