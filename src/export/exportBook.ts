@@ -1,5 +1,6 @@
 import type {Book} from '../domain/model';
 import {H,backCoverFor,backCoverPage} from '../domain/model';
+import {presentationPage} from '../domain/coverPresentation';
 import {drawComposition,compositionGeometry,defaultComposition,type CompositionOptions} from './composition';
 import {renderPage} from '../editor/renderer';
 import {flipbookMotion,readerLeafPlan,sharedViewerSize} from '../flipbook/spec';
@@ -18,7 +19,7 @@ async function blobToDataUrl(blob:Blob){return await new Promise<string>((resolv
 async function renderJpegs(book:Book,indices:number[],scale:number,onProgress:(n:number)=>void,progressEnd=.78){
   const blobs:Blob[]=[];
   for(let i=0;i<indices.length;i++){
-    const page=book.pages[indices[i]];
+    const page=presentationPage(book,indices[i]);
     if(!page)continue;
     blobs.push(await renderPage(page,{scale,quality:'original',mimeType:'image/jpeg'}));
     onProgress((i+1)/indices.length*progressEnd);
@@ -36,7 +37,7 @@ async function renderCompositions(book:Book,indices:number[],scale:number,onProg
   for(let offset=0;offset<indices.length;offset+=count){
     const images:ImageBitmap[]=[];
     try{
-      for(const index of indices.slice(offset,offset+count))images.push(await createImageBitmap(await renderPage(book.pages[index],{scale:Math.min(scale,2),quality:'original',mimeType:'image/jpeg'})));
+      for(const index of indices.slice(offset,offset+count))images.push(await createImageBitmap(await renderPage(presentationPage(book,index),{scale:Math.min(scale,2),quality:'original',mimeType:'image/jpeg'})));
       const canvas=document.createElement('canvas');
       drawComposition(canvas,images,options,Math.round(H*scale));
       output.push(await canvasBlob(canvas,'image/jpeg'));
@@ -161,7 +162,7 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
     labels,
     showCover,
     coverTexture,
-    backColor:back.mode==='match-front'?(book.pages[0]?.background??back.background):back.background,
+    backColor:back.backgroundMode==='match-front'?(book.pages[0]?.background??back.background):back.background,
     backPage,
     leafPlan:readerLeafPlan(pages.length),
     viewerConfig:{...sharedViewerSize,...flipbookMotion},
