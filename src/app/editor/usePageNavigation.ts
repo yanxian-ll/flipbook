@@ -1,7 +1,7 @@
 import {useEffect,useRef,type PointerEvent as ReactPointerEvent,type RefObject,type WheelEvent as ReactWheelEvent} from 'react';
 import type {EditorFlipBookHandle} from '../../components/EditorFlipBook';
 import {flipbookMotion} from '../../flipbook/spec';
-import {PAGE_WHEEL_LOCK_MS,PAGE_WHEEL_RESET_MS,PAGE_WHEEL_THRESHOLD,PAN_CANCEL_DURATION,PAN_COMMIT_DURATION,PAN_COMMIT_PROGRESS,PAN_COMMIT_VELOCITY,SINGLE_PAGE_FLIP_PHASE_GAP_MS,SINGLE_PAGE_PEEK,SINGLE_PAGE_PREFLIP_PAN_DURATION} from './constants';
+import {PAGE_WHEEL_LOCK_MS,PAGE_WHEEL_RESET_MS,PAGE_WHEEL_THRESHOLD,PAN_CANCEL_DURATION,PAN_COMMIT_DURATION,PAN_COMMIT_PROGRESS,PAN_COMMIT_VELOCITY,SINGLE_PAGE_FLIP_START_PROGRESS,SINGLE_PAGE_PEEK,SINGLE_PAGE_PREFLIP_PAN_DURATION} from './constants';
 
 type PanGesture={pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean};
 
@@ -74,17 +74,16 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
     const needsPrePan=focusTrack.current!==null&&Math.abs(targetShift-focusedShift)>1;
     if(!needsPrePan){startFlip();return;}
 
-    setTrackShift(targetShift,`transform ${SINGLE_PAGE_PREFLIP_PAN_DURATION}ms cubic-bezier(.2,.76,.18,1)`);
+    /* Let the single-page viewport establish the travel direction first, then
+       begin the real page turn around the midpoint while the pan keeps moving. */
+    setTrackShift(targetShift,`transform ${SINGLE_PAGE_PREFLIP_PAN_DURATION}ms cubic-bezier(.33,0,.67,1)`);
     if(singlePanTimer.current!==null)window.clearTimeout(singlePanTimer.current);
+    const flipStartDelay=Math.round(SINGLE_PAGE_PREFLIP_PAN_DURATION*SINGLE_PAGE_FLIP_START_PROGRESS);
     singlePanTimer.current=window.setTimeout(()=>{
       singlePanTimer.current=null;
       if(pendingSingleTarget.current!==targetIndex)return;
-      setTrackShift(targetShift,'none');
-      singlePanTimer.current=window.setTimeout(()=>{
-        singlePanTimer.current=null;
-        startFlip();
-      },SINGLE_PAGE_FLIP_PHASE_GAP_MS);
-    },SINGLE_PAGE_PREFLIP_PAN_DURATION+16);
+      startFlip();
+    },flipStartDelay);
   }
   function navigateSinglePage(targetIndex:number){
     if(zoomMode!=='page'||targetIndex<0||targetIndex>=pageCount||targetIndex===pageIndex)return;
@@ -135,8 +134,9 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
         const crossSpread=!sameContentSpread(pageIndex,targetIndex);
         const targetShift=singleShiftFor(targetIndex);
         const needsPrePan=crossSpread&&focusTrack.current!==null&&Math.abs(targetShift-focusedShift)>1;
+        const flipStartDelay=needsPrePan?Math.round(SINGLE_PAGE_PREFLIP_PAN_DURATION*SINGLE_PAGE_FLIP_START_PROGRESS):0;
         lockDuration=crossSpread
-          ?Math.max(PAGE_WHEEL_LOCK_MS,(needsPrePan?SINGLE_PAGE_PREFLIP_PAN_DURATION+SINGLE_PAGE_FLIP_PHASE_GAP_MS:0)+flipbookMotion.flippingTime+160)
+          ?Math.max(PAGE_WHEEL_LOCK_MS,flipStartDelay+flipbookMotion.flippingTime+160)
           :Math.max(PAGE_WHEEL_LOCK_MS,PAN_COMMIT_DURATION+120);
       }
       navigateSinglePage(targetIndex);
