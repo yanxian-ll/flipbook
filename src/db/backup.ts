@@ -134,32 +134,39 @@ export async function exportLibraryBackup(onProgress?:BackupProgress){
   }
 }
 
-async function restoreBookFromArchive(archive:BackupArchive,prefix=''){
+async function restoreBookFromArchive(archive:BackupArchive,prefix='',onProgress?:BackupProgress){
+  reportProgress(onProgress,0);
   const manifestPath=backupPath(prefix,'manifest.json');
   if(!archive.has(manifestPath))throw new Error(`备份文件缺少作品信息：${manifestPath}`);
   let manifest:BackupManifest;
   try{manifest=JSON.parse(await archive.text(manifestPath)) as BackupManifest;}catch{throw new Error('备份文件的作品信息无法读取。');}
   if(![BACKUP_FORMAT,LEGACY_BACKUP_FORMAT].includes(manifest.format)||manifest.version!==1)throw new Error('不支持这个版本的 FLIPBOOK 备份。');
   validateBook(manifest.book);
+  reportProgress(onProgress,5);
   const existing=await repository.list();
   const book=structuredClone(manifest.book);
   if(existing.some(item=>item.id===book.id)){book.id=uid();book.title=`${book.title}（恢复副本）`;book.createdAt=Date.now();}
   book.updatedAt=Date.now();
 
+  const assets=bookAssets(book);
   const insertedIds:string[]=[];
   try{
-    for(const metadata of bookAssets(book)){
-      if(await repository.getAsset(metadata.id))continue;
-      const base=backupPath(prefix,`assets/${metadata.id}`);
-      const original=await archive.blob(`${base}/original`,metadata.mimeType||'application/octet-stream');
-      const preview=await archive.blob(`${base}/preview`,'image/webp');
-      const thumbnail=await archive.blob(`${base}/thumbnail`,'image/webp');
-      const stored:StoredAsset={...metadata,original,preview,thumbnail};
-      await repository.putAssets([stored]);
-      insertedIds.push(metadata.id);
+    for(let index=0;index<assets.length;index++){
+      const metadata=assets[index];
+      if(!(await repository.getAsset(metadata.id))){
+        const base=backupPath(prefix,`assets/${metadata.id}`);
+        const original=await archive.blob(`${base}/original`,metadata.mimeType||'application/octet-stream');
+        const preview=await archive.blob(`${base}/preview`,'image/webp');
+        const thumbnail=await archive.blob(`${base}/thumbnail`,'image/webp');
+        const stored:StoredAsset={...metadata,original,preview,thumbnail};
+        await repository.putAssets([stored]);
+        insertedIds.push(metadata.id);
+      }
+      reportProgress(onProgress,5+90*(index+1)/Math.max(1,assets.length));
     }
     await repository.create(book,[]);
     await repository.markInitialized();
+    reportProgress(onProgress,100);
     return book;
   }catch(cause){
     if(insertedIds.length)await repository.removeAssets(insertedIds).catch(()=>undefined);
@@ -167,25 +174,43 @@ async function restoreBookFromArchive(archive:BackupArchive,prefix=''){
   }
 }
 
-export async function importBookBackup(file:File){
+export async function importBookBackup(file:File,onProgress?:BackupProgress){
+  reportProgress(onProgress,0);
   const archive=await openArchive(file);
-  return await restoreBookFromArchive(archive);
+  reportProgress(onProgress,3);
+  const book=await restoreBookFromArchive(archive,'',percent=>reportProgress(onProgress,3+percent*.97));
+  reportProgress(onProgress,100);
+  return book;
 }
 
-export async function importLibraryBackup(file:File){
+export async function importLibraryBackup(file:File,onProgress?:BackupProgress){
+  reportProgress(onProgress,0);
   const archive=await openArchive(file);
+  reportProgress(onProgress,2);
   if(!archive.has('library.json'))throw new Error('这不是有效的 FLIPBOOK 全部作品备份。');
   let manifest:LibraryManifest;
   try{manifest=JSON.parse(await archive.text('library.json')) as LibraryManifest;}catch{throw new Error('全部作品备份信息无法读取。');}
   if(manifest.format!==LIBRARY_BACKUP_FORMAT||![1,2].includes(manifest.version)||!Array.isArray(manifest.entries))throw new Error('不支持这个版本的全部作品备份。');
+  reportProgress(onProgress,4);
   const restored:Book[]=[];
+  const total=Math.max(1,manifest.entries.length);
   if(manifest.version===2){
-    for(const prefix of manifest.entries)restored.push(await restoreBookFromArchive(archive,prefix));
+    for(let index=0;index<manifest.entries.length;index++){
+      const prefix=manifest.entries[index];
+      restored.push(await restoreBookFromArchive(archive,prefix,percent=>{
+        reportProgress(onProgress,4+95*(index+percent/100)/total);
+      }));
+    }
+    reportProgress(onProgress,100);
     return restored;
   }
-  for(const path of manifest.entries){
+  for(let index=0;index<manifest.entries.length;index++){
+    const path=manifest.entries[index];
     const blob=await archive.blob(path,'application/zip');
-    restored.push(await importBookBackup(new File([blob],path.split('/').at(-1)??'book.flipbook-backup',{type:'application/zip'})));
+    restored.push(await importBookBackup(new File([blob],path.split('/').at(-1)??'book.flipbook-backup',{type:'application/zip'}),percent=>{
+      reportProgress(onProgress,4+95*(index+percent/100)/total);
+    }));
   }
+  reportProgress(onProgress,100);
   return restored;
 }
