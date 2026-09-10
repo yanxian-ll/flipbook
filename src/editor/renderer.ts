@@ -12,20 +12,25 @@ export function elementProps(e:Element){return {id:e.id,x:e.x,y:e.y,width:e.widt
 export function textProps(e:Element){const style=[e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';return {...elementProps(e),text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:style,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
 export function frameClip(e:Element){return (ctx:Konva.Context)=>{ctx.beginPath();if(e.frameShape==='ellipse')ctx.ellipse(e.width/2,e.height/2,e.width/2,e.height/2,0,0,Math.PI*2);else ctx.rect(0,0,e.width,e.height);ctx.closePath();};}
 export function photoProps(e:Element,image:HTMLImageElement){const common={...elementProps(e),image,strokeWidth:0,strokeEnabled:false};if(e.fit==='contain'){const ratio=Math.min(e.width/image.naturalWidth,e.height/image.naturalHeight);return {...common,width:image.naturalWidth*ratio,height:image.naturalHeight*ratio};}return {...common,crop:imageCrop(e,image)};}
-export function pageTextureProps(image:HTMLImageElement,_uploaded:boolean){
+export function pageTextureProps(image:HTMLImageElement){
   const sourceWidth=Math.max(1,image.naturalWidth||image.width||1);
   const sourceHeight=Math.max(1,image.naturalHeight||image.height||1);
-  const scale=Math.max(W/sourceWidth,H/sourceHeight);
-  const scaledWidth=sourceWidth*scale;
-  const scaledHeight=sourceHeight*scale;
+  const sourceRatio=sourceWidth/sourceHeight;
+  const pageRatio=W/H;
+  let cropWidth=sourceWidth,cropHeight=sourceHeight;
+  if(sourceRatio>pageRatio)cropWidth=sourceHeight*pageRatio;
+  else cropHeight=sourceWidth/pageRatio;
   return {
+    image,
     width:W,height:H,
-    fillPatternImage:image,
-    fillPatternRepeat:'no-repeat' as const,
-    fillPatternScaleX:scale,fillPatternScaleY:scale,
-    fillPatternX:(W-scaledWidth)/2,
-    fillPatternY:(H-scaledHeight)/2,
+    crop:{
+      x:(sourceWidth-cropWidth)/2,
+      y:(sourceHeight-cropHeight)/2,
+      width:cropWidth,
+      height:cropHeight,
+    },
     opacity:.55,
+    listening:false,
   };
 }
 const images=new Map<string,Promise<HTMLImageElement>>();
@@ -54,7 +59,7 @@ export async function renderPage(page:Page,options:{scale?:number;quality?:'thum
     const pattern=uploadedTexture
       ?await loadAssetImage(page.patternAssetId!,options.quality??'preview')
       :page.pattern?await loadStaticImage(`/reference/${page.pattern}`):undefined;
-    if(pattern)layer.add(new Konva.Rect(pageTextureProps(pattern,uploadedTexture)));
+    if(pattern)layer.add(new Konva.Image(pageTextureProps(pattern)));
     const ordered=page.templateOverlay?[...page.elements.filter(e=>e.type==='image'),...page.elements.filter(e=>e.type!=='image')]:page.elements;
     let overlayAdded=false;
     const addOverlay=async()=>{if(page.templateOverlay&&!overlayAdded){layer.add(new Konva.Image({image:await loadStaticImage(page.templateOverlay),width:W,height:H,listening:false}));overlayAdded=true;}};
