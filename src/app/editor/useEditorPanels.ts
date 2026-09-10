@@ -10,11 +10,18 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
   const [photoLibraryOpen,setPhotoLibraryOpen]=useState(false);
   const [templateLibraryOpen,setTemplateLibraryOpen]=useState(false);
   const autoOpenedBook=useRef<string|null>(null);
+  const selectedIds=useEditor(state=>state.selected);
 
   useEffect(()=>{
     const page=book?.pages[pageIndex];if(!page)return;
     setPhotoDraft([...new Set(page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id))]);
   },[pageIndex,book?.pages[pageIndex]?.id]);
+
+  useEffect(()=>{
+    if(selectedIds.length!==1)return;
+    const selected=book?.pages[pageIndex]?.elements.find(element=>element.id===selectedIds[0]);
+    if(selected?.type==='sticker')openTool('stickers');
+  },[selectedIds,pageIndex,book?.pages[pageIndex]?.id]);
 
   const sideLibraries=wide&&viewWidth>=DESKTOP_SIDE_LIBRARY_MIN_WIDTH;
   useEffect(()=>{
