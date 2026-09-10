@@ -34,23 +34,28 @@ html.desktop-app .phone-shell.expanded{
 /* Keep a permanent close affordance when the native title bar is hidden. */
 html.desktop-app .desktop-close-button{
   position:fixed;
-  top:5px;
-  right:5px;
+  top:12px;
+  right:8px;
   z-index:2147483647;
   display:grid;
   place-items:center;
-  width:32px;
-  height:32px;
+  width:40px;
+  height:40px;
   padding:0;
   border:0;
-  border-radius:9px;
-  background:rgba(255,255,255,.82);
+  border-radius:50%;
+  background:transparent;
   color:#252525;
-  font:300 24px/1 Arial,sans-serif;
+  font:400 23px/1 Arial,sans-serif;
   cursor:pointer;
   app-region:no-drag;
   -webkit-app-region:no-drag;
   transition:background .15s ease,color .15s ease,transform .15s ease;
+}
+html.desktop-app #root:has(.studio) .desktop-close-button{
+  width:34px;
+  height:34px;
+  right:10px;
 }
 html.desktop-app .desktop-close-button:hover{
   background:#e5484d;
@@ -59,7 +64,7 @@ html.desktop-app .desktop-close-button:hover{
 html.desktop-app .desktop-close-button:active{transform:scale(.94)}
 html.desktop-app .desktop-close-button:focus-visible{outline:2px solid #3185ff;outline-offset:1px}
 html:not(.desktop-app) .desktop-close-button{display:none}
-html.desktop-app .phone-shell>header{padding-right:46px!important;box-sizing:border-box}
+html.desktop-app .phone-shell>header{padding-right:56px!important;box-sizing:border-box}
 
 /* Electron 44 uses app-region for frameless-window dragging. Keep the legacy
    WebKit spelling too so the same CSS remains compatible with older builds. */
@@ -68,7 +73,7 @@ html.desktop-app body::before{
   position:fixed;
   top:0;
   left:0;
-  right:42px;
+  right:52px;
   height:10px;
   z-index:2147483647;
   app-region:drag;
