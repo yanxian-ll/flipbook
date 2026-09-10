@@ -9,6 +9,8 @@ type BackupManifest={format:string;version:1;exportedAt:number;book:Book};
 type LibraryManifest={format:typeof LIBRARY_BACKUP_FORMAT;version:1;exportedAt:number;entries:string[]};
 export type BackupProgress=(percent:number)=>void;
 
+const BACKUP_READ_CONCURRENCY=6;
+
 function safeName(name:string){return (name.trim()||'flipbook').replace(/[\\/:*?"<>|]+/g,'_').slice(0,80);}
 function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}
 async function requireAssetFile(zip:JSZip,path:string,type:string){const entry=zip.file(path);if(!entry)throw new Error(`备份文件缺少素材数据：${path}`);const bytes=await entry.async('uint8array');return new Blob([bytes],{type});}
@@ -17,6 +19,20 @@ function bookAssets(book:Book):Asset[]{
   return [...book.assets,...(book.textureAssets??[])].filter(asset=>!seen.has(asset.id)&&seen.add(asset.id));
 }
 function reportProgress(onProgress:BackupProgress|undefined,percent:number){onProgress?.(Math.max(0,Math.min(100,percent)));}
+async function mapConcurrent<T,R>(items:T[],limit:number,task:(item:T,index:number)=>Promise<R>):Promise<R[]>{
+  if(!items.length)return [];
+  const results=new Array<R>(items.length);
+  let nextIndex=0;
+  const workers=Array.from({length:Math.min(limit,items.length)},async()=>{
+    while(true){
+      const index=nextIndex++;
+      if(index>=items.length)return;
+      results[index]=await task(items[index],index);
+    }
+  });
+  await Promise.all(workers);
+  return results;
+}
 
 async function buildBookBackup(book:Book,onProgress?:BackupProgress){
   const zip=new JSZip();
@@ -24,20 +40,28 @@ async function buildBookBackup(book:Book,onProgress?:BackupProgress){
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
   const assets=bookAssets(book);
   reportProgress(onProgress,0);
-  if(!assets.length)reportProgress(onProgress,65);
-  for(let index=0;index<assets.length;index++){
-    const metadata=assets[index];
+  let loaded=0;
+  const storedAssets=await mapConcurrent(assets,BACKUP_READ_CONCURRENCY,async metadata=>{
     const stored=await repository.getAsset(metadata.id);
     if(!stored)throw new Error(`素材或纹理“${metadata.name}”的本地图片文件缺失，无法完成完整备份。`);
+    loaded++;
+    reportProgress(onProgress,60*loaded/assets.length);
+    return stored;
+  });
+  if(!assets.length)reportProgress(onProgress,60);
+  for(let index=0;index<assets.length;index++){
+    const metadata=assets[index],stored=storedAssets[index];
     const base=`assets/${metadata.id}`;
     zip.file(`${base}/original`,stored.original);
     zip.file(`${base}/preview`,stored.preview);
     zip.file(`${base}/thumbnail`,stored.thumbnail);
-    reportProgress(onProgress,65*(index+1)/assets.length);
   }
+  // Photos and WebP thumbnails are already compressed. Re-running DEFLATE over every
+  // blob costs substantial CPU while usually saving very little space, so keep the
+  // backup container uncompressed and preserve the exact same file structure.
   return await zip.generateAsync(
-    {type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},
-    metadata=>reportProgress(onProgress,65+metadata.percent*.35)
+    {type:'blob',compression:'STORE'},
+    metadata=>reportProgress(onProgress,60+metadata.percent*.4)
   );
 }
 
