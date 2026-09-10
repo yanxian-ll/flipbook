@@ -1,5 +1,6 @@
 import {backCoverFor} from '../domain/model';
 import {useEditor} from '../store/editor';
+import {BookBackCoverVisual} from '../components/BookCover';
 
 const colors=['#e8e2cf','#eeeae3','#ffffff','#f5ec30','#e48af5','#75a4e1','#f6c9cc','#1a1a1a'];
 
@@ -17,6 +18,7 @@ export function BackCoverSettingsPanel(){
       <button type="button" className={back.mode==='solid'?'selected':''} onClick={()=>change({mode:'solid'})}>纯色</button>
       <button type="button" className={back.mode==='custom'?'selected':''} onClick={()=>change({mode:'custom'})}>独立编辑</button>
     </div>
+    <div className="back-cover-settings-preview" aria-label="后封面预览"><BookBackCoverVisual book={book}/></div>
 
     {back.mode!=='match-front'&&<>
       <p className="field-label">后封面颜色</p>
