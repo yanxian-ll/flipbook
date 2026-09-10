@@ -8,8 +8,8 @@ const CRC_TABLE=(()=>{
   return table;
 })();
 
-const ZIP32_MAX=0xffffffff;
 const textEncoder=new TextEncoder();
+const ZIP64_VERSION=45;
 
 type WritableFileLike={
   write(data:Uint8Array):Promise<void>;
@@ -28,11 +28,16 @@ type Entry={name:Uint8Array;crc:number;size:number;offset:number;time:number;dat
 
 function u16(value:number){const bytes=new Uint8Array(2);new DataView(bytes.buffer).setUint16(0,value,true);return bytes;}
 function u32(value:number){const bytes=new Uint8Array(4);new DataView(bytes.buffer).setUint32(0,value>>>0,true);return bytes;}
+function u64(value:number){const bytes=new Uint8Array(8);new DataView(bytes.buffer).setBigUint64(0,BigInt(value),true);return bytes;}
 function concat(...parts:Uint8Array[]){
   const result=new Uint8Array(parts.reduce((sum,part)=>sum+part.byteLength,0));
   let offset=0;
   for(const part of parts){result.set(part,offset);offset+=part.byteLength;}
   return result;
+}
+function zip64Extra(...values:Uint8Array[]){
+  const data=concat(...values);
+  return concat(u16(0x0001),u16(data.byteLength),data);
 }
 function updateCrc(crc:number,bytes:Uint8Array){
   let value=crc>>>0;
@@ -75,7 +80,6 @@ export class StreamZipWriter{
   constructor(private sink:Sink){}
 
   private async write(bytes:Uint8Array){
-    if(this.offset+bytes.byteLength>ZIP32_MAX)throw new Error('备份文件超过 4 GB，当前 ZIP 格式无法安全写入。请分开备份画册。');
     await this.sink.write(bytes);
     this.offset+=bytes.byteLength;
   }
@@ -85,15 +89,16 @@ export class StreamZipWriter{
   }
 
   async addBlob(name:string,blob:Blob,onProgress?:(written:number,total:number)=>void){
-    if(blob.size>ZIP32_MAX)throw new Error(`备份中的文件“${name}”超过 4 GB，无法写入。`);
     const nameBytes=textEncoder.encode(name);
     if(nameBytes.byteLength>0xffff)throw new Error('备份文件路径过长，无法写入。');
     const {time,date}=dosDateTime();
     const localOffset=this.offset;
     const flags=0x0808; // data descriptor + UTF-8 filename
+    const localExtra=zip64Extra(u64(0),u64(0));
     const localHeader=concat(
-      u32(0x04034b50),u16(20),u16(flags),u16(0),u16(time),u16(date),
-      u32(0),u32(0),u32(0),u16(nameBytes.byteLength),u16(0),nameBytes,
+      u32(0x04034b50),u16(ZIP64_VERSION),u16(flags),u16(0),u16(time),u16(date),
+      u32(0),u32(0xffffffff),u32(0xffffffff),u16(nameBytes.byteLength),u16(localExtra.byteLength),
+      nameBytes,localExtra,
     );
     await this.write(localHeader);
 
@@ -110,26 +115,33 @@ export class StreamZipWriter{
     }
     crc=(crc^0xffffffff)>>>0;
     const size=blob.size;
-    await this.write(concat(u32(0x08074b50),u32(crc),u32(size),u32(size)));
+    await this.write(concat(u32(0x08074b50),u32(crc),u64(size),u64(size)));
     this.entries.push({name:nameBytes,crc,size,offset:localOffset,time,date});
     onProgress?.(size,size);
   }
 
   async finish(){
-    if(this.entries.length>0xffff)throw new Error('备份文件条目过多，无法写入。');
     const centralOffset=this.offset;
     for(const entry of this.entries){
+      const centralExtra=zip64Extra(u64(entry.size),u64(entry.size),u64(entry.offset));
       const centralHeader=concat(
-        u32(0x02014b50),u16(20),u16(20),u16(0x0808),u16(0),u16(entry.time),u16(entry.date),
-        u32(entry.crc),u32(entry.size),u32(entry.size),u16(entry.name.byteLength),u16(0),u16(0),
-        u16(0),u16(0),u32(0),u32(entry.offset),entry.name,
+        u32(0x02014b50),u16(ZIP64_VERSION),u16(ZIP64_VERSION),u16(0x0808),u16(0),u16(entry.time),u16(entry.date),
+        u32(entry.crc),u32(0xffffffff),u32(0xffffffff),u16(entry.name.byteLength),u16(centralExtra.byteLength),u16(0),
+        u16(0),u16(0),u32(0),u32(0xffffffff),entry.name,centralExtra,
       );
       await this.write(centralHeader);
     }
     const centralSize=this.offset-centralOffset;
+    const zip64EndOffset=this.offset;
     await this.write(concat(
-      u32(0x06054b50),u16(0),u16(0),u16(this.entries.length),u16(this.entries.length),
-      u32(centralSize),u32(centralOffset),u16(0),
+      u32(0x06064b50),u64(44),u16(ZIP64_VERSION),u16(ZIP64_VERSION),u32(0),u32(0),
+      u64(this.entries.length),u64(this.entries.length),u64(centralSize),u64(centralOffset),
+    ));
+    await this.write(concat(
+      u32(0x07064b50),u32(0),u64(zip64EndOffset),u32(1),
+    ));
+    await this.write(concat(
+      u32(0x06054b50),u16(0),u16(0),u16(0xffff),u16(0xffff),u32(0xffffffff),u32(0xffffffff),u16(0),
     ));
     return await this.sink.close();
   }
