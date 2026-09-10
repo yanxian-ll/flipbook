@@ -3,11 +3,10 @@ import {Button} from '../components/ui';
 import {backCoverFor,coverTemplateFor,textElement} from '../domain/model';
 import {useCoverContext} from '../store/coverContext';
 import {useEditor} from '../store/editor';
-import type {PanelId} from './EditorPanel';
 
 const colors=['#f5ec30','#eeeae3','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#ffffff','#1a1a1a'];
 
-export function CoverSettingsPanel({onPanel}:{onPanel:(panel:PanelId)=>void}){
+export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')=>void}){
   const s=useEditor(),book=s.book!,cover=book.pages[0];
   const contextSide=useCoverContext(state=>state.side);
   const setSide=useCoverContext(state=>state.setSide);
@@ -18,7 +17,7 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:PanelId)=>void}){
   const templateId=side==='front'?book.coverTemplate:back.templateId;
   const template=coverTemplateFor(book,templateId);
   const assetId=side==='front'?frontPhoto?.assetId:back.assetId;
-  const assetName=assetId?book.assets.find(asset=>asset.id===assetId)?.name:'未选择照片';
+  const assetName=assetId?(book.assets.find(asset=>asset.id===assetId)?.name??'素材已缺失'):'未选择照片';
 
   function frontText(value:string,key:'text'|'color'){
     s.change(draft=>{
