@@ -85,7 +85,7 @@ export function validateBook(value: unknown): asserts value is Book {
   if(!b || typeof b.id !== 'string' || typeof b.title !== 'string' || !Array.isArray(b.pages) || b.pages.length === 0 || !Array.isArray(b.assets) || b.format?.width !== W || b.format?.height !== H || b.pages[0].type !== 'cover' || b.pages.some(p=>!Array.isArray(p.elements)||typeof p.background!=='string')) throw new Error('画册数据损坏，无法打开。原数据已保留。');
 }
 
-export function visualPageBackground(page:Page){return page.templateBackground??page.background;}
+export function visualPageBackground(page:Page){return page.pattern||page.patternAssetId?page.background:page.templateBackground??page.background;}
 
 export function bookStyleFor(book:Book):BookStyle{
   return {
