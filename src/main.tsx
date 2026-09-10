@@ -6,6 +6,7 @@ import {Loading} from './components/ui';
 import {AppErrorBoundary} from './components/AppErrorBoundary';
 import './styles/tokens.css';
 import './styles.css';
+import './styles/app-shell.css';
 
 const Create=lazy(()=>import('./app/Create').then(module=>({default:module.Create})));
 const Editor=lazy(()=>import('./app/Editor').then(module=>({default:module.Editor})));
