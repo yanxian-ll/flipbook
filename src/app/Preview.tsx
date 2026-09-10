@@ -2,7 +2,7 @@ import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
 import {Children,forwardRef,memo,useEffect,useRef,useState} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import {useNavigate,useParams,useSearchParams} from 'react-router-dom';
-import {ChevronLeft,ChevronRight,Maximize2,Upload,Pencil} from 'lucide-react';
+import {ChevronLeft,ChevronRight,Download,Maximize2,Pencil} from 'lucide-react';
 import {type Book,type Page} from '../domain/model';
 import {repository,friendlyError} from '../db/repository';
 import {PageThumbnail} from '../components/PageThumbnail';
@@ -75,7 +75,7 @@ export function Preview(){
       <span>{book?.title??'FLIPBOOK'}</span>
       <div className="flex">
         <IconButton label="全屏" onClick={()=>{void (document.fullscreenElement?document.exitFullscreen():shell.current?.requestFullscreen())?.catch(e=>setError(friendlyError(e)));}}><Maximize2 size={17}/></IconButton>
-        <IconButton label="导出 Flipbook" onClick={()=>setExporting(true)}><Upload size={17}/></IconButton>
+        <IconButton label="导出 Flipbook" onClick={()=>setExporting(true)}><Download size={17}/></IconButton>
       </div>
     </header>
     <ErrorMessage message={error}/>
@@ -109,7 +109,7 @@ export function Preview(){
           onFlip={event=>setIndex(Number(event.data)||0)}
         >
           {Children.toArray([
-            ...book.pages.map((page,pageIndex)=><PreviewLeaf key={page.id} book={book} page={page} index={pageIndex} nearby={Math.abs(pageIndex-index)<=3} kind="page"/>),
+            ...book.pages.map((page,pageIndex)=><PreviewLeaf key={page.id} book={book} page={page} index={pageIndex} nearby={Math.abs(pageIndex-index)<=5} kind="page"/>),
             plan.needsFiller?<PreviewLeaf key="__preview_blank__" book={book} index={plan.fillerIndex} nearby={false} kind="blank"/>:null,
             <PreviewLeaf key="__preview_back__" book={book} index={plan.backIndex} nearby={false} kind="back"/>
           ])}
