@@ -63,7 +63,7 @@ function FlipLeafInner(
   const page=book.pages[index];
   if(!page)return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
 
-  return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''}`} data-density={index===0?'hard':'soft'}>
+  return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''}`} data-book-side={index===0?'cover':index%2===1?'left':'right'} data-density={index===0?'hard':'soft'}>
     {index===0
       ?active
         ?<LiveEditorSurface onInteractionChange={onInteractionChange}><BookCoverEditor book={book} width={width} onTextEdit={onTextEdit} onImageSelect={onImageSelect} onOpen={onOpenCover}/></LiveEditorSurface>

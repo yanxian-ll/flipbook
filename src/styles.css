@@ -1310,3 +1310,62 @@
 .export-collage-count .segments{margin:10px 0 0}
 .export-collage-count .btn{padding:9px 10px;font-size:10px}
 .export-hint{margin:12px 1px 0;color:#999;font-size:9px;line-height:1.65}
+.composition-toggles{display:flex;flex-wrap:wrap;gap:16px;margin:16px 0;font-size:12px}.composition-toggles label{display:flex;align-items:center;gap:6px}.composition-custom{display:grid;grid-template-columns:1fr 1fr;gap:12px}.composition-stage{position:relative;background:#eeefed;border:1px solid #e5e5e5;border-radius:12px;height:300px;display:flex;align-items:center;justify-content:center;padding:14px;overflow:hidden}.composition-stage canvas{display:block;max-width:100%;max-height:100%;width:auto;height:auto;box-shadow:0 2px 12px #0001;touch-action:none}.composition-status{position:absolute;bottom:20px;background:#fffffff0;padding:6px 12px;border-radius:20px;font-size:11px}.composition-nav{display:flex;align-items:center;justify-content:space-between;margin:12px 0;font-size:11px}.composition-nav .btn{font-size:11px;padding:7px 12px}.composition-adjust{background:#fafafa;border-radius:12px;padding:12px}.composition-adjust label{display:flex;align-items:center;gap:10px;font-size:11px;margin-bottom:12px}.composition-adjust input{flex:1;min-width:0}.composition-adjust span{width:42px;text-align:right;font-variant-numeric:tabular-nums}.composition-adjust .btn{font-size:11px}.export-collage-count .segments{flex-wrap:wrap}
+/* Export workspace: let the artwork remain visible while adjusting its output. */
+.export-dialog{--export-paper:#fff;--export-desk:#eceeec;--export-ink:#202421;--export-muted:#626963;--export-line:#dfe3df;color:var(--export-ink)}
+.modal.export-dialog-composing{width:980px;padding:28px;overflow:hidden;display:flex;flex-direction:column}
+.export-dialog-composing>h2,.export-dialog-composing>p,.export-dialog-composing>.export-back,.export-dialog-composing>.export-current-format,.export-dialog-composing>.export-footer{flex-shrink:0}
+.export-dialog-composing .export-workspace{display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);gap:28px;min-height:0;overflow-y:auto;align-items:start;padding:0;border:0}
+.export-preview-pane{position:sticky;top:0;min-width:0;padding:16px;background:var(--export-desk);border-radius:14px}
+.export-preview-title{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;font-size:12px}
+.export-preview-title span{font-size:11px;color:var(--export-muted)}
+.export-dialog .composition-stage{height:clamp(200px,40dvh,440px);padding:12px;border:0;border-radius:0;background:transparent}
+.export-dialog .export-preview-pane .export-hint{color:var(--export-muted);font-size:11px;line-height:1.65;min-height:36px}
+.export-settings-pane{min-width:0;padding:0 4px 12px 0}
+.export-settings-pane .export-collage-count{margin-top:0}
+.export-dialog .field,.export-dialog .field select,.export-dialog .composition-toggles,.export-dialog .composition-adjust label{font-size:12px}
+.export-dialog .export-hint{color:var(--export-muted);font-size:11px}
+.export-dialog .export-collage-count small{color:var(--export-muted);font-size:11px}
+.export-dialog .composition-nav{margin-bottom:0;gap:8px}
+.export-dialog .composition-nav .btn{min-height:36px;background:var(--export-paper)}
+.export-dialog .composition-custom .field{display:flex;flex-direction:column;align-items:stretch;gap:6px}
+.export-dialog .composition-custom input{width:100%;min-width:0}
+.export-dialog .export-selection{flex-wrap:wrap;gap:12px;align-items:center}
+.export-dialog .export-selection button{min-height:32px;color:var(--export-ink)}
+.export-dialog .export-pages{max-height:220px}
+.export-dialog .export-pages span{font-size:11px}
+.export-footer{padding-top:12px;border-top:1px solid var(--export-line);margin-top:16px;background:var(--export-paper)}
+.export-footer>p{font-size:12px;color:var(--export-muted);margin:0 0 10px}
+.export-footer .export-progress{margin:0 0 10px}
+.export-footer .export-progress span{width:100%;transform-origin:left;transition:transform 180ms ease-out}
+.export-dialog :is(button,input,select,canvas):focus-visible{outline:2px solid #377258;outline-offset:3px}
+.export-dialog .btn:disabled{opacity:.4;cursor:not-allowed}
+.composition-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;color:var(--export-muted);font-size:12px;text-align:center}
+.composition-empty b{font-size:15px;color:var(--export-ink)}
+@media(max-width:720px){
+  .modal.export-dialog-composing{padding:26px 16px 16px;overflow-y:auto}
+  .export-dialog-composing .export-workspace{display:flex;flex-direction:column;overflow:visible;gap:20px;flex-shrink:0}
+  .export-preview-pane{position:static;width:100%;padding:12px}
+  .export-settings-pane{width:100%;padding:0}
+  .export-dialog .composition-stage{height:240px}
+  .export-footer{position:sticky;bottom:-16px;margin-bottom:-16px;padding-bottom:16px;z-index:2}
+}
+@media(prefers-reduced-motion:reduce){
+  .export-dialog *{animation-iteration-count:1!important;scroll-behavior:auto!important}
+  .export-footer .export-progress span{transition:none}
+}
+.export-dialog-composing .export-workspace{min-height:0;flex:1 1 auto}
+.export-dialog .export-settings-pane{border:0;margin:0;min-inline-size:0}
+.export-dialog .composition-stage{height:clamp(140px,calc(90dvh - 500px),440px)}
+.export-footer{position:relative;z-index:2}
+@media(max-width:720px){.export-dialog .composition-stage{height:240px}.export-dialog-composing .export-workspace{flex:0 0 auto}.export-footer{position:sticky}}
+/* Permanent book shading follows the leaf in both editing modes. */
+.native-book-stage .editor-flip-page[data-book-side]::after,
+.single-page-editor-shell .book-page::after{content:'';position:absolute;inset:0;z-index:15;pointer-events:none;border:1px solid #00000012}
+.native-book-stage .editor-flip-page[data-book-side=cover]::after{display:none}
+.single-page-editor-shell .book-page{position:relative}
+.native-book-stage .editor-flip-page[data-book-side=left]::after,
+.single-page-editor-shell .book-page-left::after{background:linear-gradient(90deg,#00000008,transparent 3%,transparent 89%,#00000008 95%,#00000028 99%,#00000055)}
+.native-book-stage .editor-flip-page[data-book-side=right]::after,
+.single-page-editor-shell .book-page-right::after{background:linear-gradient(90deg,#00000040,#ffffff33 .6%,#00000015 2%,transparent 8%,transparent 97%,#00000008)}
+.native-book-stage .editor-fallback-spread>.spine-shadow{width:28px;background:linear-gradient(90deg,transparent,#0003 45%,#0006 50%,#fff4 54%,transparent)}
