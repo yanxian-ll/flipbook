@@ -18,6 +18,7 @@ interface EditorState {
 let saveTimer:ReturnType<typeof setTimeout>|undefined;
 let saveQueue:Promise<void>=Promise.resolve();
 function schedule(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{void useEditor.getState().flush().catch(()=>{});},900);}
+function checkpoint(book:Book|null,reason:string){if(book)void repository.createSnapshot(book,reason).catch(()=>{});}
 export const useEditor=create<EditorState>((set,get)=>({
   book:null,pageIndex:0,selected:[],past:[],future:[],status:'saved',error:'',revision:0,clipboard:[],
   load(book){
@@ -70,9 +71,9 @@ export const useEditor=create<EditorState>((set,get)=>({
     });
     get().setPage(index);
   },
-  removePage(){if(get().pageIndex===0)return;const index=get().pageIndex;get().change(b=>{b.pages.splice(index,1);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index-1);},
+  removePage(){if(get().pageIndex===0)return;const index=get().pageIndex;checkpoint(get().book,'删除页面前');get().change(b=>{b.pages.splice(index,1);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index-1);},
   duplicatePage(){const index=get().pageIndex;if(index===0)return;get().change(b=>{const page=structuredClone(current(b.pages[index]));page.id=uid();page.elements=page.elements.map(e=>({...e,id:uid()}));b.pages.splice(index+1,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index+1);},
-  reorderPage(from,to){if(from===0||to===0||from===to)return;get().change(b=>{const [page]=b.pages.splice(from,1);b.pages.splice(to,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(to);},
+  reorderPage(from,to){if(from===0||to===0||from===to)return;checkpoint(get().book,'调整页面顺序前');get().change(b=>{const [page]=b.pages.splice(from,1);b.pages.splice(to,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(to);},
   reorderSpread(fromStart,toStart){
     if(fromStart<1||toStart<1||fromStart===toStart)return;
     const book=get().book;if(!book)return;
@@ -80,6 +81,7 @@ export const useEditor=create<EditorState>((set,get)=>({
     const fromGroup=Math.max(0,Math.min(groupCount-1,Math.floor((fromStart-1)/2)));
     const toGroup=Math.max(0,Math.min(groupCount-1,Math.floor((toStart-1)/2)));
     if(fromGroup===toGroup)return;
+    checkpoint(book,'调整跨页顺序前');
     get().change(b=>{
       const content=b.pages.slice(1);
       const groups=[] as typeof content[];
@@ -91,7 +93,7 @@ export const useEditor=create<EditorState>((set,get)=>({
     });
     get().setPage(1+toGroup*2);
   },
-  layout(id,assetIds){const layout=[...layouts,...(get().book?.customLayouts??[])].find(l=>l.id===id);if(!layout)return;get().change(b=>{b.pages[get().pageIndex]=applyLayout(b.pages[get().pageIndex],layout,assetIds);});set({selected:[]});},
+  layout(id,assetIds){const layout=[...layouts,...(get().book?.customLayouts??[])].find(l=>l.id===id);if(!layout)return;checkpoint(get().book,'应用排版前');get().change(b=>{b.pages[get().pageIndex]=applyLayout(b.pages[get().pageIndex],layout,assetIds);});set({selected:[]});},
   setPhotos(ids){
     get().change(b=>{
       const page=b.pages[get().pageIndex];
@@ -149,6 +151,7 @@ export const useEditor=create<EditorState>((set,get)=>({
     if(!currentBook)return;
     const removing=[...new Set(ids)].filter(id=>currentBook.assets.some(asset=>asset.id===id));
     if(!removing.length)return;
+    checkpoint(currentBook,'删除素材前');
     clearTimeout(saveTimer);
     const removeSet=new Set(removing);
     const next=produce(currentBook,draft=>{
