@@ -7,6 +7,7 @@ const LIBRARY_BACKUP_FORMAT='flipbook-library-backup';
 const LEGACY_BACKUP_FORMAT=['flip','in-backup'].join('');
 type BackupManifest={format:string;version:1;exportedAt:number;book:Book};
 type LibraryManifest={format:typeof LIBRARY_BACKUP_FORMAT;version:1;exportedAt:number;entries:string[]};
+export type BackupProgress=(percent:number)=>void;
 
 function safeName(name:string){return (name.trim()||'flipbook').replace(/[\\/:*?"<>|]+/g,'_').slice(0,80);}
 function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}
@@ -15,44 +16,69 @@ function bookAssets(book:Book):Asset[]{
   const seen=new Set<string>();
   return [...book.assets,...(book.textureAssets??[])].filter(asset=>!seen.has(asset.id)&&seen.add(asset.id));
 }
+function reportProgress(onProgress:BackupProgress|undefined,percent:number){onProgress?.(Math.max(0,Math.min(100,percent)));}
 
-async function buildBookBackup(book:Book){
+async function buildBookBackup(book:Book,onProgress?:BackupProgress){
   const zip=new JSZip();
   const manifest:BackupManifest={format:BACKUP_FORMAT,version:1,exportedAt:Date.now(),book:structuredClone(book)};
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
-  for(const metadata of bookAssets(book)){
+  const assets=bookAssets(book);
+  reportProgress(onProgress,0);
+  if(!assets.length)reportProgress(onProgress,65);
+  for(let index=0;index<assets.length;index++){
+    const metadata=assets[index];
     const stored=await repository.getAsset(metadata.id);
     if(!stored)throw new Error(`素材或纹理“${metadata.name}”的本地图片文件缺失，无法完成完整备份。`);
     const base=`assets/${metadata.id}`;
     zip.file(`${base}/original`,stored.original);
     zip.file(`${base}/preview`,stored.preview);
     zip.file(`${base}/thumbnail`,stored.thumbnail);
+    reportProgress(onProgress,65*(index+1)/assets.length);
   }
-  return await zip.generateAsync({type:'blob',compression:'DEFLATE',compressionOptions:{level:6}});
+  return await zip.generateAsync(
+    {type:'blob',compression:'DEFLATE',compressionOptions:{level:6}},
+    metadata=>reportProgress(onProgress,65+metadata.percent*.35)
+  );
 }
 
-export async function exportBookBackup(bookId:string){
+export async function exportBookBackup(bookId:string,onProgress?:BackupProgress){
+  reportProgress(onProgress,0);
   const book=await repository.get(bookId);
-  const blob=await buildBookBackup(book);
+  const blob=await buildBookBackup(book,percent=>reportProgress(onProgress,percent*.98));
   const stamp=new Date().toISOString().slice(0,10);
   downloadBlob(blob,`${safeName(book.title)}-${stamp}.flipbook-backup`);
+  reportProgress(onProgress,100);
 }
 
-export async function exportLibraryBackup(){
+export async function exportLibraryBackup(onProgress?:BackupProgress){
+  reportProgress(onProgress,0);
   const books=await repository.list();
   if(!books.length)throw new Error('当前还没有可备份的画册。');
   const zip=new JSZip(),entries:string[]=[];
+  const weights=books.map(book=>Math.max(1,bookAssets(book).length));
+  const totalWeight=weights.reduce((sum,weight)=>sum+weight,0);
+  let completedWeight=0;
   for(let index=0;index<books.length;index++){
-    const book=books[index];
+    const book=books[index],weight=weights[index];
     const name=`books/${String(index+1).padStart(3,'0')}-${safeName(book.title)}.flipbook-backup`;
     entries.push(name);
-    zip.file(name,await buildBookBackup(book));
+    const blob=await buildBookBackup(book,percent=>{
+      const completed=completedWeight+weight*percent/100;
+      reportProgress(onProgress,92*completed/totalWeight);
+    });
+    zip.file(name,blob);
+    completedWeight+=weight;
+    reportProgress(onProgress,92*completedWeight/totalWeight);
   }
   const manifest:LibraryManifest={format:LIBRARY_BACKUP_FORMAT,version:1,exportedAt:Date.now(),entries};
   zip.file('library.json',JSON.stringify(manifest,null,2));
-  const blob=await zip.generateAsync({type:'blob',compression:'STORE'});
+  const blob=await zip.generateAsync(
+    {type:'blob',compression:'STORE'},
+    metadata=>reportProgress(onProgress,92+metadata.percent*.08)
+  );
   const stamp=new Date().toISOString().slice(0,10);
   downloadBlob(blob,`flipbook-library-${stamp}.flipbook-library-backup`);
+  reportProgress(onProgress,100);
 }
 
 export async function importBookBackup(file:File){
