@@ -1,0 +1,10 @@
+export const PAGE_ASPECT_RATIO=1696/1200;
+export const SINGLE_PAGE_PEEK=.13;
+export const PAGE_WHEEL_THRESHOLD=52;
+export const PAGE_WHEEL_LOCK_MS=600;
+export const PAGE_WHEEL_RESET_MS=180;
+export const PAN_COMMIT_PROGRESS=.22;
+export const PAN_COMMIT_VELOCITY=.5;
+export const PAN_COMMIT_DURATION=230;
+export const PAN_CANCEL_DURATION=160;
+export const DESKTOP_SIDE_LIBRARY_MIN_WIDTH=700;
