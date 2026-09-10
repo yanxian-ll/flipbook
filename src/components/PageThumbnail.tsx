@@ -7,6 +7,16 @@ const visibleRenderQueue=createWorkQueue(2);
 const cache=new WeakMap<Page,Map<number,Blob>>();
 const pending=new WeakMap<Page,Map<number,Promise<Blob>>>();
 const immediatePending=new WeakMap<Page,Map<number,Promise<Blob>>>();
+const visibleTargets=new Map<Element,(visible:boolean)=>void>();
+let sharedVisibilityObserver:IntersectionObserver|null=null;
+function visibilityObserver(){
+  if(typeof IntersectionObserver==='undefined')return null;
+  if(!sharedVisibilityObserver)sharedVisibilityObserver=new IntersectionObserver(entries=>{
+    for(const entry of entries)visibleTargets.get(entry.target)?.(entry.isIntersecting);
+  },{rootMargin:'160px'});
+  return sharedVisibilityObserver;
+}
+
 function cached(page:Page,scale:number){return cache.get(page)?.get(scale);}
 function store(page:Page,scale:number,blob:Blob){if(!cache.has(page))cache.set(page,new Map());cache.get(page)!.set(scale,blob);return blob;}
 export function preloadPageThumbnail(page:Page,scale=.12):Promise<Blob>{
@@ -39,11 +49,17 @@ function LazyThumbnail(props:ThumbnailProps){
   const host=useRef<HTMLDivElement>(null),[visible,setVisible]=useState(false);
   useEffect(()=>{
     const node=host.current;if(!node)return;
-    const observer=new IntersectionObserver(entries=>setVisible(entries[0].isIntersecting),{rootMargin:'120px'});
+    const observer=visibilityObserver();
+    if(!observer){setVisible(true);return;}
+    const update=(next:boolean)=>setVisible(next);
+    visibleTargets.set(node,update);
     observer.observe(node);
-    return()=>observer.disconnect();
+    return()=>{
+      observer.unobserve(node);
+      visibleTargets.delete(node);
+    };
   },[]);
-  return <div ref={host} className="page-thumbnail-host" style={{width:'100%',height:'100%'}}>{visible?<RenderedThumbnail {...props} delay={200}/>:<div className="thumbnail-placeholder" style={{background:visualPageBackground(props.page)}}/>}</div>;
+  return <div ref={host} className="page-thumbnail-host" style={{width:'100%',height:'100%'}}>{visible?<RenderedThumbnail {...props} delay={160}/>:<div className="thumbnail-placeholder" style={{background:visualPageBackground(props.page)}}/>}</div>;
 }
 function RenderedThumbnail({page,alt='页面预览',scale=.12,delay=0,immediate=false}:ThumbnailProps&{delay?:number}){
   const [url,setUrl]=useState(''),[error,setError]=useState(''),[retry,setRetry]=useState(0);
@@ -63,5 +79,5 @@ function RenderedThumbnail({page,alt='页面预览',scale=.12,delay=0,immediate=
     if(hit)show(hit);else if(delay)timer=setTimeout(load,delay);else load();
     return()=>{alive=false;if(timer)clearTimeout(timer);};
   },[page,scale,delay,retry,immediate]);
-  return <div className="page-thumbnail-host" style={{width:'100%',height:'100%'}}>{error?<button className="thumbnail-retry" title={error} onClick={e=>{e.stopPropagation();setRetry(n=>n+1);}}>页面加载失败，点击重试</button>:url?<img src={url} alt={alt} decoding="async"/>:<div className="thumbnail-placeholder" aria-label="正在加载页面" style={{background:visualPageBackground(page)}}/>}</div>;
+  return <div className="page-thumbnail-host" style={{width:'100%',height:'100%'}}>{error?<button className="thumbnail-retry" title={error} onClick={e=>{e.stopPropagation();setRetry(n=>n+1);}}>页面加载失败，点击重试</button>:url?<img src={url} alt={alt} loading="lazy" decoding="async"/>:<div className="thumbnail-placeholder" aria-label="正在加载页面" style={{background:visualPageBackground(page)}}/>}</div>;
 }
