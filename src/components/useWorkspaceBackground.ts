@@ -23,7 +23,7 @@ export function useWorkspaceBackground(book:Book|null|undefined):CSSProperties{
     return {
       backgroundColor,
       backgroundImage:`linear-gradient(${tint},${tint}),url("${image}")`,
-      backgroundSize:'auto, 420px auto',
+      backgroundSize:'auto, clamp(720px,70vw,960px) auto',
       backgroundPosition:'center,center',
       backgroundRepeat:'no-repeat,repeat',
     };
@@ -36,7 +36,7 @@ export function useWorkspaceBackground(book:Book|null|undefined):CSSProperties{
     return {
       backgroundColor,
       backgroundImage:`linear-gradient(${tint},${tint}),url("/reference/${pattern}")`,
-      backgroundSize:`auto, ${pattern.startsWith('bg-')?'240px auto':'420px auto'}`,
+      backgroundSize:`auto, ${pattern.startsWith('bg-')?'clamp(560px,55vw,760px) auto':'clamp(720px,70vw,960px) auto'}`,
       backgroundPosition:'center,center',
       backgroundRepeat:'no-repeat,repeat',
     };
