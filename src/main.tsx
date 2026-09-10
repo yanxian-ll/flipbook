@@ -7,6 +7,7 @@ import {AppErrorBoundary} from './components/AppErrorBoundary';
 import './styles/tokens.css';
 import './styles.css';
 import './styles/app-shell.css';
+import './styles/template-actions.css';
 
 if(/Electron\//i.test(navigator.userAgent))document.documentElement.classList.add('desktop-app');
 
