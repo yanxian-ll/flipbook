@@ -1,5 +1,5 @@
 import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
-import {Children,forwardRef,useEffect,useRef,useState} from 'react';
+import {Children,forwardRef,memo,useEffect,useRef,useState} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import {useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {ChevronLeft,ChevronRight,Maximize2,Upload,Pencil} from 'lucide-react';
@@ -19,14 +19,21 @@ type PreviewLeafProps={
   kind:'page'|'blank'|'back';
 };
 
-const PreviewLeaf=forwardRef<HTMLDivElement,PreviewLeafProps>(({book,page,nearby,index,kind},ref)=>{
+const PreviewLeafBase=forwardRef<HTMLDivElement,PreviewLeafProps>(({book,page,nearby,index,kind},ref)=>{
   if(kind==='back')return <div ref={ref} className="flip-page preview-back-cover" data-density="hard" aria-label="后封面"><BookBackCoverVisual book={book} className="preview-back-cover-visual"/></div>;
   if(kind==='blank')return <div ref={ref} className="flip-page preview-blank-page" aria-hidden/>;
   if(!page)return <div ref={ref} className="flip-page preview-blank-page" aria-hidden/>;
   if(index===0)return <div ref={ref} className="flip-page preview-cover-page" data-density="hard"><BookCoverVisual book={book} className="preview-cover-visual"/></div>;
   return <div ref={ref} className="flip-page" data-density="soft">{nearby?<PageThumbnail page={page} scale={.6} immediate alt={`第 ${index} 页`}/>:<div className="thumbnail-placeholder" style={{background:page.background,width:'100%',height:'100%'}}/>}</div>;
 });
-PreviewLeaf.displayName='PreviewLeaf';
+PreviewLeafBase.displayName='PreviewLeaf';
+const PreviewLeaf=memo(PreviewLeafBase,(prev,next)=>{
+  if(prev.kind!==next.kind||prev.index!==next.index||prev.nearby!==next.nearby||prev.page!==next.page)return false;
+  if(prev.kind==='back')return prev.book.backCover===next.book.backCover&&prev.book.bookStyle===next.book.bookStyle&&prev.book.pages[0]?.background===next.book.pages[0]?.background;
+  if(prev.index===0)return prev.book.coverTemplate===next.book.coverTemplate&&prev.book.pages[0]===next.book.pages[0];
+  return true;
+});
+PreviewLeaf.displayName='MemoPreviewLeaf';
 
 export function Preview(){
   const {bookId}=useParams();
