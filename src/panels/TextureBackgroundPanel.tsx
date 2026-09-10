@@ -10,21 +10,17 @@ import './textureBackground.css';
 export type TextureBackgroundMode='workspace'|'page';
 
 const RECENT_TEXTURE_LIMIT=4;
-const workspaceColors=['#e9eaec','#ddd9d1','#cfc7bb','#cfd9d6','#d5dce5','#b9b0a4','#262728'] as const;
-const pageColors=['#ffffff','#eeeae3','#f5ec30','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#1a1a1a'] as const;
-const workspaceTextures=[
-  ['', '无纹理'],
-  ['bg3.jpg','织物'],
-  ['bg4.jpg','粗纸'],
-  ['bg5.jpg','牛皮纸'],
+const sharedColors=[
+  '#ffffff','#eeeae3','#f5ec30','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#1a1a1a',
+  '#e9eaec','#ddd9d1','#cfc7bb','#cfd9d6','#d5dce5','#b9b0a4','#262728',
 ] as const;
-const pageTextures=[
+const sharedTextures=[
   ['', '纯色'],
   ['bg-dots.jpg','波点'],
   ['bg-grid.jpg','格纹'],
   ['bg2.jpg','纸张'],
   ['bg3.jpg','织物'],
-  ['bg4.jpg','纹理'],
+  ['bg4.jpg','粗纸'],
   ['bg5.jpg','牛皮纸'],
 ] as const;
 
@@ -49,8 +45,8 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
   const workspace=mode==='workspace';
   const currentTextureId=workspace?book.workspaceTextureId:page.patternAssetId;
   const recent=useMemo(()=>recentTextureAssets(book,currentTextureId),[book.textureAssets,book.recentTextureIds,currentTextureId]);
-  const colors=workspace?workspaceColors:pageColors;
-  const textures=workspace?workspaceTextures:pageTextures;
+  const colors=sharedColors;
+  const textures=sharedTextures;
   const title=workspace?'垫底背景':'底纹';
 
   function setColor(value:string){
