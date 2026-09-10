@@ -48,8 +48,15 @@ export function EditorPreviewRail({book,mode,flipBook,onAddPage,onRequestDelete}
   if(pageIndex===0)return null;
 
   const selectPreviewPage=(index:number,multi=false)=>{
+    const state=useEditor.getState();
+    if(multi){
+      const activeIndex=state.pageIndex;
+      state.selectPreviewPage(index,true);
+      if(useEditor.getState().pageIndex!==activeIndex)useEditor.setState({pageIndex:activeIndex});
+      return;
+    }
     flipBook.current?.flipTo(index);
-    useEditor.getState().selectPreviewPage(index,multi);
+    state.selectPreviewPage(index,false);
   };
   const jumpTo=(index:number)=>{
     flipBook.current?.turnTo(index);
