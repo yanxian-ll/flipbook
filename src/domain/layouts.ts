@@ -110,7 +110,7 @@ function layoutVisualBackground(layout:Layout){
   return layout.background?.startsWith('rgba(')?'#ffffff':layout.background;
 }
 export function applyLayout(page:Page,layout:Layout,assetIds?:string[]):Page {
-  if(page.layoutId===layout.id&&!assetIds)return page;
+  if(page.layoutId===layout.id&&!assetIds&&!page.layoutSlots)return page;
   const oldImages=page.elements.filter(e=>e.type==='image');
   const sourceIds=assetIds??oldImages.map(e=>e.assetId!).filter(Boolean);
   const ids=fitAssetIds(sourceIds,layout.slots.length);
@@ -122,7 +122,7 @@ export function applyLayout(page:Page,layout:Layout,assetIds?:string[]):Page {
     if(layout.id==='tpl2_p3_right'&&text.key==='caption'&&ids[0])return layoutTextElement({...text,text:singlePhotoTemplateCaption(ids[0],page.id)});
     return layoutTextElement(text);
   });
-  return {...page,layoutId:layout.id,templateOverlay:layout.overlay,templateBackground:layoutVisualBackground(layout),templateTextSchema:TEMPLATE_TEXT_SCHEMA,pattern:undefined,patternAssetId:undefined,elements:[...images,...texts]};
+  return {...page,layoutId:layout.id,layoutSlots:undefined,templateOverlay:layout.overlay,templateBackground:layoutVisualBackground(layout),templateTextSchema:TEMPLATE_TEXT_SCHEMA,pattern:undefined,patternAssetId:undefined,elements:[...images,...texts]};
 }
 export function autoLayout(book:Book,assets:Asset[]):Book {
   const pages:Page[]=[book.pages[0]];
