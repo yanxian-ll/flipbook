@@ -72,7 +72,11 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     const [moved]=next.splice(from,1);
     next.splice(to,0,moved);
     setPhotoIds(next);
-    if(page.type!=='cover'&&page.layoutId)s.setPhotos(next);
+    if(page.type!=='cover'&&page.layoutId){
+      const applied=[...new Set(page.elements.filter(element=>element.type==='image'&&!element.freeImage&&element.assetId).map(element=>element.assetId!))];
+      const pureReorder=applied.length===next.length&&applied.every(id=>next.includes(id));
+      if(pureReorder)s.setPhotos(next);
+    }
   }
   function chooseAsset(assetId:string){
     if(suppressAssetClick.current)return;
