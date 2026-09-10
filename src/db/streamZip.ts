@@ -17,7 +17,7 @@ type WritableFileLike={
   abort?(reason?:unknown):Promise<void>;
 };
 type FileHandleLike={createWritable():Promise<WritableFileLike>};
-type SaveFilePicker=(options:{suggestedName:string;types:Array<{description:string;accept:Record<string,string[]>}>})=>Promise<FileHandleLike>;
+type SaveFilePicker=(options:{suggestedName:string})=>Promise<FileHandleLike>;
 
 type Sink={
   write(data:Uint8Array):Promise<void>;
@@ -60,13 +60,10 @@ class MemorySink implements Sink{
   async abort(){this.parts=[];}
 }
 
-export async function createZipSink(suggestedName:string,extension:string):Promise<Sink>{
+export async function createZipSink(suggestedName:string):Promise<Sink>{
   const picker=(globalThis as typeof globalThis&{showSaveFilePicker?:SaveFilePicker}).showSaveFilePicker;
   if(picker){
-    const handle=await picker.call(globalThis,{
-      suggestedName,
-      types:[{description:'Flipbook backup',accept:{'application/zip':[extension]}}],
-    });
+    const handle=await picker.call(globalThis,{suggestedName});
     return new FileSink(await handle.createWritable());
   }
   return new MemorySink();
