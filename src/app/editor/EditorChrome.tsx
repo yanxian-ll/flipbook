@@ -4,6 +4,7 @@ import {Button,IconButton,Modal} from '../../components/ui';
 import {useEditor} from '../../store/editor';
 import {commitEditorTitle} from './editorTitle';
 import './editorControls.css';
+import './topControls.css';
 
 export function EditorHeader({wide,onBack,onToggleWide}:{wide:boolean;onBack:()=>void;onToggleWide:()=>void}){
   const title=useEditor(state=>state.book?.title??'');

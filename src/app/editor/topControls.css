@@ -1,0 +1,14 @@
+/* Top editor controls sit directly on the workspace so they do not mask background textures. */
+.studio .workspace-toolbar .toolbar-pill,
+.studio .view-mode-switch{
+  background:transparent!important;
+  box-shadow:none!important;
+  border-color:transparent!important;
+  backdrop-filter:none!important;
+}
+.studio .workspace-toolbar .toolbar-pill .icon-btn{
+  background:transparent!important;
+}
+.studio .workspace-toolbar .toolbar-pill .icon-btn:hover{
+  background:rgba(255,255,255,.18)!important;
+}
