@@ -15,10 +15,22 @@ const Editor=lazy(()=>import('./app/Editor').then(module=>({default:module.Edito
 const Preview=lazy(()=>import('./app/Preview').then(module=>({default:module.Preview})));
 const Settings=lazy(()=>import('./app/Settings').then(module=>({default:module.Settings})));
 
+function DesktopCloseButton(){
+  if(!window.desktopWindow)return null;
+  return <button
+    type="button"
+    className="desktop-close-button"
+    aria-label="关闭 Flipbook"
+    title="关闭"
+    onClick={()=>{void window.desktopWindow?.close();}}
+  >×</button>;
+}
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <AppErrorBoundary>
       <BrowserRouter>
+        <DesktopCloseButton/>
         <Suspense fallback={<main className="phone-shell"><Loading text="正在打开…"/></main>}>
           <Routes>
             <Route path="/" element={<Bookshelf/>}/>
