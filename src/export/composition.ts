@@ -11,7 +11,7 @@ export interface CompositionOptions {
   offsetY?:number;
   bookStyle?:boolean;
 }
-export const defaultComposition:CompositionOptions={pagesPerCollage:2,frame:false,ratio:'3:4',frameWidth:1200,frameHeight:1600,zoom:1,offsetX:0,offsetY:0,bookStyle:false};
+export const defaultComposition:CompositionOptions={pagesPerCollage:2,frame:true,ratio:'3:4',frameWidth:1200,frameHeight:1600,zoom:1,offsetX:0,offsetY:0,bookStyle:true};
 const bounded=(n:number|undefined,fallback:number,min:number,max:number)=>Math.min(max,Math.max(min,Number.isFinite(n)?n!:fallback));
 export function compositionGeometry(options:CompositionOptions={}){
   const count=[1,2,4,6,8].includes(options.pagesPerCollage??2)?options.pagesPerCollage??2:2;
