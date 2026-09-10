@@ -290,6 +290,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const formatBatch=(batch:{at:number;legacy:boolean})=>batch.legacy?'较早上传':new Intl.DateTimeFormat('zh-CN',{month:'2-digit',day:'2-digit',hour:'2-digit',minute:'2-digit',hour12:false}).format(new Date(batch.at));
 
   const [customOpen,setCustomOpen]=useState(false),[customName,setCustomName]=useState('我的模板'),[customSlots,setCustomSlots]=useState<Slot[]>([]);
+  const [customMode,setCustomMode]=useState<'create'|'edit-page'>('create');
   const pagePhotoIds=coverTarget
     ?coverAssetId?[coverAssetId]:[]
     :page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id);
@@ -331,6 +332,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   }
 
   function openCustomTemplate(){
+    setCustomMode('create');
     if(coverTarget){
       const selectedTemplate=coverTemplates.find(template=>template.id===coverTemplateId)??coverTemplateFor(book,'cutout');
       const slot=selectedTemplate.slot??coverTemplateFor(book,'cutout').slot!;
@@ -343,9 +345,42 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     setCustomOpen(true);
   }
 
+  function openCurrentPageTemplate(){
+    if(coverTarget||page.type==='cover')return;
+    setError('');
+    setCustomMode('edit-page');
+    setCustomSlots(page.elements.filter(element=>element.type==='image').map(element=>({x:element.x/W,y:element.y/H,width:element.width/W,height:element.height/H,shape:element.frameShape})));
+    setCustomOpen(true);
+  }
+
   function saveCustomTemplate(){
     if(customSlots.some(slot=>slot.width<=0||slot.height<=0||slot.x<0||slot.y<0||slot.x+slot.width>1.001||slot.y+slot.height>1.001)){
       setError('请将所有图框放在页面范围内。');
+      return;
+    }
+    if(customMode==='edit-page'&&!coverTarget){
+      s.change(draft=>{
+        const currentPage=draft.pages[s.pageIndex];
+        const sourceImages=currentPage.elements.filter(element=>element.type==='image');
+        const sourceIds=sourceImages.map(element=>element.assetId).filter((id):id is string=>!!id);
+        const ids=fitAssetIds(sourceIds,customSlots.length);
+        const nextImages:Element[]=customSlots.flatMap((slot,index)=>{
+          const assetId=ids[index];
+          if(!assetId)return [];
+          const source=sourceImages[index]??sourceImages[index%sourceImages.length];
+          const base=source?{...source}:imageElement(assetId);
+          return [{...base,id:sourceImages[index]?.id??uid(),type:'image',assetId,x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape,freeImage:undefined}];
+        });
+        let imageIndex=0;
+        currentPage.elements=currentPage.elements.flatMap(element=>{
+          if(element.type!=='image')return [element];
+          const replacement=nextImages[imageIndex++];
+          return replacement?[replacement]:[];
+        });
+        if(imageIndex<nextImages.length)currentPage.elements.push(...nextImages.slice(imageIndex));
+      });
+      setError('');
+      setCustomOpen(false);
       return;
     }
     if(coverTarget){
@@ -380,6 +415,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const layer=(direction:number)=>{if(!selected)return;s.change(draft=>{const elements=draft.pages[s.pageIndex].elements;const index=elements.findIndex(element=>element.id===selected.id);const [element]=elements.splice(index,1);elements.splice(Math.max(0,Math.min(elements.length,index+direction)),0,element);});};
   const coverLabel=coverSide==='back'?'后封面':'前封面';
   const panelTitle=coverTarget&&panel==='layouts'?`${coverLabel}模板`:coverTarget&&panel==='photos'?`${coverLabel}照片`:names[panel];
+  const editingCurrentPageTemplate=customMode==='edit-page'&&!coverTarget;
 
   return <aside className={`editor-panel ${placement?`panel-${placement}`:''} ${paired?'paired-library-panel':''}`}>
     <div className="panel-grabber"/>
@@ -447,6 +483,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
           <Button className="danger" disabled><Trash2 size={15}/>删除模板</Button>
           <Button className="primary" disabled={!photoCount} onClick={openCustomTemplate}>创建模板</Button>
         </div>
+        <Button className="full" disabled={!photoCount} onClick={openCurrentPageTemplate}>修改模板</Button>
       </>)}
 
       {panel==='text'&&(coverSide==='back'?<><p className="muted">后封面文字在“封面设置”中统一编辑，避免修改到最后一张内页。</p><Button className="full" onClick={()=>onPanel('cover')}>打开封面设置</Button></>:<>
@@ -480,11 +517,11 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     <Modal open={assetDeleteOpen} onClose={()=>setAssetDeleteOpen(false)} title={`删除选中的 ${photoIds.length} 张素材？`} description={deleteDescription}>
       <div className="actions"><Button disabled={busy} onClick={()=>setAssetDeleteOpen(false)}>取消</Button><Button className="danger" disabled={busy} onClick={()=>void removeSelectedAssets()}>删除素材</Button></div>
     </Modal>
-    <Modal wide open={customOpen} onClose={()=>setCustomOpen(false)} title={coverTarget?'新增封面模板':'新建自定义模板'} description={coverTarget?'拖动和缩放照片区域，模板只保存照片窗口几何，不保存封皮颜色或照片内容':'以当前页图框和文字为底稿保存一个新的自定义模板，不覆盖原模板'}>
-      <label className="field stack">模板名称<input value={customName} onChange={event=>setCustomName(event.target.value)}/></label>
+    <Modal wide open={customOpen} onClose={()=>setCustomOpen(false)} title={editingCurrentPageTemplate?'修改当前页模板':coverTarget?'新增封面模板':'新建自定义模板'} description={editingCurrentPageTemplate?'只修改当前页的图框布局，不创建新模板，也不会改动原模板。':coverTarget?'拖动和缩放照片区域，模板只保存照片窗口几何，不保存封皮颜色或照片内容':'以当前页图框和文字为底稿保存一个新的自定义模板，不覆盖原模板'}>
+      {!editingCurrentPageTemplate&&<label className="field stack">模板名称<input value={customName} onChange={event=>setCustomName(event.target.value)}/></label>}
       <VisualTemplateEditor slots={customSlots} onChange={setCustomSlots} assetIds={coverTarget?photoIds:pagePhotoIds} background={coverTarget?coverBackground:page.templateBackground??page.background} overlay={coverTarget?undefined:page.templateOverlay} texts={coverTarget?(coverSide==='front'?page.elements.filter(element=>element.type==='text'):[]):page.elements.filter(element=>element.type==='text')} maxSlots={coverTarget?1:9}/>
       <ErrorMessage message={error}/>
-      <Button className="primary full" onClick={saveCustomTemplate}>保存并应用模板</Button>
+      <Button className="primary full" onClick={saveCustomTemplate}>{editingCurrentPageTemplate?'应用到当前页':'保存并应用模板'}</Button>
     </Modal>
   </aside>;
 }
