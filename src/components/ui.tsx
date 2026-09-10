@@ -5,7 +5,15 @@ export function Button({children,className='',...props}:ButtonHTMLAttributes<HTM
 export function IconButton({label,children,active=false,onClick,...props}:ButtonHTMLAttributes<HTMLButtonElement>&{label:string;active?:boolean}){
   const workspaceExpansion=label==='展开工作区'?true:label==='收起工作区'?false:null;
   return <button title={label} aria-label={label} className={`icon-btn ${active?'active':''}`} {...props} onClick={event=>{
-    if(workspaceExpansion!==null)void window.desktopWindow?.setExpanded(workspaceExpansion);
+    if(workspaceExpansion!==null&&window.desktopWindow){
+      // The React views currently default to wide=true while Electron opens compact.
+      // On that first mismatched click, grow the real window and keep the wide state.
+      if(!workspaceExpansion&&window.innerWidth<850){
+        void window.desktopWindow.setExpanded(true);
+        return;
+      }
+      void window.desktopWindow.setExpanded(workspaceExpansion);
+    }
     onClick?.(event);
   }}>{children}</button>;
 }
