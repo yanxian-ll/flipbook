@@ -1,14 +1,45 @@
-/* Top editor controls sit directly on the workspace so they do not mask background textures. */
-.studio .workspace-toolbar .toolbar-pill,
-.studio .view-mode-switch{
+/* Keep the corner editor tool groups directly on the workspace. */
+.studio .workspace-toolbar .toolbar-pill{
   background:transparent!important;
   box-shadow:none!important;
   border-color:transparent!important;
   backdrop-filter:none!important;
+  -webkit-backdrop-filter:none!important;
 }
 .studio .workspace-toolbar .toolbar-pill .icon-btn{
   background:transparent!important;
 }
 .studio .workspace-toolbar .toolbar-pill .icon-btn:hover{
   background:rgba(255,255,255,.18)!important;
+}
+
+/* View mode and preview rail use a real frosted-glass surface: the workspace
+   remains visible through them while blur and a light tint protect legibility. */
+.studio .view-mode-switch{
+  background:rgba(255,255,255,.58)!important;
+  border-color:rgba(255,255,255,.62)!important;
+  box-shadow:0 8px 24px rgba(0,0,0,.09),inset 0 1px 0 rgba(255,255,255,.7)!important;
+  backdrop-filter:blur(18px) saturate(140%)!important;
+  -webkit-backdrop-filter:blur(18px) saturate(140%)!important;
+}
+.studio .view-mode-switch button{
+  color:#4f4f4f;
+  background:transparent;
+}
+.studio .view-mode-switch button:hover{
+  color:#222;
+  background:rgba(255,255,255,.34);
+}
+.studio .view-mode-switch button.active{
+  background:rgba(30,30,30,.84);
+  color:#fff;
+  box-shadow:0 1px 4px rgba(0,0,0,.18);
+}
+
+.studio .clean-page-strip{
+  background:rgba(255,255,255,.62)!important;
+  border-color:rgba(255,255,255,.58)!important;
+  box-shadow:0 10px 30px rgba(0,0,0,.10),inset 0 1px 0 rgba(255,255,255,.62)!important;
+  backdrop-filter:blur(20px) saturate(140%)!important;
+  -webkit-backdrop-filter:blur(20px) saturate(140%)!important;
 }
