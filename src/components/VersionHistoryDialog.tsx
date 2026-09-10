@@ -60,7 +60,7 @@ export function VersionHistoryDialog({
     finally{setBusy(false);}
   }
 
-  return <Modal open={open} onClose={onClose} title="历史版本" description="版本保存在当前浏览器本地。自动版本最多保留最近 24 个。" wide className="version-history-dialog">
+  return <Modal open={open} onClose={onClose} title="历史版本" description="版本保存在当前浏览器本地。历史版本最多保留最近 24 个。" wide className="version-history-dialog">
     <div className="version-history-head">
       <div><Clock3 size={17}/><span>自动版本约每 5 分钟生成一次</span></div>
       <Button onClick={()=>void saveVersion()} disabled={busy}><Save size={14}/>保存当前版本</Button>
