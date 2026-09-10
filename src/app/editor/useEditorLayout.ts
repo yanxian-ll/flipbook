@@ -2,8 +2,9 @@ import {useMemo} from 'react';
 import type {Book} from '../../domain/model';
 import {PAGE_ASPECT_RATIO,SINGLE_PAGE_PEEK} from './constants';
 
-export function useEditorLayout({book,pageIndex,wide,viewWidth,viewHeight,spreadRoom}:{book:Book;pageIndex:number;wide:boolean;viewWidth:number;viewHeight:number;spreadRoom:{width:number;height:number}}){
+export function useEditorLayout({book,pageIndex,wide,viewWidth,viewHeight,spreadRoom}:{book:Book|null;pageIndex:number;wide:boolean;viewWidth:number;viewHeight:number;spreadRoom:{width:number;height:number}}){
   return useMemo(()=>{
+    if(!book?.pages.length)return null;
     const page=book.pages[pageIndex]??book.pages[0];
     const pair=pageIndex===0?-1:pageIndex%2===1?pageIndex+1:pageIndex-1;
     const neighborIndex=pair>=0&&pair<book.pages.length?pair:-1;
