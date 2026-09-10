@@ -17,17 +17,19 @@ export function EditorPreviewRail({book,mode,flipBook,onAddPage,onRequestDelete}
   onRequestDelete:()=>void;
 }){
   const pageIndex=useEditor(state=>state.pageIndex);
+  const selectedPages=useEditor(state=>state.selectedPages);
   const coverSide=useCoverContext(state=>state.side);
   const [overflow,setOverflow]=useState(false);
   const [dragSpread,setDragSpread]=useState<number|null>(null);
   const [dragOverSpread,setDragOverSpread]=useState<number|null>(null);
   const strip=useRef<HTMLDivElement>(null);
   const suppressClick=useRef(false);
+  const selectedPageSet=new Set(selectedPages);
   const thumbnailSpreads=Array.from({length:Math.ceil(Math.max(0,book.pages.length-1)/2)},(_,index)=>1+index*2);
 
   useEffect(()=>{
     const node=strip.current;if(!node)return;
-    const selected=node.querySelector<HTMLElement>('.selected');if(!selected)return;
+    const selected=node.querySelector<HTMLElement>('.preview-page-active');if(!selected)return;
     const left=selected.getBoundingClientRect().left-node.getBoundingClientRect().left+node.scrollLeft-(node.clientWidth-selected.offsetWidth)/2;
     node.scrollTo({left:Math.max(0,left),behavior:Math.abs(left-node.scrollLeft)>node.clientWidth?'auto':'smooth'});
   },[pageIndex,mode,book.pages.length]);
@@ -45,7 +47,14 @@ export function EditorPreviewRail({book,mode,flipBook,onAddPage,onRequestDelete}
 
   if(pageIndex===0)return null;
 
-  const jumpTo=(index:number)=>{flipBook.current?.turnTo(index);useEditor.getState().setPage(index);};
+  const selectPreviewPage=(index:number,multi=false)=>{
+    flipBook.current?.flipTo(index);
+    useEditor.getState().selectPreviewPage(index,multi);
+  };
+  const jumpTo=(index:number)=>{
+    flipBook.current?.turnTo(index);
+    useEditor.getState().selectPreviewPage(index,false);
+  };
   const dropSpread=(targetStart:number)=>{
     const from=dragSpread;
     setDragSpread(null);setDragOverSpread(null);
@@ -58,26 +67,39 @@ export function EditorPreviewRail({book,mode,flipBook,onAddPage,onRequestDelete}
     }));
   };
   const railClass=`page-strip clean-page-strip ${mode==='spread'?'spread-preview-strip':'single-preview-strip'} ${overflow?'has-overflow':'fits-content'}`;
-  const deleteButton=coverSide===null&&pageIndex>0?<button className="thumbnail-add-page thumbnail-delete-page" type="button" aria-label={`删除第 ${pageIndex} 页`} title={`删除第 ${pageIndex} 页`} onClick={onRequestDelete}><Trash2 size={15}/></button>:null;
+  const selectedDeleteCount=selectedPages.reduce((count,id)=>count+Number(book.pages.findIndex(page=>page.id===id)>0),0);
+  const deleteCount=selectedDeleteCount||Number(pageIndex>0);
+  const deleteLabel=deleteCount>1?`删除选中的 ${deleteCount} 页`:`删除第 ${pageIndex} 页`;
+  const deleteButton=coverSide===null&&pageIndex>0?<button className="thumbnail-add-page thumbnail-delete-page" type="button" data-page-delete-trigger aria-label={deleteLabel} title={deleteLabel} onClick={onRequestDelete}><Trash2 size={15}/></button>:null;
 
   if(mode==='spread')return <div className={railClass} aria-label="双页预览">
     <IconButton label="跳到第一页" disabled={pageIndex<=1} onClick={()=>jumpTo(Math.min(1,book.pages.length-1))}><ChevronsLeft size={18}/></IconButton>
     <div ref={strip} className="page-strip-scroll"><div className="page-strip-track">
-      <button className="cover-spread-thumb" aria-label="封面" onClick={()=>flipBook.current?.flipTo(0)}><PageThumbnail page={book.pages[0]}/></button>
+      <button className="cover-spread-thumb" aria-label="封面" onClick={()=>selectPreviewPage(0,false)}><PageThumbnail page={book.pages[0]}/></button>
       {thumbnailSpreads.map(start=>{
-        const left=book.pages[start],right=book.pages[start+1],selectedSpread=pageIndex===start||pageIndex===start+1;
+        const left=book.pages[start],right=book.pages[start+1];
+        const leftSelected=selectedPageSet.has(left.id),rightSelected=!!right&&selectedPageSet.has(right.id);
+        const leftActive=pageIndex===start,rightActive=!!right&&pageIndex===start+1;
         return <button
           key={left.id}
           draggable
-          className={`spread-thumb ${selectedSpread?'selected':''} ${dragSpread===start?'dragging':''} ${dragOverSpread===start&&dragSpread!==start?'drag-over':''}`}
-          aria-label={right?`第 ${start}–${start+1} 页，可拖动排序`:`第 ${start} 页，可拖动排序`}
-          onClick={()=>{if(suppressClick.current)return;flipBook.current?.flipTo(start);useEditor.getState().setPage(start);}}
+          className={`spread-thumb ${dragSpread===start?'dragging':''} ${dragOverSpread===start&&dragSpread!==start?'drag-over':''}`}
+          aria-label={right?`第 ${start}–${start+1} 页，可点击单页；按 Ctrl 或 Command 可多选；可拖动排序`:`第 ${start} 页，可点击选择；按 Ctrl 或 Command 可多选；可拖动排序`}
+          onClick={event=>{
+            if(suppressClick.current)return;
+            const rect=event.currentTarget.getBoundingClientRect();
+            const target=right&&event.clientX>=rect.left+rect.width/2?start+1:start;
+            selectPreviewPage(target,event.ctrlKey||event.metaKey);
+          }}
           onDragStart={event=>{suppressClick.current=true;setDragSpread(start);setDragOverSpread(start);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',String(start));}}
           onDragEnter={event=>{event.preventDefault();if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}}
           onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect='move';if(dragSpread!==null&&dragSpread!==start)setDragOverSpread(start);}}
           onDrop={event=>{event.preventDefault();dropSpread(start);}}
           onDragEnd={()=>{setDragSpread(null);setDragOverSpread(null);window.setTimeout(()=>{suppressClick.current=false;},0);}}
-        ><div className="spread-thumb-page"><PageThumbnail page={left}/></div><div className={`spread-thumb-page ${right?'':'blank'}`}>{right&&<PageThumbnail page={right}/>}</div></button>;
+        >
+          <div className={`spread-thumb-page ${leftSelected?'preview-page-selected':''} ${leftActive?'preview-page-active':''}`}><PageThumbnail page={left}/></div>
+          <div className={`spread-thumb-page ${right?'':'blank'} ${rightSelected?'preview-page-selected':''} ${rightActive?'preview-page-active':''}`}>{right&&<PageThumbnail page={right}/>}</div>
+        </button>;
       })}
     </div></div>
     <button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={17}/></button>
@@ -88,7 +110,16 @@ export function EditorPreviewRail({book,mode,flipBook,onAddPage,onRequestDelete}
   return <div className={railClass} aria-label="单页预览">
     <IconButton label="跳到第一页" disabled={pageIndex<=1} onClick={()=>jumpTo(Math.min(1,book.pages.length-1))}><ChevronsLeft size={18}/></IconButton>
     <div ref={strip} className="page-strip-scroll"><div className="page-strip-track">
-      {book.pages.map((page,index)=><button key={page.id} className={`single-page-thumb ${pageIndex===index?'selected':''}`} aria-label={index===0?'封面':`第 ${index} 页`} onClick={()=>useEditor.getState().setPage(index)}><PageThumbnail page={page}/></button>)}
+      {book.pages.map((page,index)=>{
+        const selected=selectedPageSet.has(page.id),active=pageIndex===index;
+        return <button
+          key={page.id}
+          className={`single-page-thumb ${active?'selected':''} ${selected?'preview-page-selected':''} ${active?'preview-page-active':''}`}
+          aria-label={index===0?'封面':`第 ${index} 页${index>0?'；按 Ctrl 或 Command 可多选':''}`}
+          aria-current={active?'page':undefined}
+          onClick={event=>selectPreviewPage(index,index>0&&(event.ctrlKey||event.metaKey))}
+        ><PageThumbnail page={page}/></button>;
+      })}
     </div></div>
     <button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={17}/></button>
     {deleteButton}
