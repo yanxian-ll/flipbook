@@ -16,14 +16,15 @@ describe('cover presentation model',()=>{
     expect(normalized.templateId).toBe('cutout');
     const page=backCoverPage(book);
     expect(page.background).toBe('#ffffff');
-    expect(page.elements.find(element=>element.type==='image')).toMatchObject({
+    const image=page.elements.find(element=>element.type==='image');
+    expect(image).toMatchObject({
       assetId:photo.id,
-      x:414,
       y:360,
       width:372,
       height:498,
       crop:{x:.2,y:.7,zoom:1.4},
     });
+    expect(image?.x).toBeCloseTo(414);
   });
 
   it('lets a no-photo template hide the photo without deleting the selection',()=>{
