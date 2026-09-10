@@ -28,9 +28,10 @@ export function useEditorShortcuts(onEscape:()=>void){
         return;
       }
       if(key==='delete'||key==='backspace'){
-        if(!state.selected.length)return;
+        // Never let a bare delete key remove a page (or navigate the browser
+        // backward). It only acts when an element is explicitly selected.
         event.preventDefault();
-        state.deleteSelected();
+        if(state.selected.length)state.deleteSelected();
         return;
       }
       if(key==='escape'){
