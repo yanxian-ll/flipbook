@@ -48,7 +48,6 @@ function MoveHandle({element,scale,onMove,onCommit}:{element:Element;scale:numbe
   const y=Math.max(pad,element.y-h-gap);
   return <Group x={x} y={y} draggable onMouseEnter={event=>setStageCursor(event.target,'grab')} onMouseLeave={event=>setStageCursor(event.target,'default')} onDragStart={event=>setStageCursor(event.target,'grabbing')} onDragMove={event=>onMove(event.target.x()-x,event.target.y()-y)} onDragEnd={event=>{onMove(event.target.x()-x,event.target.y()-y);onCommit();setStageCursor(event.target,'grab');}}>
     <Rect width={w} height={h} cornerRadius={h/2} fill="#fff" stroke="#3185ff" strokeWidth={1/safeScale} shadowColor="#000" shadowOpacity={.12} shadowBlur={7/safeScale} shadowOffsetY={2/safeScale}/>
-    <Text text="↕↔" width={w} height={h} align="center" verticalAlign="middle" fontSize={13/safeScale} fontFamily="Arial" fill="#3185ff" listening={false}/>
   </Group>;
 }
 
