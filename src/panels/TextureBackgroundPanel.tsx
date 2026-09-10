@@ -153,7 +153,6 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
     <header><h2>{title}</h2><IconButton label="关闭面板" onClick={onClose}><X size={17}/></IconButton></header>
     <ErrorMessage message={error}/>
     <div className="panel-body texture-background-body">
-      <p className="settings-intro">{workspace?'设置整本画册外部的底色与纹理。':'设置当前页面的底色与纹理。'} 上传后的纹理可在两个窗口中复用。</p>
       <p className="field-label">底色</p>
       <div className="swatches texture-color-swatches">{colors.map(value=><button key={value} aria-label={`底色 ${value}`} className={(workspace?book.workspaceBackground:page.background)===value?'chosen':''} style={{backgroundColor:value}} onClick={()=>setColor(value)}/>)}</div>
       <label className="field texture-custom-color"><span>自定义颜色</span><input type="color" value={workspace?book.workspaceBackground:page.background} onChange={event=>setColor(event.target.value)}/></label>
@@ -168,7 +167,6 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
         <Button className="full texture-upload-button" disabled={busy} onClick={()=>textureInput.current?.click()}><Upload size={16}/>{busy?'正在处理…':'上传纹理'}</Button>
         {workspace&&<Button className="full texture-image-button" disabled={busy} onClick={()=>backgroundImageInput.current?.click()}><ImagePlus size={16}/>上传背景图</Button>}
       </div>
-      <p className="muted texture-upload-hint">{workspace?'纹理会加入默认纹理后的最近记录；背景图保持整张铺满。':`手动上传的纹理会接在默认纹理后，只显示最近 ${RECENT_TEXTURE_LIMIT} 个。`}</p>
       <Button className="full" onClick={reset}>恢复默认</Button>
     </div>
   </aside>;
