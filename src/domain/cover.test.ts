@@ -1,4 +1,5 @@
 import {describe,expect,it} from 'vitest';
+import {frontCoverRenderPage} from './coverPresentation';
 import {H,W,backCoverFor,backCoverPage,coverTemplateFor,coverTemplatesFor,newBook,type Asset} from './model';
 
 const photo:Asset={
@@ -56,5 +57,21 @@ describe('cover presentation model',()=>{
     expect(templates.map(template=>template.id)).toEqual(expect.arrayContaining(['plain','basic','cutout']));
     expect(coverTemplateFor(book,'basic').slot).toEqual({x:80/W,y:100/H,width:1040/W,height:1300/H});
     expect(coverTemplateFor(book,'plain')).not.toHaveProperty('background');
+  });
+
+  it('applies front-cover template geometry only at presentation time',()=>{
+    const book=newBook('Front','editorial',[photo]);
+    const stored=book.pages[0].elements.find(element=>element.type==='image')!;
+    const storedGeometry={x:stored.x,y:stored.y,width:stored.width,height:stored.height,opacity:stored.opacity};
+
+    book.coverTemplate='basic';
+    const basic=frontCoverRenderPage(book).elements.find(element=>element.type==='image')!;
+    expect(basic).toMatchObject({x:80,y:100,width:1040,height:1300,opacity:1});
+    expect(book.pages[0].elements.find(element=>element.type==='image')).toMatchObject(storedGeometry);
+
+    book.coverTemplate='plain';
+    const hidden=frontCoverRenderPage(book).elements.find(element=>element.type==='image')!;
+    expect(hidden.opacity).toBe(0);
+    expect(hidden.assetId).toBe(photo.id);
   });
 });
