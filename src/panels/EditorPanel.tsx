@@ -145,7 +145,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   useEffect(()=>{
     if(!selectedTape)return;
     setTapeColor(normalizedHexColor(selectedTape.color));
-    setTapeOpacity(Math.max(.1,Math.min(1,selectedTape.opacity));
+    setTapeOpacity(Math.max(.1,Math.min(1,selectedTape.opacity)));
   },[selectedTape?.id,selectedTape?.color,selectedTape?.opacity]);
 
   function applyCoverPhoto(assetId:string|undefined){
