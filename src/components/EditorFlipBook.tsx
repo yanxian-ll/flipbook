@@ -6,6 +6,7 @@ import {PageThumbnail} from './PageThumbnail';
 import {EditorCanvas} from '../editor/EditorCanvas';
 import {Plus} from 'lucide-react';
 import {useEditor} from '../store/editor';
+import {useCoverContext} from '../store/coverContext';
 import {editorLeafPlan,flipPrevSafely,flipToSafely,flipbookMotion} from '../flipbook/spec';
 
 export type EditorFlipBookHandle={
@@ -96,6 +97,7 @@ const FlipLeaf=memo(ForwardedFlipLeaf,(prev,next)=>{
   if(prev.kind==='back'){
     return prev.book.backCover===next.book.backCover
       &&prev.book.bookStyle===next.book.bookStyle
+      &&prev.book.customCoverTemplates===next.book.customCoverTemplates
       &&prev.book.pages[0]?.background===next.book.pages[0]?.background;
   }
   return true;
@@ -161,6 +163,7 @@ function EditorFlipBookInner(
   const flip=useRef<any>(null);
   const [editingSurfaceHovered,setEditingSurfaceHovered]=useState(false);
   const [displayedIndex,setDisplayedIndex]=useState(activeIndex);
+  const setCoverSide=useCoverContext(state=>state.setSide);
   const actionRefs=useRef({onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage});
   actionRefs.current={onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage};
   const stableActions=useMemo(()=>({
@@ -188,6 +191,10 @@ function EditorFlipBookInner(
 
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
   useEffect(()=>setDisplayedIndex(activeIndex),[activeIndex,resetKey]);
+  useEffect(()=>{
+    setCoverSide(displayedIndex===0?'front':displayedIndex>=backIndex?'back':null);
+  },[displayedIndex,backIndex,setCoverSide]);
+  useEffect(()=>()=>useCoverContext.getState().setSide(null),[]);
   const openCover=()=>flip.current?.pageFlip?.().flipNext?.();
   const leafProps={book,width:safeWidth,...stableActions,onOpenCover:openCover,onInteractionChange:setEditingSurfaceHovered,scale:imageScale};
 
