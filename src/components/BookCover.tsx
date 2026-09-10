@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState,type CSSProperties} from 'react';
-import {H,W,backCoverFor,bookStyleFor,type Book,type Element} from '../domain/model';
+import {H,W,backCoverFor,bookStyleFor,coverTemplateFor,type Book,type CoverTemplate,type Element} from '../domain/model';
 import {dragCrop} from '../domain/crop';
 import {repository} from '../db/repository';
 import {useEditor} from '../store/editor';
@@ -32,15 +32,19 @@ function coverCropStyle(image?:Element){
     filter:`blur(${Math.max(0,image?.blur??0)}px)`,
   };
 }
-function coverTemplateClass(book:Book){return book.coverTemplate==='basic'||book.coverTemplate==='cutout'?book.coverTemplate:'custom';}
-function customCoverFrameStyle(book:Book,image?:Element):CSSProperties|undefined{
-  if(!image||book.coverTemplate==='basic'||book.coverTemplate==='cutout')return undefined;
+function coverTemplateClass(template:CoverTemplate){
+  if(template.id==='plain'||!template.slot)return 'plain';
+  return template.id==='basic'||template.id==='cutout'?template.id:'custom';
+}
+function coverFrameStyle(template:CoverTemplate):CSSProperties|undefined{
+  const slot=template.slot;
+  if(!slot)return undefined;
   return {
-    left:`${image.x/W*100}%`,
-    top:`${image.y/H*100}%`,
-    width:`${image.width/W*100}%`,
-    height:`${image.height/H*100}%`,
-    borderRadius:image.frameShape==='ellipse'?'50%':undefined,
+    left:`${slot.x*100}%`,
+    top:`${slot.y*100}%`,
+    width:`${slot.width*100}%`,
+    height:`${slot.height*100}%`,
+    borderRadius:slot.shape==='ellipse'?'50%':undefined,
   };
 }
 
@@ -48,39 +52,39 @@ function CoverContents({book,cropOverride,quality='thumbnail'}:{book:Book;cropOv
   const src=useCoverImage(book,quality);
   const cover=book.pages[0];
   const image=cover.elements.find(element=>element.type==='image');
+  const template=coverTemplateFor(book,book.coverTemplate);
   const shownImage=image&&cropOverride?{...image,crop:cropOverride}:image;
   return <>
     <span className="cover-grain"/>
     <span className="cover-spine"/>
-    {src&&<span className="cover-window" style={customCoverFrameStyle(book,image)}><img className="cover-window-image" src={src} alt="画册封面照片" style={coverCropStyle(shownImage)}/></span>}
+    {template.slot&&src&&<span className="cover-window" style={coverFrameStyle(template)}><img className="cover-window-image" src={src} alt="画册封面照片" style={coverCropStyle(shownImage)}/></span>}
     <span className="cover-caption" style={{color:cover.elements.find(element=>element.type==='text')?.color}}>{cover.elements.find(element=>element.type==='text')?.text??'TIME TO FLIPBOOK'}</span>
   </>;
 }
 
 export function BookCoverVisual({book,className='',cropOverride}:{book:Book;className?:string;cropOverride?:Element['crop']}){
-  const cover=book.pages[0];
-  return <div className={`book-cover ${coverTemplateClass(book)} ${className}`.trim()} style={{backgroundColor:cover.background}}><CoverContents book={book} cropOverride={cropOverride} quality="preview"/></div>;
+  const cover=book.pages[0],template=coverTemplateFor(book,book.coverTemplate);
+  return <div className={`book-cover ${coverTemplateClass(template)} ${className}`.trim()} style={{backgroundColor:cover.background}}><CoverContents book={book} cropOverride={cropOverride} quality="preview"/></div>;
 }
 
 export function BookCover({book,onClick}:{book:Book;onClick?:()=>void}){
-  const cover=book.pages[0];
-  return <button className={`book-cover ${coverTemplateClass(book)}`} style={{backgroundColor:cover.background}} onClick={onClick} aria-label={`打开 ${book.title}`}><CoverContents book={book}/></button>;
+  const cover=book.pages[0],template=coverTemplateFor(book,book.coverTemplate);
+  return <button className={`book-cover ${coverTemplateClass(template)}`} style={{backgroundColor:cover.background}} onClick={onClick} aria-label={`打开 ${book.title}`}><CoverContents book={book}/></button>;
 }
 
 export function BookBackCoverVisual({book,className=''}:{book:Book;className?:string}){
   const back=backCoverFor(book);
-  const custom=back.mode==='custom';
-  const background=back.mode==='match-front'?(book.pages[0]?.background??back.background):back.background;
-  const src=useAssetImage(custom?back.assetId:undefined,'preview');
+  const template=coverTemplateFor(book,back.templateId);
+  const background=back.backgroundMode==='match-front'?(book.pages[0]?.background??back.background):back.background;
+  const src=useAssetImage(back.assetId,'preview');
   const style=bookStyleFor(book);
-  return <div className={`book-back-cover ${className}`.trim()} style={{backgroundColor:background}}>
+  return <div className={`book-back-cover ${coverTemplateClass(template)} ${className}`.trim()} style={{backgroundColor:background}}>
     <span className="cover-grain"/>
     <span className="cover-spine"/>
-    {custom&&src&&<span className="back-cover-window"><img src={src} alt="画册后封面照片" style={coverCropStyle({crop:back.crop} as Element)}/></span>}
-    {custom&&back.text?.trim()&&<span className="back-cover-caption" style={{color:back.textColor??style.textColor,fontFamily:style.fontFamily}}>{back.text}</span>}
+    {template.slot&&src&&<span className="back-cover-window" style={coverFrameStyle(template)}><img src={src} alt="画册后封面照片" style={coverCropStyle({crop:back.crop} as Element)}/></span>}
+    {back.text.trim()&&<span className="back-cover-caption" style={{color:back.textColor??style.textColor,fontFamily:style.fontFamily}}>{back.text}</span>}
   </div>;
 }
-
 
 export function BookCoverEditor({
   book,
@@ -98,6 +102,7 @@ export function BookCoverEditor({
   const cover=book.pages[0];
   const image=cover.elements.find(element=>element.type==='image');
   const text=cover.elements.find(element=>element.type==='text');
+  const template=coverTemplateFor(book,book.coverTemplate);
   const update=useEditor(state=>state.updateElement);
   const select=useEditor(state=>state.select);
   const [previewCrop,setPreviewCrop]=useState<Element['crop']>();
@@ -105,7 +110,7 @@ export function BookCoverEditor({
   const asset=book.assets.find(asset=>asset.id===image?.assetId);
 
   function beginPhoto(e:React.PointerEvent<HTMLButtonElement>){
-    if(e.button!==0||!image||drag.current)return;
+    if(e.button!==0||!image||!template.slot||drag.current)return;
     const crop=image.crop??{x:.5,y:.5,zoom:1};
     drag.current={pointerId:e.pointerId,x:e.clientX,y:e.clientY,crop,moved:false};
     e.currentTarget.setPointerCapture(e.pointerId);
@@ -133,8 +138,8 @@ export function BookCoverEditor({
   }
 
   return <div
-    className={`book-cover-editor ${coverTemplateClass(book)}`}
-    style={{width,height:width*1696/1200}}
+    className={`book-cover-editor ${coverTemplateClass(template)}`}
+    style={{width,height:width*H/W}}
   >
     <BookCoverVisual book={book} className="book-cover-editor-visual" cropOverride={previewCrop}/>
     <button
@@ -144,10 +149,10 @@ export function BookCoverEditor({
       title="打开画册"
       onClick={e=>{e.stopPropagation();onOpen();}}
     />
-    {image&&<button
+    {image&&template.slot&&<button
       type="button"
       className="cover-editor-photo-hit"
-      style={customCoverFrameStyle(book,image)}
+      style={coverFrameStyle(template)}
       aria-label="调整或替换封面照片"
       onPointerDown={beginPhoto}
       onPointerMove={movePhoto}
