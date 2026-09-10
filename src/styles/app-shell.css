@@ -17,6 +17,9 @@ html.desktop-app #root{
   background:var(--ui-surface);
 }
 html.desktop-app .phone-shell{
+  width:100%;
+  max-width:none;
+  height:100%;
   max-height:none;
   border-radius:0!important;
   box-shadow:none!important;
@@ -28,21 +31,25 @@ html.desktop-app .phone-shell.expanded{
   max-height:none;
 }
 
-/* Frameless windows still need a drag target. The top strip is invisible and
-   the normal app headers provide a larger draggable area around their controls. */
+/* Electron 44 uses app-region for frameless-window dragging. Keep the legacy
+   WebKit spelling too so the same CSS remains compatible with older builds. */
 html.desktop-app body::before{
   content:'';
   position:fixed;
-  top:4px;
-  left:72px;
-  right:72px;
-  height:8px;
+  top:0;
+  left:0;
+  right:0;
+  height:10px;
   z-index:2147483647;
+  app-region:drag;
   -webkit-app-region:drag;
 }
 html.desktop-app .shelf-header,
 html.desktop-app .studio-header{
+  app-region:drag;
   -webkit-app-region:drag;
+  user-select:none;
+  cursor:move;
 }
 html.desktop-app button,
 html.desktop-app input,
@@ -50,5 +57,6 @@ html.desktop-app textarea,
 html.desktop-app select,
 html.desktop-app a,
 html.desktop-app [role='button']{
+  app-region:no-drag;
   -webkit-app-region:no-drag;
 }

@@ -1,4 +1,4 @@
-const {app,BrowserWindow,screen,shell}=require('electron');
+const {app,BrowserWindow,ipcMain,screen,shell}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -81,8 +81,23 @@ function initialContentSize(){
   const {width,height}=screen.getPrimaryDisplay().workAreaSize;
   return {
     width:Math.min(430,Math.max(320,width-32)),
-    height:Math.min(932,Math.max(560,height-48)),
+    height:Math.min(932,Math.max(480,height-48)),
   };
+}
+
+function layoutBounds(window,expanded){
+  const current=window.getBounds();
+  const display=screen.getDisplayMatching(current);
+  const area=display.workArea;
+  const availableWidth=Math.max(320,area.width-32);
+  const availableHeight=Math.max(480,area.height-32);
+  const width=expanded?Math.min(1280,availableWidth):Math.min(430,availableWidth);
+  const height=Math.min(932,availableHeight);
+  const centerX=current.x+current.width/2;
+  const centerY=current.y+current.height/2;
+  const x=Math.max(area.x,Math.min(Math.round(centerX-width/2),area.x+area.width-width));
+  const y=Math.max(area.y,Math.min(Math.round(centerY-height/2),area.y+area.height-height));
+  return {x,y,width,height};
 }
 
 async function createWindow(){
@@ -94,7 +109,7 @@ async function createWindow(){
     height:contentSize.height,
     useContentSize:true,
     minWidth:320,
-    minHeight:560,
+    minHeight:480,
     resizable:true,
     maximizable:true,
     fullscreenable:true,
@@ -104,6 +119,7 @@ async function createWindow(){
     backgroundColor:'#ffffff',
     autoHideMenuBar:true,
     webPreferences:{
+      preload:path.join(__dirname,'preload.cjs'),
       contextIsolation:true,
       nodeIntegration:false,
       sandbox:true,
@@ -125,6 +141,14 @@ async function createWindow(){
 
   await window.loadURL(serverOrigin);
 }
+
+ipcMain.handle('desktop-window:set-expanded',(event,expanded)=>{
+  const window=BrowserWindow.fromWebContents(event.sender);
+  if(!window)return null;
+  const bounds=layoutBounds(window,Boolean(expanded));
+  window.setBounds(bounds,true);
+  return bounds;
+});
 
 app.whenReady().then(async()=>{
   await createWindow();
