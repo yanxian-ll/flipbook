@@ -12,6 +12,7 @@ const input:ShareHtmlInput={
   showCover:true,
   coverTexture:'data:image/png;base64,TEXTURE',
   backColor:'#efe7d2',
+  backPage:'data:image/jpeg;base64,BACK',
   leafPlan:{needsFiller:false,backIndex:3},
   viewerConfig:{
     width:480,
@@ -52,6 +53,7 @@ describe('shared HTML viewer',()=>{
     expect(html).toContain('function makeBack');
     expect(html).toContain('new St.PageFlip');
     expect(html).toContain('data:image/jpeg;base64,AAA');
+    expect(html).toContain('data:image/jpeg;base64,BACK');
   });
 
   it('serializes inline JSON safely for script tags',()=>{
