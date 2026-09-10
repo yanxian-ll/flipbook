@@ -6,13 +6,13 @@ import {assetMetadata} from '../domain/assets';
 import {applyLayout,layouts,defaultLayout,fitAssetIds,frameIsFixed,isSinglePhotoTemplateCaption,singlePhotoTemplateCaption} from '../domain/layouts';
 type Status='saved'|'saving'|'error';
 interface EditorState {
-  book:Book|null; pageIndex:number; selected:string[]; past:Book[]; future:Book[];
+  book:Book|null; pageIndex:number; selected:string[]; selectedPages:string[]; past:Book[]; future:Book[];
   status:Status; error:string; revision:number; clipboard:Element[];
   load:(book:Book)=>void; change:(recipe:(b:Book)=>void)=>void; select:(id:string|null,multi?:boolean)=>void;
-  setPage:(index:number)=>void; updateElement:(id:string,patch:Partial<Element>)=>void;
+  setPage:(index:number)=>void; selectPreviewPage:(index:number,multi?:boolean)=>void; updateElement:(id:string,patch:Partial<Element>)=>void;
   addElement:(element:Element)=>void; deleteSelected:()=>void; duplicateSelected:()=>void;
   copy:()=>void; paste:()=>void; undo:()=>void; redo:()=>void;
-  addPage:()=>void; removePage:()=>void; duplicatePage:()=>void; reorderPage:(from:number,to:number)=>void; reorderSpread:(fromStart:number,toStart:number)=>void;
+  addPage:()=>void; removePage:()=>void; removePages:(pageIds:string[])=>void; duplicatePage:()=>void; reorderPage:(from:number,to:number)=>void; reorderSpread:(fromStart:number,toStart:number)=>void;
   layout:(id:string,assetIds?:string[])=>void; setPhotos:(ids:string[])=>void; addAssets:(assets:StoredAsset[])=>Promise<void>; removeAssets:(ids:string[])=>Promise<void>; flush:()=>Promise<void>;
 }
 let saveTimer:ReturnType<typeof setTimeout>|undefined;
@@ -20,7 +20,7 @@ let saveQueue:Promise<void>=Promise.resolve();
 function schedule(){clearTimeout(saveTimer);saveTimer=setTimeout(()=>{void useEditor.getState().flush().catch(()=>{});},900);}
 function checkpoint(book:Book|null,reason:string){if(book)void repository.createSnapshot(book,reason).catch(()=>{});}
 export const useEditor=create<EditorState>((set,get)=>({
-  book:null,pageIndex:0,selected:[],past:[],future:[],status:'saved',error:'',revision:0,clipboard:[],
+  book:null,pageIndex:0,selected:[],selectedPages:[],past:[],future:[],status:'saved',error:'',revision:0,clipboard:[],
   load(book){
     clearTimeout(saveTimer);
     const normalized=structuredClone(book);
@@ -47,20 +47,44 @@ export const useEditor=create<EditorState>((set,get)=>({
         migratedTemplateTexts=true;
       }
     }
-    set({book:normalized,pageIndex:0,selected:[],past:[],future:[],status:migratedTemplateTexts?'saving':'saved',error:'',revision:migratedTemplateTexts?1:0});
+    set({book:normalized,pageIndex:0,selected:[],selectedPages:normalized.pages[0]?[normalized.pages[0].id]:[],past:[],future:[],status:migratedTemplateTexts?'saving':'saved',error:'',revision:migratedTemplateTexts?1:0});
     if(migratedTemplateTexts)schedule();
   },
   change(recipe){const current=get().book;if(!current)return;const next=produce(current,draft=>{recipe(draft);draft.updatedAt=Date.now();});set(s=>({book:next,past:[...s.past.slice(-79),current],future:[],status:'saving',revision:s.revision+1}));schedule();},
   select(id,multi=false){set(s=>({selected:id?(multi?(s.selected.includes(id)?s.selected.filter(x=>x!==id):[...s.selected,id]):[id]):[]}));},
-  setPage(index){set({pageIndex:Math.max(0,Math.min(index,(get().book?.pages.length??1)-1)),selected:[]});},
+  setPage(index){
+    const book=get().book;
+    const pageIndex=Math.max(0,Math.min(index,(book?.pages.length??1)-1));
+    const pageId=book?.pages[pageIndex]?.id;
+    set({pageIndex,selected:[],selectedPages:pageId?[pageId]:[]});
+  },
+  selectPreviewPage(index,multi=false){
+    const state=get(),book=state.book;
+    if(!book?.pages.length)return;
+    const pageIndex=Math.max(0,Math.min(index,book.pages.length-1));
+    const pageId=book.pages[pageIndex].id;
+    if(!multi||pageIndex===0){
+      set({pageIndex,selected:[],selectedPages:[pageId]});
+      return;
+    }
+    const contentIds=new Set(book.pages.slice(1).map(page=>page.id));
+    const selectedPages=[...new Set(state.selectedPages.filter(id=>contentIds.has(id)))];
+    const activeId=book.pages[state.pageIndex]?.id;
+    if(selectedPages.includes(pageId)){
+      if(pageId===activeId||selectedPages.length<=1)return;
+      set({selectedPages:selectedPages.filter(id=>id!==pageId)});
+      return;
+    }
+    set({pageIndex,selected:[],selectedPages:[...selectedPages,pageId]});
+  },
   updateElement(id,patch){get().change(b=>{const page=b.pages[get().pageIndex],e=page?.elements.find(e=>e.id===id);if(!e)return;if(frameIsFixed(page,e)){if(patch.assetId)e.assetId=patch.assetId;if(patch.crop)e.crop={x:Math.max(0,Math.min(1,patch.crop.x)),y:Math.max(0,Math.min(1,patch.crop.y)),zoom:Math.max(1,Math.min(4,patch.crop.zoom))};}else Object.assign(e,patch);});},
   addElement(element){get().change(b=>{b.pages[get().pageIndex].elements.push(element);});set({selected:[element.id]});},
   deleteSelected(){const selected=get().selected;if(!selected.length)return;get().change(b=>{const page=b.pages[get().pageIndex];page.elements=page.elements.filter(e=>!selected.includes(e.id)||e.locked||frameIsFixed(page,e));});set({selected:[]});},
   copy(){const s=get();set({clipboard:structuredClone(s.book?.pages[s.pageIndex].elements.filter(e=>s.selected.includes(e.id))??[])});},
   paste(){const items=get().clipboard.filter(e=>e.type!=='image').map(e=>({...e,id:uid(),x:e.x+30,y:e.y+30,templateTextKey:undefined}));if(!items.length)return;get().change(b=>{b.pages[get().pageIndex].elements.push(...items);});set({selected:items.map(e=>e.id)});},
   duplicateSelected(){get().copy();get().paste();},
-  undo(){const s=get();if(!s.past.length||!s.book)return;set({book:s.past.at(-1)!,past:s.past.slice(0,-1),future:[s.book,...s.future],selected:[],status:'saving',pageIndex:Math.min(s.pageIndex,s.past.at(-1)!.pages.length-1),revision:s.revision+1});schedule();},
-  redo(){const s=get();if(!s.future.length||!s.book)return;set({book:s.future[0],past:[...s.past,s.book],future:s.future.slice(1),selected:[],status:'saving',revision:s.revision+1});schedule();},
+  undo(){const s=get();if(!s.past.length||!s.book)return;const previous=s.past.at(-1)!;const pageIndex=Math.min(s.pageIndex,previous.pages.length-1);set({book:previous,past:s.past.slice(0,-1),future:[s.book,...s.future],selected:[],selectedPages:previous.pages[pageIndex]?[previous.pages[pageIndex].id]:[],status:'saving',pageIndex,revision:s.revision+1});schedule();},
+  redo(){const s=get();if(!s.future.length||!s.book)return;const next=s.future[0];const pageIndex=Math.min(s.pageIndex,next.pages.length-1);set({book:next,past:[...s.past,s.book],future:s.future.slice(1),selected:[],selectedPages:next.pages[pageIndex]?[next.pages[pageIndex].id]:[],status:'saving',pageIndex,revision:s.revision+1});schedule();},
   addPage(){
     const index=get().pageIndex+1;
     get().change(b=>{
@@ -71,7 +95,44 @@ export const useEditor=create<EditorState>((set,get)=>({
     });
     get().setPage(index);
   },
-  removePage(){if(get().pageIndex===0)return;const index=get().pageIndex;checkpoint(get().book,'删除页面前');get().change(b=>{b.pages.splice(index,1);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index-1);},
+  removePage(){
+    const state=get(),book=state.book;
+    if(!book||state.pageIndex===0)return;
+    const selectedPages=state.selectedPages.filter(id=>book.pages.findIndex(page=>page.id===id)>0);
+    get().removePages(selectedPages.length?selectedPages:[book.pages[state.pageIndex].id]);
+  },
+  removePages(pageIds){
+    const state=get(),book=state.book;
+    if(!book)return;
+    const removableIds=new Set(book.pages.slice(1).map(page=>page.id));
+    const removeSet=new Set(pageIds.filter(id=>removableIds.has(id)));
+    if(!removeSet.size)return;
+    const activeIndex=state.pageIndex,activeId=book.pages[activeIndex]?.id;
+    let fallbackId=activeId;
+    if(!fallbackId||removeSet.has(fallbackId)){
+      fallbackId=undefined;
+      for(let index=activeIndex-1;index>=0;index--){
+        const id=book.pages[index]?.id;
+        if(id&&!removeSet.has(id)){fallbackId=id;break;}
+      }
+      if(!fallbackId){
+        for(let index=activeIndex+1;index<book.pages.length;index++){
+          const id=book.pages[index]?.id;
+          if(id&&!removeSet.has(id)){fallbackId=id;break;}
+        }
+      }
+    }
+    checkpoint(book,removeSet.size>1?'删除多个页面前':'删除页面前');
+    get().change(b=>{
+      b.pages=b.pages.filter((page,index)=>index===0||!removeSet.has(page.id));
+      b.pages.forEach((page,index)=>page.order=index);
+    });
+    const next=get().book;
+    if(!next)return;
+    let nextIndex=fallbackId?next.pages.findIndex(page=>page.id===fallbackId):-1;
+    if(nextIndex<0)nextIndex=Math.max(0,Math.min(activeIndex-1,next.pages.length-1));
+    get().setPage(nextIndex);
+  },
   duplicatePage(){const index=get().pageIndex;if(index===0)return;get().change(b=>{const page=structuredClone(current(b.pages[index]));page.id=uid();page.elements=page.elements.map(e=>({...e,id:uid()}));b.pages.splice(index+1,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(index+1);},
   reorderPage(from,to){if(from===0||to===0||from===to)return;checkpoint(get().book,'调整页面顺序前');get().change(b=>{const [page]=b.pages.splice(from,1);b.pages.splice(to,0,page);b.pages.forEach((p,i)=>p.order=i);});get().setPage(to);},
   reorderSpread(fromStart,toStart){
