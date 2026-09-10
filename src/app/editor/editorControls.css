@@ -34,3 +34,14 @@
 .studio .clean-page-strip .single-page-thumb.preview-page-active{
   border-color:#202020;
 }
+
+/* Keep the adaptive preview rail content-sized when a desktop side library opens.
+   Older side-panel width rules are more specific than the base fit-content rule. */
+@media(min-width:850px){
+  .studio.expanded.photo-library-open:not(.template-library-open) .clean-page-strip,
+  .studio.expanded.template-library-open:not(.photo-library-open) .clean-page-strip,
+  .studio.expanded.photo-library-open.template-library-open .clean-page-strip,
+  .studio.expanded.libraries-open .clean-page-strip{
+    width:fit-content!important;
+  }
+}
