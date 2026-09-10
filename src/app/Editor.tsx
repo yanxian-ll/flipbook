@@ -1,7 +1,7 @@
 import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
 import {useEffect,useRef,useState,type PointerEvent as ReactPointerEvent,type WheelEvent as ReactWheelEvent} from 'react';
 import {useNavigate,useParams} from 'react-router-dom';
-import {ChevronLeft,ChevronsLeft,ChevronsRight,Undo2,Redo2,Eye,Upload,Images,Grid2X2,Type,Sun,Plus,Sticker,Maximize2,Minimize2,Copy,Trash2,BookOpen,Palette,Check} from 'lucide-react';
+import {ChevronLeft,ChevronsLeft,ChevronsRight,Undo2,Redo2,Eye,Upload,Images,Grid2X2,Type,Sun,Plus,Sticker,Maximize2,Minimize2,Copy,Trash2,BookOpen,Palette,Check,History} from 'lucide-react';
 import {repository,friendlyError} from '../db/repository';
 import {useEditor} from '../store/editor';
 import {EditorCanvas} from '../editor/EditorCanvas';
@@ -11,12 +11,13 @@ import {EditorFlipBook,type EditorFlipBookHandle} from '../components/EditorFlip
 import {Button,IconButton,Loading,ErrorMessage} from '../components/ui';
 import {EditorPanel,type PanelId} from '../panels/EditorPanel';
 import {ExportDialog} from '../export/ExportDialog';
+import {VersionHistoryDialog} from '../components/VersionHistoryDialog';
 import {frameIsFixed} from '../domain/layouts';
 
 export function Editor(){
   const workspaceStyle=useWorkspaceBackground(useEditor(s=>s.book));
   const {bookId}=useParams();const navigate=useNavigate();const s=useEditor();
-  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[dragSpread,setDragSpread]=useState<number|null>(null),[dragOverSpread,setDragOverSpread]=useState<number|null>(null),[photoDraft,setPhotoDraft]=useState<string[]>([]),[photoLibraryOpen,setPhotoLibraryOpen]=useState(false),[templateLibraryOpen,setTemplateLibraryOpen]=useState(false);
+  const [loading,setLoading]=useState(true),[error,setError]=useState(''),[panel,setPanel]=useState<PanelId|null>(null),[wide,setWide]=useState(true),[exporting,setExporting]=useState(false),[historyOpen,setHistoryOpen]=useState(false),[viewWidth,setViewWidth]=useState(360),[viewHeight,setViewHeight]=useState(500),[zoomMode,setZoomMode]=useState<'spread'|'page'>('spread'),[dragSpread,setDragSpread]=useState<number|null>(null),[dragOverSpread,setDragOverSpread]=useState<number|null>(null),[photoDraft,setPhotoDraft]=useState<string[]>([]),[photoLibraryOpen,setPhotoLibraryOpen]=useState(false),[templateLibraryOpen,setTemplateLibraryOpen]=useState(false);
   const [spreadRoom,setSpreadRoom]=useState({width:0,height:0});
   const [previewOverflow,setPreviewOverflow]=useState(false);
   const spreadStage=useRef<HTMLDivElement>(null);
@@ -181,7 +182,7 @@ export function Editor(){
   const compactPanel=sideLibraries?(panel&&panel!=='photos'&&panel!=='layouts'?panel:null):(panel??(photoLibraryOpen?'photos':templateLibraryOpen?'layouts':null));
   return <main className={`phone-shell studio ${wide?'expanded':''} ${bothSideOpen?'libraries-open':''} ${photoSideOpen?'photo-library-open':''} ${templateSideOpen?'template-library-open':''}`}><header className="studio-header"><IconButton label="返回书架" onClick={()=>void leave('/')}><ChevronLeft size={21}/></IconButton><input className="editor-title" aria-label="画册名称" value={book.title} onChange={e=>s.change(b=>{b.title=e.target.value;})}/><IconButton label={wide?'收起工作区':'展开工作区'} onClick={()=>setWide(!wide)}>{wide?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</IconButton></header><ErrorMessage message={error||s.error}/>
     <div className="editor-workspace" ref={workspace} style={workspaceStyle}>
-      <div className="workspace-toolbar"><div className="toolbar-pill"><IconButton label="撤销" disabled={!s.past.length} onClick={s.undo}><Undo2 size={16}/></IconButton><IconButton label="重做" disabled={!s.future.length} onClick={s.redo}><Redo2 size={16}/></IconButton></div><div className="toolbar-pill toolbar-pill-actions"><div className={`save-status ${s.status}`} role="status">{s.status==='saved'?<><Check size={10}/>已保存</>:s.status==='saving'?'保存中…':<button onClick={()=>void s.flush().catch(()=>{})}>保存失败，点此重试</button>}</div>{page.type==='cover'&&<IconButton label="封面设置" onClick={()=>toggleTool('cover')}><BookOpen size={16}/></IconButton>}<IconButton label="垫底背景" onClick={()=>toggleTool('background')}><Palette size={16}/></IconButton><IconButton label="翻页预览" onClick={()=>void leave(`/preview/${book.id}`)}><Eye size={16}/></IconButton><IconButton label="导出 Flipbook" onClick={()=>setExporting(true)}><Upload size={16}/></IconButton></div></div>
+      <div className="workspace-toolbar"><div className="toolbar-pill"><IconButton label="撤销" disabled={!s.past.length} onClick={s.undo}><Undo2 size={16}/></IconButton><IconButton label="重做" disabled={!s.future.length} onClick={s.redo}><Redo2 size={16}/></IconButton><IconButton label="历史版本" onClick={()=>setHistoryOpen(true)}><History size={16}/></IconButton></div><div className="toolbar-pill toolbar-pill-actions"><div className={`save-status ${s.status}`} role="status">{s.status==='saved'?<><Check size={10}/>已保存</>:s.status==='saving'?'保存中…':<button onClick={()=>void s.flush().catch(()=>{})}>保存失败，点此重试</button>}</div>{page.type==='cover'&&<IconButton label="封面设置" onClick={()=>toggleTool('cover')}><BookOpen size={16}/></IconButton>}<IconButton label="垫底背景" onClick={()=>toggleTool('background')}><Palette size={16}/></IconButton><IconButton label="翻页预览" onClick={()=>void leave(`/preview/${book.id}`)}><Eye size={16}/></IconButton><IconButton label="导出 Flipbook" onClick={()=>setExporting(true)}><Upload size={16}/></IconButton></div></div>
       <div className="view-mode-switch" style={!wide&&zoomMode==='spread'?{top:`max(46px, calc(50% - ${spreadUnitWidth*1.4133333333/2+52}px))`}:undefined} role="group" aria-label="页面显示模式"><button type="button" className={zoomMode==='spread'?'active':''} aria-pressed={zoomMode==='spread'} onClick={()=>changeViewMode('spread')}>双页</button><button type="button" className={zoomMode==='page'?'active':''} aria-pressed={zoomMode==='page'} onClick={()=>changeViewMode('page')}>单页</button></div>
       {selected&&!frameIsFixed(page,selected)&&<div className="context-toolbar"><IconButton label="复制元素" onClick={s.duplicateSelected}><Copy size={16}/></IconButton><IconButton label="删除元素" onClick={s.deleteSelected}><Trash2 size={16}/></IconButton></div>}
       <div ref={spreadStage} className={`spread-area native-book-stage ${panel||photoSideOpen||templateSideOpen?'panel-open':''} zoom-${zoomMode}`} onWheelCapture={handlePageWheel}>
@@ -233,5 +234,12 @@ export function Editor(){
     {templateSideOpen&&<EditorPanel key={`${page.id}:layouts`} panel="layouts" placement="right" paired={bothSideOpen} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setTemplateLibraryOpen(false);if(panel==='layouts')setPanel(null);}}/>}
     {compactPanel&&<EditorPanel key={`${page.id}:${compactPanel}`} panel={page.type!=='cover'&&compactPanel==='cover'?'layouts':compactPanel} photoIds={photoDraft} onPhotoIdsChange={setPhotoDraft} onPanel={openTool} onClose={()=>{setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}}/>}
     <ExportDialog book={book} open={exporting} onClose={()=>setExporting(false)}/>
+    <VersionHistoryDialog
+      book={book}
+      open={historyOpen}
+      onClose={()=>setHistoryOpen(false)}
+      onBeforeRestore={async()=>{await s.flush();}}
+      onRestore={restored=>{s.load(restored);setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}}
+    />
   </main>;
 }
