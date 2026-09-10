@@ -9,10 +9,11 @@ import {useCoverContext} from '../../store/coverContext';
 
 type ViewMode='spread'|'page';
 
-export function EditorPreviewRail({book,mode,flipBook,onAddPage,onRequestDelete}:{
+export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,onRequestDelete}:{
   book:Book;
   mode:ViewMode;
   flipBook:RefObject<EditorFlipBookHandle|null>;
+  onNavigatePage:(index:number)=>void;
   onAddPage:()=>void;
   onRequestDelete:()=>void;
 }){
@@ -55,10 +56,18 @@ export function EditorPreviewRail({book,mode,flipBook,onAddPage,onRequestDelete}
       if(useEditor.getState().pageIndex!==activeIndex)useEditor.setState({pageIndex:activeIndex});
       return;
     }
+    if(mode==='page'){
+      onNavigatePage(index);
+      return;
+    }
     flipBook.current?.flipTo(index);
     state.selectPreviewPage(index,false);
   };
   const jumpTo=(index:number)=>{
+    if(mode==='page'){
+      onNavigatePage(index);
+      return;
+    }
     flipBook.current?.turnTo(index);
     useEditor.getState().selectPreviewPage(index,false);
   };
