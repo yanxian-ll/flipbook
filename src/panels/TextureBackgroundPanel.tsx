@@ -1,5 +1,5 @@
 import {useEffect,useMemo,useRef,useState} from 'react';
-import {ImagePlus,Upload,X} from 'lucide-react';
+import {Upload,X} from 'lucide-react';
 import {assetMetadata,prepareAsset} from '../domain/assets';
 import type {Asset,Book} from '../domain/model';
 import {repository,friendlyError} from '../db/repository';
@@ -40,7 +40,7 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
   const pageIndex=useEditor(state=>state.pageIndex);
   const change=useEditor(state=>state.change);
   const page=book.pages[pageIndex];
-  const textureInput=useRef<HTMLInputElement>(null),backgroundImageInput=useRef<HTMLInputElement>(null);
+  const textureInput=useRef<HTMLInputElement>(null);
   const [busy,setBusy]=useState(false),[error,setError]=useState('');
   const workspace=mode==='workspace';
   const currentTextureId=workspace?book.workspaceTextureId:page.patternAssetId;
@@ -102,7 +102,7 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
       }
     });
   }
-  async function upload(files:FileList|null,kind:'texture'|'workspace-image'='texture'){
+  async function upload(files:FileList|null){
     const file=files?.[0];
     if(!file)return;
     setBusy(true);setError('');
@@ -111,13 +111,6 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
       await repository.putAssets([prepared]);
       const metadata=assetMetadata(prepared);
       change(draft=>{
-        if(kind==='workspace-image'){
-          if(!draft.assets.some(asset=>asset.id===metadata.id))draft.assets.push(metadata);
-          draft.workspaceImageId=metadata.id;
-          draft.workspaceTextureId=undefined;
-          draft.workspacePattern=undefined;
-          return;
-        }
         const textureAssets=draft.textureAssets??=[];
         if(!textureAssets.some(asset=>asset.id===metadata.id))textureAssets.push(metadata);
         const rest=(draft.recentTextureIds??[]).filter(id=>id!==metadata.id);
@@ -136,7 +129,6 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
     finally{
       setBusy(false);
       if(textureInput.current)textureInput.current.value='';
-      if(backgroundImageInput.current)backgroundImageInput.current.value='';
     }
   }
 
@@ -157,12 +149,8 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
         {textures.map(([name,label])=><button key={name||'none'} type="button" aria-label={`纹理 ${label}`} className={builtInChosen(name)?'chosen':''} style={name?{backgroundImage:`url(/reference/${name})`}:{}} onClick={()=>chooseBuiltIn(name)}>{label}</button>)}
         {recent.map(asset=><UploadedTexture key={asset.id} asset={asset} chosen={currentTextureId===asset.id} onClick={()=>chooseUploaded(asset.id)}/>) }
       </div>
-      <input ref={textureInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={event=>void upload(event.target.files,'texture')}/>
-      {workspace&&<input ref={backgroundImageInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={event=>void upload(event.target.files,'workspace-image')}/>} 
-      <div className={workspace?'texture-upload-actions':''}>
-        <Button className="full texture-upload-button" disabled={busy} onClick={()=>textureInput.current?.click()}><Upload size={16}/>{busy?'正在处理…':'上传纹理'}</Button>
-        {workspace&&<Button className="full texture-image-button" disabled={busy} onClick={()=>backgroundImageInput.current?.click()}><ImagePlus size={16}/>上传背景图</Button>}
-      </div>
+      <input ref={textureInput} hidden type="file" accept="image/jpeg,image/png,image/webp,image/gif,image/avif" onChange={event=>void upload(event.target.files)}/>
+      <Button className="full texture-upload-button" disabled={busy} onClick={()=>textureInput.current?.click()}><Upload size={16}/>{busy?'正在处理…':'上传纹理'}</Button>
       <Button className="full" onClick={reset}>恢复默认</Button>
     </div>
   </aside>;
