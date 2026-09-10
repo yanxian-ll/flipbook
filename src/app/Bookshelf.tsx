@@ -10,12 +10,28 @@ import {IconButton,Modal,Button,Loading,ErrorMessage} from '../components/ui';
 
 export function Bookshelf({creating=false}:{creating?:boolean}){
   const [books,setBooks]=useState<Book[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[grid,setGrid]=useState(true),[index,setIndex]=useState(0),[deleting,setDeleting]=useState(false),[rename,setRename]=useState(false),[title,setTitle]=useState(''),[menu,setMenu]=useState(false),[transferring,setTransferring]=useState(false),[wide,setWide]=useState(true);
+  const [backupProgress,setBackupProgress]=useState<number|null>(null);
   const navigate=useNavigate();const startX=useRef(0),restoreInput=useRef<HTMLInputElement>(null);const current=books[Math.min(index,books.length-1)];
   async function refresh(){try{setBooks(await repository.list());}catch(e){setError(friendlyError(e));}finally{setLoading(false);}}
   useEffect(()=>{void initializeDemo().then(refresh).catch(e=>{setError(friendlyError(e));setLoading(false);});},[]);
   async function remove(){if(!current)return;try{await repository.remove(current.id);setDeleting(false);setIndex(0);await refresh();}catch(e){setError(friendlyError(e));}}
-  async function backup(){if(!current||transferring)return;setTransferring(true);setError('');try{await exportBookBackup(current.id);setMenu(false);}catch(e){setError(friendlyError(e));}finally{setTransferring(false);}}
+  async function backup(){
+    if(!current||transferring)return;
+    setTransferring(true);setBackupProgress(0);setError('');
+    let lastProgress=-1;
+    try{
+      const saved=await exportBookBackup(current.id,progress=>{
+        const rounded=Math.round(progress);
+        if(rounded===lastProgress)return;
+        lastProgress=rounded;
+        setBackupProgress(rounded);
+      },current.title);
+      if(saved)setMenu(false);
+    }catch(e){setError(friendlyError(e));}
+    finally{setTransferring(false);setBackupProgress(null);}
+  }
   async function restore(files:FileList|null){const file=files?.[0];if(!file||transferring)return;setTransferring(true);setError('');try{await importBookBackup(file);setIndex(0);await refresh();}catch(e){setError(friendlyError(e));}finally{setTransferring(false);if(restoreInput.current)restoreInput.current.value='';}}
+  const backingUp=backupProgress!==null;
   return <main className={`phone-shell shelf ${wide?'expanded':''} ${creating?'behind-wizard':''}`}>
     <header className="shelf-header">
       <div className="view-toggle"><IconButton label="书架网格" active={grid} onClick={()=>setGrid(true)}><Grid2X2 size={17}/></IconButton><IconButton label="单本轮播" active={!grid} onClick={()=>setGrid(false)}><BookIcon size={17}/></IconButton></div>
@@ -32,6 +48,6 @@ export function Bookshelf({creating=false}:{creating?:boolean}){
     <button className="create-fab" title="新建 Flipbook" aria-label="新建 Flipbook" onClick={()=>navigate('/create')}><Plus size={28}/></button>
     <Modal open={deleting} onClose={()=>setDeleting(false)} title="要删掉这本 Flipbook 吗？" description="删除后无法从书架恢复，建议先备份重要作品。"><div className="actions"><Button onClick={()=>setDeleting(false)}>取消</Button><Button className="danger" onClick={()=>void remove()}>删除</Button></div></Modal>
     <Modal open={rename} onClose={()=>setRename(false)} title="给这本书起个名字"><input aria-label="画册名称" maxLength={80} value={title} onChange={e=>setTitle(e.target.value)}/><div className="actions"><Button onClick={()=>setRename(false)}>取消</Button><Button className="primary" disabled={!title.trim()} onClick={()=>{if(current)void repository.rename(current.id,title).then(()=>{setRename(false);return refresh();}).catch(e=>setError(friendlyError(e)));}}>保存</Button></div></Modal>
-    <Modal open={menu} onClose={()=>setMenu(false)} title={current?.title??'画册操作'}><div className="menu-list"><Button onClick={()=>current&&navigate(`/editor/${current.id}`)}>打开画册</Button><Button onClick={()=>{setMenu(false);setTitle(current.title);setRename(true);}}>重命名</Button><Button onClick={()=>{void repository.duplicate(current.id).then(()=>{setMenu(false);return refresh();}).catch(e=>setError(friendlyError(e)));}}><Copy size={17}/>复制画册</Button><Button onClick={()=>navigate(`/preview/${current.id}?export=1`)}>导出画册</Button><Button disabled={transferring} onClick={()=>void backup()}><Download size={17}/>备份作品</Button><Button className="danger" onClick={()=>{setMenu(false);setDeleting(true);}}>删除</Button></div></Modal>
+    <Modal open={menu} onClose={()=>setMenu(false)} title={current?.title??'画册操作'}><div className="menu-list"><Button onClick={()=>current&&navigate(`/editor/${current.id}`)}>打开画册</Button><Button onClick={()=>{setMenu(false);setTitle(current.title);setRename(true);}}>重命名</Button><Button onClick={()=>{void repository.duplicate(current.id).then(()=>{setMenu(false);return refresh();}).catch(e=>setError(friendlyError(e)));}}><Copy size={17}/>复制画册</Button><Button onClick={()=>navigate(`/preview/${current.id}?export=1`)}>导出画册</Button><Button disabled={transferring} onClick={()=>void backup()} aria-label={backingUp?`正在备份 ${backupProgress}%`:'备份作品'} style={{position:'relative',overflow:'hidden',opacity:backingUp?1:undefined}}>{backingUp&&<span aria-hidden style={{position:'absolute',left:0,top:0,bottom:0,width:`${backupProgress}%`,background:'#dedede',borderRadius:'inherit',transition:'width 120ms linear'}}/>}<span style={{position:'relative',zIndex:1,display:'inline-flex',alignItems:'center',gap:8}}><Download size={17}/>{backingUp?`备份中 ${backupProgress}%`:'备份作品'}</span></Button><Button className="danger" onClick={()=>{setMenu(false);setDeleting(true);}}>删除</Button></div></Modal>
   </main>;
 }
