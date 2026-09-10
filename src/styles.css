@@ -1382,3 +1382,293 @@
 .native-book-stage .editor-flip-page[data-book-side=right].--simple::after,
 .single-page-editor-shell .book-page-right::after{background:linear-gradient(90deg,#00000040,#ffffff33 .6%,#00000015 2%,transparent 8%,transparent 97%,#00000008)}
 .native-book-stage .editor-fallback-spread>.spine-shadow{width:28px;background:linear-gradient(90deg,transparent,#0003 45%,#0006 50%,#fff4 54%,transparent)}
+
+
+/* Editor UI polish: adaptive preview rail and calmer desktop chrome.
+   These rules change presentation only; editing, navigation and export handlers stay unchanged. */
+.studio .view-mode-switch{
+  gap:1px;
+  padding:3px;
+  border-color:#ffffff8a;
+  border-radius:11px;
+  background:#ffffffe0;
+  box-shadow:0 4px 16px #0000000b;
+  backdrop-filter:blur(16px);
+}
+.studio .view-mode-switch button{
+  min-width:56px;
+  height:29px;
+  padding:0 11px;
+  border-radius:8px;
+  color:#8a8a8a;
+  font-size:11px;
+}
+.studio .view-mode-switch button.active{
+  background:#242424e8;
+  color:#fff;
+  box-shadow:0 1px 4px #00000020;
+}
+
+.studio .toolbar-pill{
+  border:1px solid #ffffff80;
+  background:#ffffffe8;
+  box-shadow:0 5px 16px #0000000a;
+  backdrop-filter:blur(16px);
+}
+.studio .toolbar-pill-actions{align-items:center}
+.studio .save-status{
+  position:static!important;
+  top:auto!important;
+  right:auto!important;
+  min-width:48px;
+  height:30px;
+  padding:0 7px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:4px;
+  border-right:1px solid #0000000b;
+  color:#8c8c8c;
+  font-size:9px;
+  white-space:nowrap;
+  transition:opacity .2s ease;
+}
+.studio .save-status button{
+  padding:0;
+  border:0;
+  background:transparent;
+  color:#a65353;
+  font:inherit;
+  cursor:pointer;
+}
+.studio .save-status.saved{animation:editor-saved-fade 2.8s ease 1.8s forwards}
+.studio .save-status.saving{opacity:1}
+@keyframes editor-saved-fade{to{opacity:0}}
+
+.studio .clean-page-strip{
+  --preview-track-max:min(560px,calc(68vw - 124px),calc(100vw - 154px));
+  left:50%!important;
+  right:auto!important;
+  transform:translateX(-50%)!important;
+  width:fit-content!important;
+  max-width:min(68vw,720px,calc(100% - 32px))!important;
+  height:58px!important;
+  max-height:58px!important;
+  padding:7px 9px!important;
+  gap:6px!important;
+  justify-content:center!important;
+  overflow:hidden!important;
+  border:1px solid #ffffff9c;
+  border-radius:16px!important;
+  background:#ffffffe0!important;
+  box-shadow:0 10px 30px #0000000c!important;
+  backdrop-filter:blur(18px)!important;
+  transition:left .22s ease,max-width .22s ease,background .2s ease,box-shadow .2s ease;
+}
+.studio .clean-page-strip .page-strip-scroll{
+  position:relative;
+  flex:0 1 auto!important;
+  width:max-content;
+  max-width:var(--preview-track-max);
+  min-width:0;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  scroll-padding-inline:28px;
+}
+.studio .clean-page-strip.has-overflow .page-strip-scroll{
+  -webkit-mask-image:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);
+  mask-image:linear-gradient(90deg,transparent 0,#000 18px,#000 calc(100% - 18px),transparent 100%);
+}
+.studio .clean-page-strip .page-strip-track{
+  width:max-content!important;
+  min-width:max-content!important;
+  margin:0!important;
+}
+.studio .clean-page-strip>.thumbnail-add-page{
+  display:grid;
+  place-items:center;
+  flex:0 0 34px;
+  width:34px;
+  min-width:34px;
+  height:34px;
+  margin:0 1px;
+  border:1px solid #dedede;
+  border-radius:50%;
+  background:#fff;
+  color:#777;
+  box-shadow:0 2px 7px #0000000c;
+}
+.studio .clean-page-strip>.thumbnail-add-page:hover{
+  background:#f5f5f5;
+  color:#222;
+  border-color:#cfcfcf;
+}
+.studio .clean-page-strip>.icon-btn{
+  flex:0 0 30px;
+  width:30px;
+  height:34px;
+  border-radius:50%;
+  background:#ffffffb8;
+  color:#777;
+  transition:width .18s ease,flex-basis .18s ease,opacity .15s ease,background .15s ease;
+}
+.studio .clean-page-strip>.icon-btn:hover{background:#f1f1f1;color:#222}
+.studio .clean-page-strip.fits-content>.icon-btn{
+  width:0!important;
+  flex-basis:0!important;
+  min-width:0!important;
+  padding:0!important;
+  margin:0!important;
+  opacity:0;
+  overflow:hidden;
+  pointer-events:none;
+}
+
+/* The bottom tool bar is fixed application chrome; keep it visually flatter than the floating rail. */
+.studio .editor-tools{
+  background:#fff;
+  border-top:1px solid #0000000d;
+  box-shadow:none;
+}
+
+/* Template categories stay on one calm horizontal row instead of a dense 5+4 grid. */
+.template-count-tabs{
+  display:flex!important;
+  flex-wrap:nowrap!important;
+  align-items:center;
+  gap:4px!important;
+  margin:9px 0 13px!important;
+  overflow-x:auto;
+  overflow-y:hidden;
+  scrollbar-width:none;
+  scroll-snap-type:x proximity;
+}
+.template-count-tabs::-webkit-scrollbar{display:none}
+.template-count-tabs button{
+  flex:0 0 auto;
+  min-width:40px!important;
+  padding:6px 9px!important;
+  border-radius:7px!important;
+  scroll-snap-align:start;
+}
+.layout-card-meta{gap:6px}
+.layout-card-meta small{color:#9a9a9a}
+.layout-card-meta em{
+  background:#f3f3f3;
+  color:#999;
+}
+
+/* Side libraries are separated by air and a very soft shadow, not a hard border. */
+@media(min-width:850px){
+  .studio.expanded .editor-panel.panel-left{
+    border-right:0!important;
+    box-shadow:4px 0 18px #00000009!important;
+  }
+  .studio.expanded .editor-panel.panel-right{
+    border-left:0!important;
+    box-shadow:-4px 0 18px #00000009!important;
+  }
+
+  /* 290px panel + 32px breathing room. The existing ResizeObserver then
+     naturally scales the book to the remaining space without changing editor behavior. */
+  .studio.expanded.photo-library-open .spread-area{left:322px!important}
+  .studio.expanded.template-library-open .spread-area{right:322px!important}
+  .studio.expanded.photo-library-open.template-library-open .spread-area{
+    left:322px!important;
+    right:322px!important;
+  }
+
+  .studio.expanded.photo-library-open:not(.template-library-open) .clean-page-strip{
+    left:calc(50% + 161px)!important;
+    --preview-track-max:min(500px,calc(100vw - 520px));
+    max-width:min(62vw,660px,calc(100% - 354px))!important;
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) .clean-page-strip{
+    left:calc(50% - 161px)!important;
+    --preview-track-max:min(500px,calc(100vw - 520px));
+    max-width:min(62vw,660px,calc(100% - 354px))!important;
+  }
+  .studio.expanded.photo-library-open.template-library-open .clean-page-strip,
+  .studio.expanded.libraries-open .clean-page-strip{
+    left:50%!important;
+    --preview-track-max:min(430px,calc(100vw - 760px));
+    max-width:min(52vw,590px,calc(100% - 676px))!important;
+  }
+}
+
+@media(min-width:1500px){
+  .studio .view-mode-switch button{
+    min-width:62px;
+    height:32px;
+    padding:0 13px;
+    font-size:12px;
+  }
+  .studio .save-status{
+    height:37px;
+    min-width:58px;
+    padding:0 9px;
+    font-size:10px;
+  }
+  .studio .clean-page-strip{
+    --preview-track-max:min(650px,calc(64vw - 136px));
+    max-width:min(64vw,820px,calc(100% - 40px))!important;
+    height:67px!important;
+    max-height:67px!important;
+    padding:6px 11px!important;
+    gap:8px!important;
+  }
+  .studio .clean-page-strip>.thumbnail-add-page{
+    width:38px;
+    min-width:38px;
+    flex-basis:38px;
+    height:38px;
+  }
+  .studio .clean-page-strip>.icon-btn{
+    width:34px;
+    flex-basis:34px;
+    height:38px;
+  }
+
+  /* 360px panel + 32px breathing room on large desktop. */
+  .studio.expanded.photo-library-open .spread-area{left:392px!important}
+  .studio.expanded.template-library-open .spread-area{right:392px!important}
+  .studio.expanded.photo-library-open.template-library-open .spread-area{
+    left:392px!important;
+    right:392px!important;
+  }
+  .studio.expanded.photo-library-open:not(.template-library-open) .clean-page-strip{
+    left:calc(50% + 196px)!important;
+    --preview-track-max:min(590px,calc(100vw - 650px));
+    max-width:min(60vw,760px,calc(100% - 432px))!important;
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) .clean-page-strip{
+    left:calc(50% - 196px)!important;
+    --preview-track-max:min(590px,calc(100vw - 650px));
+    max-width:min(60vw,760px,calc(100% - 432px))!important;
+  }
+  .studio.expanded.photo-library-open.template-library-open .clean-page-strip,
+  .studio.expanded.libraries-open .clean-page-strip{
+    left:50%!important;
+    --preview-track-max:min(470px,calc(100vw - 900px));
+    max-width:min(48vw,640px,calc(100% - 824px))!important;
+  }
+  .studio.expanded .template-count-tabs button{
+    min-width:46px!important;
+    padding:7px 11px!important;
+    font-size:11px!important;
+  }
+}
+
+@media(max-width:699px){
+  .studio .clean-page-strip{
+    --preview-track-max:calc(100vw - 126px);
+    max-width:calc(100% - 16px)!important;
+    border-radius:14px!important;
+  }
+  .studio .view-mode-switch button{
+    min-width:49px;
+    height:28px;
+    padding:0 9px;
+  }
+}
