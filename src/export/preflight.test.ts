@@ -43,9 +43,9 @@ describe('export preflight',()=>{
     const photo=asset('back-photo',500,500);
     const book=newBook('back','editorial',[photo]);
     book.backCover={mode:'custom',background:'#eeeae3',assetId:photo.id,crop:{x:.5,y:.5,zoom:1},text:'THE END',textColor:'#222'};
-    const missing=inspectExport({...book,assets:[]},[0],'share',1);
+    const missing=inspectExport({...book,assets:[]},[0],'share',1.6);
     expect(missing.issues.find(issue=>issue.id==='missing-metadata')?.pages).toContain(-1);
-    const low=inspectExport(book,[0],'share',1);
+    const low=inspectExport(book,[0],'share',1.6);
     expect(low.issues.find(issue=>issue.id==='low-resolution')?.pages).toContain(-1);
   });
 
