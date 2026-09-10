@@ -5,6 +5,16 @@ import {useCoverContext} from '../store/coverContext';
 import {useEditor} from '../store/editor';
 
 const colors=['#f5ec30','#eeeae3','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#ffffff','#1a1a1a'];
+const PHOTO_BLUR_MAX=20;
+
+function blurToSlider(blur:number){
+  const normalized=Math.max(0,Math.min(PHOTO_BLUR_MAX,blur))/PHOTO_BLUR_MAX;
+  return Math.round(Math.sqrt(normalized)*100);
+}
+function sliderToBlur(value:number){
+  const normalized=Math.max(0,Math.min(100,value))/100;
+  return Math.round(normalized*normalized*PHOTO_BLUR_MAX*10)/10;
+}
 
 export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')=>void}){
   const book=useEditor(state=>state.book)!;
@@ -29,6 +39,18 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')
         draft.pages[0].elements.push(element);
       }
       element[key]=value;
+    });
+  }
+  function frontTitleSize(value:number){
+    change(draft=>{
+      let element=draft.pages[0].elements.find(item=>item.type==='text');
+      if(!element){
+        element=textElement('TIME TO FLIPBOOK',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center'});
+        draft.pages[0].elements.push(element);
+      }
+      const fontSize=Math.max(12,Math.min(72,Math.round(value)));
+      element.fontSize=fontSize;
+      element.height=Math.max(40,Math.ceil(fontSize*1.45));
     });
   }
   function updateBack(patch:Partial<ReturnType<typeof backCoverFor>>){
@@ -69,8 +91,9 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')
       <p className="field-label">封皮颜色</p>
       <div className="swatches">{colors.map(color=><button key={color} aria-label={`封皮 ${color}`} className={cover.background===color?'chosen':''} style={{backgroundColor:color}} onClick={()=>change(draft=>{draft.pages[0].background=color;})}/>)}</div>
       <label className="field">自定义封皮颜色<input type="color" value={cover.background} onChange={event=>change(draft=>{draft.pages[0].background=event.target.value;})}/></label>
-      {frontPhoto&&<label className="field">照片模糊度<input type="range" min={0} max={20} step={.5} value={frontPhoto.blur??0} onChange={event=>change(draft=>{const image=draft.pages[0].elements.find(element=>element.type==='image');if(image)image.blur=+event.target.value;})}/><span>{frontPhoto.blur??0} px</span></label>}
+      {frontPhoto&&<label className="field">照片模糊度<input type="range" min={0} max={100} step={1} value={blurToSlider(frontPhoto.blur??0)} aria-valuetext={`${(frontPhoto.blur??0).toFixed(1)} px`} onChange={event=>change(draft=>{const image=draft.pages[0].elements.find(element=>element.type==='image');if(image)image.blur=sliderToBlur(+event.target.value);})}/><span>{(frontPhoto.blur??0).toFixed(1)} px</span></label>}
       <label className="field stack">封面标题<input value={frontTitle?.text??''} onChange={event=>frontText(event.target.value,'text')}/></label>
+      <label className="field">标题字号<input type="range" min={12} max={72} step={1} value={frontTitle?.fontSize??26} onChange={event=>frontTitleSize(+event.target.value)}/><span>{Math.round(frontTitle?.fontSize??26)} px</span></label>
       <label className="field">标题颜色<input type="color" value={frontTitle?.color??'#4a3f1a'} onChange={event=>frontText(event.target.value,'color')}/></label>
     </>:<>
       <div className="settings-section-heading"><b>后封面样式</b><small>颜色与文字独立于模板</small></div>
