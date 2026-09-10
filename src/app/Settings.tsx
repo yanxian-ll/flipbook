@@ -38,13 +38,13 @@ export function Settings(){
     if(busy)return;setBusy(true);setBackupProgress(0);setError('');setMessage('');
     let lastProgress=-1;
     try{
-      await exportLibraryBackup(progress=>{
+      const saved=await exportLibraryBackup(progress=>{
         const rounded=Math.round(progress);
         if(rounded===lastProgress)return;
         lastProgress=rounded;
         setBackupProgress(rounded);
       });
-      setMessage('全部作品备份已生成。');
+      if(saved)setMessage('全部作品备份已生成。');
     }
     catch(cause){setError(friendlyError(cause));}
     finally{setBusy(false);setBackupProgress(null);}
