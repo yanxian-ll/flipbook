@@ -53,8 +53,9 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
     change(draft=>{
       if(workspace)draft.workspaceBackground=value;
       else{
-        draft.pages[pageIndex].background=value;
-        draft.pages[pageIndex].templateBackground=undefined;
+        const target=draft.pages[pageIndex];
+        target.background=value;
+        target.templateBackground=undefined;
       }
     });
   }
@@ -66,6 +67,7 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
         draft.workspaceImageId=undefined;
       }else{
         const target=draft.pages[pageIndex];
+        target.templateBackground=undefined;
         target.pattern=value||undefined;
         target.patternAssetId=undefined;
       }
@@ -79,6 +81,7 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
         draft.workspaceImageId=undefined;
       }else{
         const target=draft.pages[pageIndex];
+        target.templateBackground=undefined;
         target.patternAssetId=assetId;
         target.pattern=undefined;
       }
@@ -121,6 +124,7 @@ export function TextureBackgroundPanel({mode,onClose}:{mode:TextureBackgroundMod
           draft.workspaceImageId=undefined;
         }else{
           const target=draft.pages[pageIndex];
+          target.templateBackground=undefined;
           target.patternAssetId=metadata.id;
           target.pattern=undefined;
         }
