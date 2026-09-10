@@ -44,6 +44,7 @@ export interface Book {
   coverPageId: string; pages: Page[]; assets: Asset[]; createdAt: number; updatedAt: number;
   version: number; workspaceBackground: string; coverTemplate: string;
   defaultPageBackground?: string;
+  /** Legacy setting kept so older saved books remain compatible. */
   bookStyle?: BookStyle;
   backCover?: BackCover;
   workspacePattern?: string; workspaceImageId?: string; workspaceTextureId?: string;
@@ -78,7 +79,7 @@ export function newBook(title: string, themeId: ThemeId, assets: Asset[] = []): 
   const cover = blankPage(0, themeId === 'scrapbook' ? '#f5ec30' : '#e8e2cf');
   if(assets[0]) cover.elements.push(imageElement(assets[0].id,{x:414,y:360,width:372,height:498}));
   cover.elements.push(textElement('TIME TO FLIPBOOK',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center',color:'#4a3f1a'}));
-  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3',bookStyle:{pageBackground:'#eeeae3',textColor:'#252525',fontFamily:'Domine'},backCover:{mode:'match-front',backgroundMode:'match-front',background:cover.background,templateId:'plain',text:'',textColor:'#4a3f1a'}};
+  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3',backCover:{mode:'match-front',backgroundMode:'match-front',background:cover.background,templateId:'plain',text:'',textColor:'#4a3f1a'}};
 }
 export function validateBook(value: unknown): asserts value is Book {
   const b = value as Book;
