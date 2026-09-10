@@ -53,7 +53,7 @@ function LiveEditorSurface({children,onInteractionChange}:{children:ReactNode;on
 }
 
 function FlipLeafInner(
-  {book,index,kind,active,priority,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,onInteractionChange,scale}:LeafProps,
+  {book,index,kind,active,priority,width,onSelect,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,onInteractionChange,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
   if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-label="后封面"><BookBackCoverVisual book={book} className="editor-back-cover-visual"/></div>;
