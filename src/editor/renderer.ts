@@ -9,7 +9,45 @@ export function imageCrop(element:Element,image:HTMLImageElement){
   return cropRect(element,{width:image.naturalWidth,height:image.naturalHeight},element.crop);
 }
 export function elementProps(e:Element){return {id:e.id,x:e.x,y:e.y,width:e.width,height:e.height,rotation:e.rotation,opacity:e.opacity,fill:e.color??'#252525',stroke:e.borderColor??'#fff',strokeWidth:e.border??0,shadowEnabled:!!e.shadow,shadowColor:'#000',shadowBlur:e.shadow?22:0,shadowOpacity:.18,shadowOffsetY:8};}
-export function textProps(e:Element){const style=[e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';return {...elementProps(e),text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:style,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
+function textFontStyle(e:Element){return [e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';}
+export function textLayout(e:Element){
+  const fontSize=Math.max(1,e.fontSize??60);
+  const fontFamily=e.fontFamily??'Domine';
+  const fontStyle=textFontStyle(e);
+  const lineHeight=e.lineHeight??1.2;
+  const letterSpacing=e.letterSpacing??0;
+  if(e.type!=='text')return {x:e.x,y:e.y,width:e.width,height:e.height,fontStyle};
+
+  const anchor=e.align??'left';
+  const left=e.x;
+  const center=e.x+e.width/2;
+  const right=e.x+e.width;
+  const available=anchor==='center'
+    ?Math.max(20,2*Math.min(center,W-center))
+    :anchor==='right'
+      ?Math.max(20,right)
+      :Math.max(20,W-left);
+  const maxWidth=Math.max(20,Math.min(W-20,available));
+  const probe=new Konva.Text({
+    text:e.text??'',fontSize,fontFamily,fontStyle,lineHeight,letterSpacing,wrap:'word'
+  });
+  const naturalWidth=Math.max(20,Math.ceil(probe.width()||fontSize*.6));
+  const fittedWidth=Math.min(maxWidth,naturalWidth);
+  probe.width(fittedWidth);
+  const fittedHeight=Math.max(Math.ceil(fontSize*lineHeight),Math.ceil(probe.height()));
+  probe.destroy();
+
+  const localShift=anchor==='center'?(e.width-fittedWidth)/2:anchor==='right'?e.width-fittedWidth:0;
+  const radians=(e.rotation??0)*Math.PI/180;
+  return {
+    x:e.x+localShift*Math.cos(radians),
+    y:e.y+localShift*Math.sin(radians),
+    width:fittedWidth,
+    height:fittedHeight,
+    fontStyle,
+  };
+}
+export function textProps(e:Element){const layout=textLayout(e);return {...elementProps(e),...layout,text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:layout.fontStyle,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
 export function frameClip(e:Element){return (ctx:Konva.Context)=>{ctx.beginPath();if(e.frameShape==='ellipse')ctx.ellipse(e.width/2,e.height/2,e.width/2,e.height/2,0,0,Math.PI*2);else ctx.rect(0,0,e.width,e.height);ctx.closePath();};}
 export function photoProps(e:Element,image:HTMLImageElement){const common={...elementProps(e),image,strokeWidth:0,strokeEnabled:false};if(e.fit==='contain'){const ratio=Math.min(e.width/image.naturalWidth,e.height/image.naturalHeight);return {...common,width:image.naturalWidth*ratio,height:image.naturalHeight*ratio};}return {...common,crop:imageCrop(e,image)};}
 export function pageTextureProps(image:HTMLImageElement){
