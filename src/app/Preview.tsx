@@ -1,18 +1,22 @@
 import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
-import {Children,forwardRef,memo,useEffect,useRef,useState} from 'react';
-import HTMLFlipBook from 'react-pageflip';
+import {useEffect,useRef,useState} from 'react';
+import {PageFlip} from 'page-flip';
 import {useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {ChevronLeft,ChevronRight,Download,Maximize2} from 'lucide-react';
-import {backCoverPage,type Book,type Page} from '../domain/model';
-import {frontCoverRenderPage} from '../domain/coverPresentation';
+import {backCoverPage,type Book} from '../domain/model';
+import {presentationPage} from '../domain/coverPresentation';
 import {repository,friendlyError} from '../db/repository';
-import {PageThumbnail} from '../components/PageThumbnail';
+import {renderPage} from '../editor/renderer';
 import {IconButton,Loading,ErrorMessage,Button} from '../components/ui';
 import {ExportDialog} from '../export/ExportDialog';
 import {flipbookMotion,flipPrevSafely,readerLeafPlan,sharedViewerSize} from '../flipbook/spec';
 import './preview.css';
 
 type SavedEditorView={wide?:boolean;pageIndex?:number};
+type PreviewRender={pages:Blob[];back:Blob};
+
+const previewRenderCache=new WeakMap<Book,Promise<PreviewRender>>();
+
 function savedEditorView(bookId:string|undefined):SavedEditorView{
   if(!bookId)return {};
   try{
@@ -27,42 +31,61 @@ function savedEditorView(bookId:string|undefined):SavedEditorView{
 }
 function defaultExpanded(){return typeof window==='undefined'?true:window.matchMedia('(min-width:850px)').matches;}
 
-type PreviewLeafProps={
-  book:Book;
-  page?:Page;
-  index:number;
-  kind:'page'|'blank'|'back';
-};
+function preparePreviewRender(book:Book){
+  const cached=previewRenderCache.get(book);
+  if(cached)return cached;
+  const task=(async()=>{
+    const pages=new Array<Blob>(book.pages.length);
+    const options={scale:.6,quality:'preview' as const,mimeType:'image/jpeg' as const};
+    let cursor=0;
+    const workers=Array.from({length:Math.min(2,Math.max(1,book.pages.length))},async()=>{
+      while(true){
+        const index=cursor++;
+        if(index>=book.pages.length)return;
+        const page=presentationPage(book,index);
+        if(!page)throw new Error(`无法渲染第 ${index+1} 页`);
+        pages[index]=await renderPage(page,options);
+      }
+    });
+    const backPromise=renderPage(backCoverPage(book),options);
+    await Promise.all(workers);
+    return {pages,back:await backPromise};
+  })();
+  previewRenderCache.set(book,task);
+  void task.catch(()=>previewRenderCache.delete(book));
+  return task;
+}
 
-const PreviewLeafBase=forwardRef<HTMLDivElement,PreviewLeafProps>(({book,page,index,kind},ref)=>{
-  if(kind==='back'){
-    const backPage=backCoverPage(book);
-    return <div ref={ref} className="flip-page preview-back-cover" data-density="hard" aria-label="后封面">
-      <PageThumbnail page={backPage} scale={.72} immediate alt="后封面"/>
-      <span className="preview-cover-grain"/>
-      <span className="preview-cover-spine"/>
-    </div>;
+function makePreviewLeaf(root:HTMLElement,blob:Blob,label:string,density:'hard'|'soft',kind:'page'|'cover'|'back',urls:string[]){
+  const leaf=document.createElement('div');
+  leaf.className='flip-page';
+  if(kind==='cover')leaf.classList.add('preview-cover-page');
+  if(kind==='back')leaf.classList.add('preview-back-cover');
+  leaf.dataset.density=density;
+  leaf.setAttribute('aria-label',label);
+
+  const host=document.createElement('div');
+  host.className='page-thumbnail-host';
+  const image=document.createElement('img');
+  const url=URL.createObjectURL(blob);
+  urls.push(url);
+  image.src=url;
+  image.alt=label;
+  image.decoding='async';
+  image.draggable=false;
+  host.append(image);
+  leaf.append(host);
+
+  if(kind==='cover'||kind==='back'){
+    const grain=document.createElement('span');
+    grain.className='preview-cover-grain';
+    const spine=document.createElement('span');
+    spine.className='preview-cover-spine';
+    leaf.append(grain,spine);
   }
-  if(kind==='blank')return <div ref={ref} className="flip-page preview-blank-page" aria-hidden/>;
-  if(!page)return <div ref={ref} className="flip-page preview-blank-page" aria-hidden/>;
-  if(index===0){
-    const coverPage=frontCoverRenderPage(book);
-    return <div ref={ref} className="flip-page preview-cover-page" data-density="hard" aria-label="封面">
-      <PageThumbnail page={coverPage} scale={.72} immediate alt="封面"/>
-      <span className="preview-cover-grain"/>
-      <span className="preview-cover-spine"/>
-    </div>;
-  }
-  return <div ref={ref} className="flip-page" data-density="soft"><PageThumbnail page={page} scale={.72} immediate alt={`第 ${index} 页`}/></div>;
-});
-PreviewLeafBase.displayName='PreviewLeaf';
-const PreviewLeaf=memo(PreviewLeafBase,(prev,next)=>{
-  if(prev.kind!==next.kind||prev.index!==next.index||prev.page!==next.page)return false;
-  if(prev.kind==='back')return prev.book.backCover===next.book.backCover&&prev.book.bookStyle===next.book.bookStyle&&prev.book.customCoverTemplates===next.book.customCoverTemplates&&prev.book.pages[0]?.background===next.book.pages[0]?.background;
-  if(prev.index===0)return prev.book.coverTemplate===next.book.coverTemplate&&prev.book.customCoverTemplates===next.book.customCoverTemplates&&prev.book.pages[0]===next.book.pages[0];
-  return true;
-});
-PreviewLeaf.displayName='MemoPreviewLeaf';
+  root.append(leaf);
+  return image;
+}
 
 export function Preview(){
   const {bookId}=useParams();
@@ -74,21 +97,98 @@ export function Preview(){
   const [index,setIndex]=useState(initialView.pageIndex??0);
   const [expanded,setExpanded]=useState(initialView.wide??defaultExpanded());
   const [exporting,setExporting]=useState(query.has('export'));
+  const [ready,setReady]=useState(false);
   const workspaceStyle=useWorkspaceBackground(book);
-  const flip=useRef<any>(null),shell=useRef<HTMLDivElement>(null),stage=useRef<HTMLDivElement>(null);
+  const flip=useRef<any>(null),shell=useRef<HTMLDivElement>(null),stage=useRef<HTMLDivElement>(null),flipHost=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
     let live=true;
     const view=savedEditorView(bookId);
-    setBook(undefined);setError('');setIndex(view.pageIndex??0);setExpanded(view.wide??defaultExpanded());
+    setBook(undefined);setError('');setIndex(view.pageIndex??0);setExpanded(view.wide??defaultExpanded());setReady(false);
     void repository.get(bookId!).then(value=>{if(live)setBook(value);}).catch(e=>{if(live)setError(friendlyError(e));});
     return()=>{live=false;};
   },[bookId]);
 
   useEffect(()=>{
+    const host=flipHost.current;
+    if(!host||!book)return;
+    let live=true;
+    let instance:PageFlip|undefined;
+    const urls:string[]=[];
+    const plan=readerLeafPlan(book.pages.length);
+    const view=savedEditorView(bookId);
+    const startPage=Math.max(0,Math.min(view.pageIndex??0,book.pages.length-1));
+    setReady(false);
+    host.replaceChildren();
+
+    void preparePreviewRender(book).then(async rendered=>{
+      if(!live)return;
+      const root=document.createElement('div');
+      root.className='preview-pageflip-root';
+      const images=rendered.pages.map((blob,pageIndex)=>makePreviewLeaf(root,blob,pageIndex===0?'封面':`第 ${pageIndex} 页`,pageIndex===0?'hard':'soft',pageIndex===0?'cover':'page',urls));
+      if(plan.needsFiller){
+        const blank=document.createElement('div');
+        blank.className='flip-page preview-blank-page';
+        blank.dataset.density='soft';
+        blank.setAttribute('aria-hidden','true');
+        root.append(blank);
+      }
+      images.push(makePreviewLeaf(root,rendered.back,'后封面','hard','back',urls));
+      await Promise.all(images.map(image=>image.decode().catch(()=>undefined)));
+      if(!live)return;
+
+      host.replaceChildren(root);
+      instance=new PageFlip(root,{
+        width:sharedViewerSize.width,
+        height:sharedViewerSize.height,
+        size:'stretch',
+        minWidth:sharedViewerSize.minWidth,
+        maxWidth:sharedViewerSize.maxWidth,
+        minHeight:sharedViewerSize.minHeight,
+        maxHeight:sharedViewerSize.maxHeight,
+        drawShadow:true,
+        flippingTime:flipbookMotion.flippingTime,
+        usePortrait:true,
+        startZIndex:0,
+        autoSize:true,
+        maxShadowOpacity:flipbookMotion.maxShadowOpacity,
+        showCover:true,
+        mobileScrollSupport:true,
+        clickEventForward:true,
+        useMouseEvents:true,
+        swipeDistance:flipbookMotion.swipeDistance,
+        showPageCorners:true,
+        disableFlipByClick:false,
+        startPage,
+      });
+      flip.current=instance;
+      const sync=(value:unknown)=>{
+        const direct=Number(value);
+        const next=Number.isFinite(direct)?direct:Number(instance?.getCurrentPageIndex?.()??0)||0;
+        setIndex(next);
+      };
+      instance.on('flip',event=>sync(event.data));
+      instance.on('init',event=>sync(event.data?.page));
+      instance.on('update',event=>sync(event.data?.page));
+      instance.on('changeOrientation',()=>sync(undefined));
+      instance.loadFromHTML(root.querySelectorAll<HTMLElement>('.flip-page'));
+      setReady(true);
+    }).catch(cause=>{if(live)setError(friendlyError(cause));});
+
+    return()=>{
+      live=false;
+      setReady(false);
+      if(flip.current===instance)flip.current=null;
+      if(instance){try{instance.destroy();}catch{}}
+      host.replaceChildren();
+      urls.forEach(url=>URL.revokeObjectURL(url));
+    };
+  },[book,bookId]);
+
+  useEffect(()=>{
     const key=(event:KeyboardEvent)=>{
       if(document.querySelector('[role=dialog]'))return;
-      const pageFlip=flip.current?.pageFlip?.();
+      const pageFlip=flip.current;
       if(event.key==='ArrowRight')pageFlip?.flipNext?.(flipbookMotion.corner);
       if(event.key==='ArrowLeft')flipPrevSafely(pageFlip);
     };
@@ -111,7 +211,7 @@ export function Preview(){
       const forward=wheelSum>0;
       wheelSum=0;
       wheelLocked=true;
-      const pageFlip=flip.current?.pageFlip?.();
+      const pageFlip=flip.current;
       forward?pageFlip?.flipNext?.(flipbookMotion.corner):flipPrevSafely(pageFlip);
       if(wheelTimer)window.clearTimeout(wheelTimer);
       wheelTimer=window.setTimeout(()=>{wheelLocked=false;},360);
@@ -127,7 +227,6 @@ export function Preview(){
   const lastIndex=plan?.backIndex??0;
   const backCover=!!plan&&index>=plan.backIndex;
   const pageLabel=backCover?'后封面':book?(index===0?'封面':`${Math.min(index+1,book.pages.length)} / ${book.pages.length}`):'';
-  const startPage=book?Math.max(0,Math.min(index,book.pages.length-1)):0;
 
   return <main ref={shell} className={`phone-shell preview-shell ${expanded?'expanded':''}`} style={workspaceStyle}>
     <header className="studio-header">
@@ -140,46 +239,14 @@ export function Preview(){
     </header>
     <ErrorMessage message={error}/>
     {error?<Button onClick={()=>navigate('/')}>返回书架</Button>:!book||!plan?<Loading text="正在打开画册…"/>:<>
-      <div ref={stage} className={`flip-stage ${index===0?'is-cover':''} ${backCover?'is-back-cover':''}`}>
-        <HTMLFlipBook
-          ref={flip}
-          width={sharedViewerSize.width}
-          height={sharedViewerSize.height}
-          size="stretch"
-          minWidth={sharedViewerSize.minWidth}
-          maxWidth={sharedViewerSize.maxWidth}
-          minHeight={sharedViewerSize.minHeight}
-          maxHeight={sharedViewerSize.maxHeight}
-          maxShadowOpacity={flipbookMotion.maxShadowOpacity}
-          showCover
-          mobileScrollSupport
-          className="flip-book"
-          style={{}}
-          startPage={startPage}
-          drawShadow
-          flippingTime={flipbookMotion.flippingTime}
-          usePortrait
-          startZIndex={0}
-          autoSize
-          clickEventForward
-          useMouseEvents
-          swipeDistance={flipbookMotion.swipeDistance}
-          showPageCorners
-          disableFlipByClick={false}
-          renderOnlyPageLengthChange
-          onFlip={event=>setIndex(Number(event.data)||0)}
-        >
-          {Children.toArray([
-            ...book.pages.map((page,pageIndex)=><PreviewLeaf key={page.id} book={book} page={page} index={pageIndex} kind="page"/>),
-            plan.needsFiller?<PreviewLeaf key="__preview_blank__" book={book} index={plan.fillerIndex} kind="blank"/>:null,
-            <PreviewLeaf key="__preview_back__" book={book} index={plan.backIndex} kind="back"/>
-          ])}
-        </HTMLFlipBook>
+      <div ref={stage} className={`flip-stage ${index===0?'is-cover':''} ${backCover?'is-back-cover':''}`} style={{position:'relative'}}>
+        <div ref={flipHost} className="flip-book" style={{width:'min(960px,100%)',height:'100%',minWidth:0,minHeight:0,display:'flex',alignItems:'center',justifyContent:'center'}}/>
+        {!ready&&<span aria-live="polite" style={{position:'absolute',left:'50%',top:'50%',transform:'translate(-50%,-50%)',padding:'8px 12px',borderRadius:999,background:'#ffffffd9',boxShadow:'0 3px 12px #0001',fontSize:10,color:'#777',pointerEvents:'none'}}>正在准备翻页预览…</span>}
       </div>
       <div className="preview-navigation">
-        <IconButton label="上一页" disabled={index<=0} onClick={()=>flipPrevSafely(flip.current?.pageFlip?.())}><ChevronLeft/></IconButton>
+        <IconButton label="上一页" disabled={!ready||index<=0} onClick={()=>flipPrevSafely(flip.current)}><ChevronLeft/></IconButton>
         <span>{pageLabel}</span>
-        <IconButton label="下一页" disabled={index>=lastIndex} onClick={()=>flip.current?.pageFlip?.().flipNext?.(flipbookMotion.corner)}><ChevronRight/></IconButton>
+        <IconButton label="下一页" disabled={!ready||index>=lastIndex} onClick={()=>flip.current?.flipNext?.(flipbookMotion.corner)}><ChevronRight/></IconButton>
       </div>
       <p className="preview-hint">滚动鼠标滚轮，或轻拖书页一角翻页</p>
     </>}
