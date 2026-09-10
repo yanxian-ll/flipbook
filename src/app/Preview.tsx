@@ -6,7 +6,7 @@ import {ChevronLeft,ChevronRight,Maximize2,Upload,Pencil} from 'lucide-react';
 import {type Book,type Page} from '../domain/model';
 import {repository,friendlyError} from '../db/repository';
 import {PageThumbnail} from '../components/PageThumbnail';
-import {BookCoverVisual} from '../components/BookCover';
+import {BookBackCoverVisual,BookCoverVisual} from '../components/BookCover';
 import {IconButton,Loading,ErrorMessage,Button} from '../components/ui';
 import {ExportDialog} from '../export/ExportDialog';
 import {flipbookMotion,flipPrevSafely,readerLeafPlan} from '../flipbook/spec';
@@ -20,7 +20,7 @@ type PreviewLeafProps={
 };
 
 const PreviewLeaf=forwardRef<HTMLDivElement,PreviewLeafProps>(({book,page,nearby,index,kind},ref)=>{
-  if(kind==='back')return <div ref={ref} className="flip-page preview-back-cover" data-density="hard" style={{background:book.pages[0]?.background??'#f2efe4'}} aria-label="后封面"><span className="cover-grain"/><span className="cover-spine"/></div>;
+  if(kind==='back')return <div ref={ref} className="flip-page preview-back-cover" data-density="hard" aria-label="后封面"><BookBackCoverVisual book={book} className="preview-back-cover-visual"/></div>;
   if(kind==='blank')return <div ref={ref} className="flip-page preview-blank-page" aria-hidden/>;
   if(!page)return <div ref={ref} className="flip-page preview-blank-page" aria-hidden/>;
   if(index===0)return <div ref={ref} className="flip-page preview-cover-page" data-density="hard"><BookCoverVisual book={book} className="preview-cover-visual"/></div>;
