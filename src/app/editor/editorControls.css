@@ -301,7 +301,7 @@
   .studio.expanded.page-background-open.photo-library-open:not(.template-library-open) > .editor-panel:not(.panel-left):not(.panel-right){
     left:calc(50% + 185px)!important;
   }
-  .studio.expanded.page-background-open.template-library-open:not(.photo-library-open) > .editor-panel:not(.panel-left):not(.photo-library-open){
+  .studio.expanded.page-background-open.template-library-open:not(.photo-library-open) > .editor-panel:not(.panel-left):not(.panel-right){
     left:calc(50% - 185px)!important;
   }
 }
