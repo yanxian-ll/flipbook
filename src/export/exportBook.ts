@@ -126,7 +126,7 @@ async function loadPageFlipBundle(){
   try{
     const response=await fetch(cdn);
     if(!response.ok)throw new Error('page-flip bundle unavailable');
-    return {source:(await response.text()).replace(/<\\/script/gi,'<\\\\/script'),cdn};
+    return {source:(await response.text()).replace(/<\/script/gi,'<\\/script'),cdn};
   }catch{
     return {source:'',cdn};
   }
