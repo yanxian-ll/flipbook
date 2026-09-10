@@ -1,7 +1,7 @@
 import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
 import {useEffect,useRef,useState} from 'react';
 import {useNavigate,useParams} from 'react-router-dom';
-import {Grid2X2,Images,Palette,Plus,Sticker,SlidersHorizontal,Type} from 'lucide-react';
+import {Grid2X2,Images,Palette,Plus,Sticker,Type} from 'lucide-react';
 import {repository,friendlyError} from '../db/repository';
 import {useEditor} from '../store/editor';
 import {EditorCanvas} from '../editor/EditorCanvas';
@@ -27,7 +27,7 @@ const editorTools=([
   ['layouts',Grid2X2,'模版'],
   ['text',Type,'文字'],
   ['stickers',Sticker,'贴纸'],
-  ['adjust',SlidersHorizontal,'调整'],
+  ['page-background',Palette,'底纹'],
 ] as const);
 
 export function Editor(){
@@ -150,7 +150,7 @@ export function Editor(){
   const {page,neighborIndex,neighborPage,showSingleAdd,spreadUnitWidth,pageCanvasWidth,pageHeight,visualReverse,activeSide,pairSide,focusWindowWidth,focusTrackWidth,focusedShift}=layout;
   const fixed=selected?frameIsFixed(page,selected):false;
 
-  return <main className={`phone-shell studio ${wide?'expanded':''} ${panels.bothSideOpen?'libraries-open':''} ${panels.photoSideOpen?'photo-library-open':''} ${panels.templateSideOpen?'template-library-open':''}`}>
+  return <main className={`phone-shell studio ${wide?'expanded':''} ${panels.bothSideOpen?'libraries-open':''} ${panels.photoSideOpen?'photo-library-open':''} ${panels.templateSideOpen?'template-library-open':''} ${panels.compactPanel==='page-background'?'page-background-open':''}`}>
     <EditorHeader wide={wide} onBack={()=>void leave('/')} onToggleWide={()=>setWide(value=>!value)}/>
     <ErrorMessage message={error||editorError}/>
 
@@ -232,7 +232,7 @@ export function Editor(){
 
     {panels.photoSideOpen&&<EditorPanel key={`${page.id}:photos`} panel="photos" placement="left" paired={panels.bothSideOpen} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={()=>{panels.setPhotoLibraryOpen(false);if(panels.panel==='photos')panels.setPanel(null);}}/>}
     {panels.templateSideOpen&&<EditorPanel key={`${page.id}:layouts`} panel="layouts" placement="right" paired={panels.bothSideOpen} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={()=>{panels.setTemplateLibraryOpen(false);if(panels.panel==='layouts')panels.setPanel(null);}}/>}
-    {panels.compactPanel&&<EditorPanel key={`${page.id}:${panels.compactPanel}`} panel={page.type!=='cover'&&panels.compactPanel==='cover'?'layouts':panels.compactPanel} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={panels.closeAllPanels}/>} 
+    {panels.compactPanel&&<EditorPanel key={`${page.id}:${panels.compactPanel}`} panel={page.type!=='cover'&&panels.compactPanel==='cover'?'layouts':panels.compactPanel} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={panels.compactPanel==='page-background'?()=>panels.setPanel(null):panels.closeAllPanels}/>} 
 
     <PageDeleteDialog open={pageDeleteOpen&&pageIndex>0} pageIndex={pageIndex} onClose={()=>setPageDeleteOpen(false)} onConfirm={confirmPageDelete}/>
     <ExportDialog book={book} open={exporting} onClose={()=>setExporting(false)}/>

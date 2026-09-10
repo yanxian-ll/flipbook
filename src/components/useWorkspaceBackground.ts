@@ -1,9 +1,33 @@
 import {useEffect,useState,type CSSProperties} from 'react';
 import type {Book} from '../domain/model';
 import {repository} from '../db/repository';
+
+function rgba(hex:string,alpha:number){
+  const normalized=hex.trim().replace('#','');
+  const value=normalized.length===3?normalized.split('').map(char=>char+char).join(''):normalized;
+  if(!/^[0-9a-f]{6}$/i.test(value))return `rgba(233,234,236,${alpha})`;
+  const number=parseInt(value,16);
+  return `rgba(${number>>16},${number>>8&255},${number&255},${alpha})`;
+}
+
 export function useWorkspaceBackground(book:Book|null|undefined):CSSProperties{
   const [image,setImage]=useState('');
   useEffect(()=>{let live=true,url='';setImage('');if(book?.workspaceImageId)void repository.getAsset(book.workspaceImageId).then(asset=>{if(asset&&live){url=URL.createObjectURL(asset.preview);setImage(url);}}).catch(()=>{});return()=>{live=false;if(url)URL.revokeObjectURL(url);};},[book?.workspaceImageId]);
-  const source=image||(book?.workspacePattern?`/reference/${book.workspacePattern}`:'');
-  return {backgroundColor:book?.workspaceBackground??'#e9eaec',backgroundImage:source?`url("${source}")`:undefined,backgroundSize:image?'cover':book?.workspacePattern?.startsWith('bg-')?'240px auto':'cover',backgroundPosition:'center',backgroundRepeat:image?'no-repeat':'repeat'};
+
+  const backgroundColor=book?.workspaceBackground??'#e9eaec';
+  if(image)return {backgroundColor,backgroundImage:`url("${image}")`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'};
+
+  const pattern=book?.workspacePattern;
+  if(pattern){
+    const tint=rgba(backgroundColor,.45);
+    return {
+      backgroundColor,
+      backgroundImage:`linear-gradient(${tint},${tint}),url("/reference/${pattern}")`,
+      backgroundSize:`auto, ${pattern.startsWith('bg-')?'240px auto':'420px auto'}`,
+      backgroundPosition:'center,center',
+      backgroundRepeat:'no-repeat,repeat',
+    };
+  }
+
+  return {backgroundColor};
 }

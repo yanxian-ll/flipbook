@@ -40,14 +40,14 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
     syncCoverPhotos(next);
     if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(true);return;}
     if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(true);return;}
-    if(next!=='photos'&&next!=='layouts'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
+    if(next!=='photos'&&next!=='layouts'&&next!=='page-background'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
     setPanel(next);
   }
   function toggleTool(next:PanelId){
     syncCoverPhotos(next);
     if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(open=>!open);return;}
     if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(open=>!open);return;}
-    if(next!=='photos'&&next!=='layouts'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
+    if(next!=='photos'&&next!=='layouts'&&next!=='page-background'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
     setPanel(current=>current===next?null:next);
   }
   function closeAllPanels(){setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}

@@ -86,10 +86,50 @@
   box-shadow:0 2px 6px #00000010;
 }
 
+/* Page texture is an auxiliary editor rather than a replacement for the photo/template libraries. */
+@media(min-width:850px){
+  .studio.expanded.page-background-open:not(.photo-library-open):not(.template-library-open) .editor-workspace{
+    margin-left:0!important;
+  }
+  .studio.expanded.page-background-open > .editor-panel:not(.panel-left):not(.panel-right){
+    top:auto!important;
+    bottom:92px!important;
+    left:50%!important;
+    right:auto!important;
+    width:320px!important;
+    height:auto!important;
+    max-height:min(430px,calc(100% - 190px))!important;
+    transform:translateX(-50%);
+    border:1px solid #dfdfdc!important;
+    border-radius:16px!important;
+    box-shadow:0 12px 34px #0000001c!important;
+    animation:none!important;
+    z-index:24;
+  }
+  .studio.expanded.page-background-open.photo-library-open:not(.template-library-open) > .editor-panel:not(.panel-left):not(.panel-right){
+    left:calc(50% + 150px)!important;
+  }
+  .studio.expanded.page-background-open.template-library-open:not(.photo-library-open) > .editor-panel:not(.panel-left):not(.panel-right){
+    left:calc(50% - 150px)!important;
+  }
+  .studio.expanded.page-background-open > .editor-panel:not(.panel-left):not(.panel-right) .panel-grabber{
+    display:none;
+  }
+  .studio.expanded.page-background-open > .editor-panel:not(.panel-left):not(.panel-right) .panel-body{
+    padding:0 18px 18px;
+  }
+}
+
 @media(min-width:1500px){
   .studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2::after,
   .studio:not(:has(.editor-cover-actions)) .editor-panel:has(.asset-library-manager) header h2::after,
   .studio .editor-panel:has(.all-layout-grid) header h2::after{
     font-size:17px;
+  }
+  .studio.expanded.page-background-open.photo-library-open:not(.template-library-open) > .editor-panel:not(.panel-left):not(.panel-right){
+    left:calc(50% + 185px)!important;
+  }
+  .studio.expanded.page-background-open.template-library-open:not(.photo-library-open) > .editor-panel:not(.panel-left):not(.panel-right){
+    left:calc(50% - 185px)!important;
   }
 }
