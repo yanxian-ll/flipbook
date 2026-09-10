@@ -210,6 +210,13 @@ async function createWindow(){
   await window.loadURL(serverOrigin);
 }
 
+ipcMain.handle('desktop-window:close',event=>{
+  const window=BrowserWindow.fromWebContents(event.sender);
+  if(!window)return false;
+  window.close();
+  return true;
+});
+
 ipcMain.handle('desktop-window:set-expanded',(event,expanded)=>{
   const window=BrowserWindow.fromWebContents(event.sender);
   if(!window)return null;
