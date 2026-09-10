@@ -32,6 +32,68 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
     setTemplateLibraryOpen(true);
   },[book?.id,sideLibraries]);
 
+  useEffect(()=>{
+    if(!wide||panel!=='page-background')return;
+    const root=document.querySelector<HTMLElement>('.studio.expanded.page-background-open');
+    if(!root)return;
+    const panelNode=Array.from(root.children).find((node):node is HTMLElement=>node instanceof HTMLElement&&node.classList.contains('editor-panel')&&!node.classList.contains('panel-left')&&!node.classList.contains('panel-right'));
+    const header=panelNode?.querySelector<HTMLElement>('header');
+    const spread=root.querySelector<HTMLElement>('.spread-area');
+    if(!panelNode||!header||!spread)return;
+
+    panelNode.classList.add('draggable-texture-panel');
+    const previousTitle=header.getAttribute('title');
+    header.setAttribute('title','拖动底纹窗口');
+    let offsetX=0,offsetY=0;
+    let drag:null|{pointerId:number;startX:number;startY:number;baseX:number;baseY:number;minX:number;maxX:number;minY:number;maxY:number}=null;
+    const clamp=(value:number,min:number,max:number)=>Math.min(Math.max(value,Math.min(min,max)),Math.max(min,max));
+    const reset=()=>{offsetX=0;offsetY=0;panelNode.style.transform='';panelNode.classList.remove('is-dragging');drag=null;};
+    const pointerDown=(event:PointerEvent)=>{
+      if(event.button!==0||!spread.classList.contains('zoom-spread'))return;
+      const target=event.target as HTMLElement;
+      if(target.closest('button,a,input,select,textarea,label'))return;
+      event.preventDefault();
+      const rootRect=root.getBoundingClientRect(),panelRect=panelNode.getBoundingClientRect();
+      const baseX=offsetX,baseY=offsetY;
+      drag={
+        pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,baseX,baseY,
+        minX:baseX+(rootRect.left+12-panelRect.left),
+        maxX:baseX+(rootRect.right-12-panelRect.right),
+        minY:baseY+(rootRect.top+70-panelRect.top),
+        maxY:baseY+(rootRect.bottom-86-panelRect.bottom),
+      };
+      panelNode.classList.add('is-dragging');
+    };
+    const pointerMove=(event:PointerEvent)=>{
+      if(!drag||event.pointerId!==drag.pointerId)return;
+      event.preventDefault();
+      offsetX=clamp(drag.baseX+event.clientX-drag.startX,drag.minX,drag.maxX);
+      offsetY=clamp(drag.baseY+event.clientY-drag.startY,drag.minY,drag.maxY);
+      panelNode.style.transform=`translateX(calc(-50% + ${offsetX}px)) translateY(${offsetY}px)`;
+    };
+    const pointerEnd=(event:PointerEvent)=>{
+      if(!drag||event.pointerId!==drag.pointerId)return;
+      drag=null;
+      panelNode.classList.remove('is-dragging');
+    };
+    const observer=new MutationObserver(()=>{if(!spread.classList.contains('zoom-spread'))reset();});
+    observer.observe(spread,{attributes:true,attributeFilter:['class']});
+    header.addEventListener('pointerdown',pointerDown);
+    window.addEventListener('pointermove',pointerMove);
+    window.addEventListener('pointerup',pointerEnd);
+    window.addEventListener('pointercancel',pointerEnd);
+    return()=>{
+      observer.disconnect();
+      header.removeEventListener('pointerdown',pointerDown);
+      window.removeEventListener('pointermove',pointerMove);
+      window.removeEventListener('pointerup',pointerEnd);
+      window.removeEventListener('pointercancel',pointerEnd);
+      panelNode.style.transform='';
+      panelNode.classList.remove('draggable-texture-panel','is-dragging');
+      if(previousTitle===null)header.removeAttribute('title');else header.setAttribute('title',previousTitle);
+    };
+  },[wide,panel,viewWidth]);
+
   function syncCoverPhotos(next:PanelId){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
     if(next==='photos'&&currentPage?.type==='cover')setPhotoDraft(currentPage.elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!));
