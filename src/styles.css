@@ -1791,3 +1791,108 @@
   font-size:9px;
   line-height:1.55;
 }
+
+
+/* Editable back cover */
+.book-back-cover{
+  position:relative;
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  border-radius:3px 1px 1px 3px;
+  background:var(--ui-surface);
+  box-shadow:inset 2px 0 3px #0002,inset 0 1px 2px #fff9,-3px 4px 5px #0003,0 22px 34px #0003;
+}
+.book-back-cover .cover-grain{z-index:5}
+.book-back-cover .cover-spine{
+  left:auto;
+  right:0;
+  width:5.33%;
+  z-index:6;
+  transform:scaleX(-1);
+}
+.back-cover-window{
+  position:absolute;
+  left:35%;
+  top:25%;
+  width:30%;
+  height:29.5%;
+  z-index:3;
+  overflow:hidden;
+  border:1px solid #0002;
+  box-shadow:inset 0 2px 6px #0004;
+}
+.back-cover-window img{
+  width:100%;
+  height:100%;
+  max-width:none;
+  object-fit:cover;
+}
+.back-cover-caption{
+  position:absolute;
+  left:10%;
+  bottom:6.2%;
+  width:80%;
+  z-index:4;
+  font-size:clamp(5px,.9vw,9px);
+  line-height:1.35;
+  text-align:center;
+  white-space:pre-wrap;
+  overflow-wrap:anywhere;
+}
+.editor-flip-back{background:transparent}
+.editor-flip-back .editor-back-cover-visual,
+.preview-back-cover .preview-back-cover-visual{
+  width:100%;
+  height:100%;
+  max-width:none;
+  box-shadow:none;
+}
+.preview-back-cover{background:transparent}
+
+.settings-section-heading{
+  display:flex;
+  align-items:baseline;
+  justify-content:space-between;
+  gap:10px;
+  margin:4px 0 10px;
+}
+.settings-section-heading b{
+  color:var(--ui-text);
+  font-size:11px;
+  font-weight:700;
+}
+.settings-section-heading small{
+  color:var(--ui-text-muted);
+  font-size:9px;
+}
+.settings-section-divider{
+  height:1px;
+  margin:20px 0;
+  background:var(--ui-border-soft);
+}
+.back-cover-settings{padding-bottom:4px}
+.back-cover-mode{
+  display:grid;
+  grid-template-columns:repeat(3,1fr);
+  gap:5px;
+}
+.back-cover-mode button{
+  min-height:34px;
+  padding:7px 5px;
+  border:1px solid var(--ui-border);
+  border-radius:var(--ui-radius-sm);
+  background:var(--ui-surface);
+  color:var(--ui-text-muted);
+  font-size:9px;
+}
+.back-cover-mode button.selected{
+  border-color:var(--ui-text);
+  background:var(--ui-text);
+  color:var(--ui-surface);
+}
+.back-cover-crop{
+  padding:1px 10px;
+  border-radius:var(--ui-radius-md);
+  background:var(--ui-surface-muted);
+}
