@@ -1,6 +1,7 @@
 import JSZip from 'jszip';
 import {repository} from './repository';
 import {createZipSink,StreamZipWriter} from './streamZip';
+import {StoredZipReader} from './streamZipReader';
 import {type Asset,type Book,type StoredAsset,uid,validateBook} from '../domain/model';
 
 const BACKUP_FORMAT='flipbook-backup';
@@ -9,10 +10,10 @@ const LEGACY_BACKUP_FORMAT=['flip','in-backup'].join('');
 type BackupManifest={format:string;version:1;exportedAt:number;book:Book};
 type LibraryManifest={format:typeof LIBRARY_BACKUP_FORMAT;version:1|2;exportedAt:number;entries:string[]};
 export type BackupProgress=(percent:number)=>void;
+type BackupArchive={has(path:string):boolean;text(path:string):Promise<string>;blob(path:string,type:string):Promise<Blob>};
 
 function safeName(name:string){return (name.trim()||'flipbook').replace(/[\\/:*?"<>|]+/g,'_').slice(0,80);}
 function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}
-async function requireAssetFile(zip:JSZip,path:string,type:string){const entry=zip.file(path);if(!entry)throw new Error(`备份文件缺少素材数据：${path}`);const bytes=await entry.async('uint8array');return new Blob([bytes],{type});}
 function bookAssets(book:Book):Asset[]{
   const seen=new Set<string>();
   return [...book.assets,...(book.textureAssets??[])].filter(asset=>!seen.has(asset.id)&&seen.add(asset.id));
@@ -20,6 +21,31 @@ function bookAssets(book:Book):Asset[]{
 function reportProgress(onProgress:BackupProgress|undefined,percent:number){onProgress?.(Math.max(0,Math.min(100,percent)));}
 function backupPath(prefix:string,path:string){const root=prefix.replace(/\/+$/,'');return root?`${root}/${path}`:path;}
 function isAbortError(cause:unknown){return cause instanceof DOMException&&cause.name==='AbortError';}
+function isNotReadableError(cause:unknown){return cause instanceof DOMException&&cause.name==='NotReadableError';}
+
+async function openArchive(file:File):Promise<BackupArchive>{
+  try{
+    const stored=await StoredZipReader.open(file);
+    if(stored){
+      return {
+        has:path=>stored.has(path),
+        text:path=>stored.text(path),
+        blob:(path,type)=>stored.blob(path,type),
+      };
+    }
+  }catch(cause){
+    if(isNotReadableError(cause))throw cause;
+    // Older backups can use compression or a ZIP layout that the lightweight
+    // random-access reader intentionally does not handle. JSZip remains the
+    // compatibility path for those files.
+  }
+  const zip=await JSZip.loadAsync(file);
+  return {
+    has:path=>!!zip.file(path),
+    async text(path){const entry=zip.file(path);if(!entry)throw new Error(`备份文件缺少：${path}`);return await entry.async('string');},
+    async blob(path,type){const entry=zip.file(path);if(!entry)throw new Error(`备份文件缺少素材数据：${path}`);const bytes=await entry.async('uint8array');return new Blob([bytes],{type});},
+  };
+}
 
 async function writeBookEntries(writer:StreamZipWriter,book:Book,prefix='',onProgress?:BackupProgress){
   const manifest:BackupManifest={format:BACKUP_FORMAT,version:1,exportedAt:Date.now(),book:structuredClone(book)};
@@ -108,53 +134,58 @@ export async function exportLibraryBackup(onProgress?:BackupProgress){
   }
 }
 
-async function restoreBookFromZip(zip:JSZip,prefix=''){
+async function restoreBookFromArchive(archive:BackupArchive,prefix=''){
   const manifestPath=backupPath(prefix,'manifest.json');
-  const manifestEntry=zip.file(manifestPath);
-  if(!manifestEntry)throw new Error(`备份文件缺少作品信息：${manifestPath}`);
+  if(!archive.has(manifestPath))throw new Error(`备份文件缺少作品信息：${manifestPath}`);
   let manifest:BackupManifest;
-  try{manifest=JSON.parse(await manifestEntry.async('string')) as BackupManifest;}catch{throw new Error('备份文件的作品信息无法读取。');}
+  try{manifest=JSON.parse(await archive.text(manifestPath)) as BackupManifest;}catch{throw new Error('备份文件的作品信息无法读取。');}
   if(![BACKUP_FORMAT,LEGACY_BACKUP_FORMAT].includes(manifest.format)||manifest.version!==1)throw new Error('不支持这个版本的 FLIPBOOK 备份。');
   validateBook(manifest.book);
   const existing=await repository.list();
   const book=structuredClone(manifest.book);
   if(existing.some(item=>item.id===book.id)){book.id=uid();book.title=`${book.title}（恢复副本）`;book.createdAt=Date.now();}
   book.updatedAt=Date.now();
-  const storedAssets:StoredAsset[]=[];
-  for(const metadata of bookAssets(book)){
-    const base=backupPath(prefix,`assets/${metadata.id}`);
-    const original=await requireAssetFile(zip,`${base}/original`,metadata.mimeType||'application/octet-stream');
-    const preview=await requireAssetFile(zip,`${base}/preview`,'image/webp');
-    const thumbnail=await requireAssetFile(zip,`${base}/thumbnail`,'image/webp');
-    storedAssets.push({...metadata,original,preview,thumbnail});
+
+  const insertedIds:string[]=[];
+  try{
+    for(const metadata of bookAssets(book)){
+      if(await repository.getAsset(metadata.id))continue;
+      const base=backupPath(prefix,`assets/${metadata.id}`);
+      const original=await archive.blob(`${base}/original`,metadata.mimeType||'application/octet-stream');
+      const preview=await archive.blob(`${base}/preview`,'image/webp');
+      const thumbnail=await archive.blob(`${base}/thumbnail`,'image/webp');
+      const stored:StoredAsset={...metadata,original,preview,thumbnail};
+      await repository.putAssets([stored]);
+      insertedIds.push(metadata.id);
+    }
+    await repository.create(book,[]);
+    await repository.markInitialized();
+    return book;
+  }catch(cause){
+    if(insertedIds.length)await repository.removeAssets(insertedIds).catch(()=>undefined);
+    throw cause;
   }
-  await repository.create(book,storedAssets);
-  await repository.markInitialized();
-  return book;
 }
 
 export async function importBookBackup(file:File){
-  const zip=await JSZip.loadAsync(file);
-  return await restoreBookFromZip(zip);
+  const archive=await openArchive(file);
+  return await restoreBookFromArchive(archive);
 }
 
 export async function importLibraryBackup(file:File){
-  const zip=await JSZip.loadAsync(file);
-  const manifestEntry=zip.file('library.json');
-  if(!manifestEntry)throw new Error('这不是有效的 FLIPBOOK 全部作品备份。');
+  const archive=await openArchive(file);
+  if(!archive.has('library.json'))throw new Error('这不是有效的 FLIPBOOK 全部作品备份。');
   let manifest:LibraryManifest;
-  try{manifest=JSON.parse(await manifestEntry.async('string')) as LibraryManifest;}catch{throw new Error('全部作品备份信息无法读取。');}
+  try{manifest=JSON.parse(await archive.text('library.json')) as LibraryManifest;}catch{throw new Error('全部作品备份信息无法读取。');}
   if(manifest.format!==LIBRARY_BACKUP_FORMAT||![1,2].includes(manifest.version)||!Array.isArray(manifest.entries))throw new Error('不支持这个版本的全部作品备份。');
   const restored:Book[]=[];
   if(manifest.version===2){
-    for(const prefix of manifest.entries)restored.push(await restoreBookFromZip(zip,prefix));
+    for(const prefix of manifest.entries)restored.push(await restoreBookFromArchive(archive,prefix));
     return restored;
   }
   for(const path of manifest.entries){
-    const entry=zip.file(path);
-    if(!entry)throw new Error(`全部作品备份缺少：${path}`);
-    const bytes=await entry.async('uint8array');
-    restored.push(await importBookBackup(new File([bytes],path.split('/').at(-1)??'book.flipbook-backup',{type:'application/zip'})));
+    const blob=await archive.blob(path,'application/zip');
+    restored.push(await importBookBackup(new File([blob],path.split('/').at(-1)??'book.flipbook-backup',{type:'application/zip'})));
   }
   return restored;
 }
