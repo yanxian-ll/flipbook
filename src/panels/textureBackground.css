@@ -42,6 +42,19 @@
 .texture-background-panel .texture-upload-button{
   margin-top:14px;
 }
+.texture-background-panel .texture-upload-actions{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,1fr);
+  gap:8px;
+  margin-top:14px;
+}
+.texture-background-panel .texture-upload-actions .texture-upload-button{
+  margin-top:0;
+}
+.texture-background-panel .texture-upload-actions .btn{
+  min-width:0;
+  padding-inline:9px;
+}
 .texture-background-panel .texture-upload-hint{
   margin:7px 2px 0;
 }
