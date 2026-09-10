@@ -10,6 +10,7 @@ import {PageThumbnail} from '../components/PageThumbnail';
 import {EditorFlipBook,type EditorFlipBookHandle} from '../components/EditorFlipBook';
 import {Button,Loading,ErrorMessage} from '../components/ui';
 import {EditorPanel,type PanelId} from '../panels/EditorPanel';
+import {TextureBackgroundPanel} from '../panels/TextureBackgroundPanel';
 import {ExportDialog} from '../export/ExportDialog';
 import {VersionHistoryDialog} from '../components/VersionHistoryDialog';
 import {frameIsFixed} from '../domain/layouts';
@@ -232,7 +233,9 @@ export function Editor(){
 
     {panels.photoSideOpen&&<EditorPanel key={`${page.id}:photos`} panel="photos" placement="left" paired={panels.bothSideOpen} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={()=>{panels.setPhotoLibraryOpen(false);if(panels.panel==='photos')panels.setPanel(null);}}/>}
     {panels.templateSideOpen&&<EditorPanel key={`${page.id}:layouts`} panel="layouts" placement="right" paired={panels.bothSideOpen} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={()=>{panels.setTemplateLibraryOpen(false);if(panels.panel==='layouts')panels.setPanel(null);}}/>}
-    {panels.compactPanel&&<EditorPanel key={`${page.id}:${panels.compactPanel}`} panel={page.type!=='cover'&&panels.compactPanel==='cover'?'layouts':panels.compactPanel} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={panels.compactPanel==='page-background'?()=>panels.setPanel(null):panels.closeAllPanels}/>} 
+    {panels.compactPanel&&(panels.compactPanel==='background'||panels.compactPanel==='page-background'
+      ?<TextureBackgroundPanel key={`${page.id}:${panels.compactPanel}`} mode={panels.compactPanel==='background'?'workspace':'page'} onClose={()=>panels.setPanel(null)}/>
+      :<EditorPanel key={`${page.id}:${panels.compactPanel}`} panel={page.type!=='cover'&&panels.compactPanel==='cover'?'layouts':panels.compactPanel} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={panels.closeAllPanels}/>)}
 
     <PageDeleteDialog open={pageDeleteOpen&&pageIndex>0} pageIndex={pageIndex} onClose={()=>setPageDeleteOpen(false)} onConfirm={confirmPageDelete}/>
     <ExportDialog book={book} open={exporting} onClose={()=>setExporting(false)}/>

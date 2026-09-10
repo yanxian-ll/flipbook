@@ -16,7 +16,7 @@ export interface Element {
   freeImage?: boolean; lineHeight?: number; letterSpacing?: number; blur?: number;
 }
 export interface Page {
-  id: string; type: 'cover' | 'normal'; background: string; pattern?: string;
+  id: string; type: 'cover' | 'normal'; background: string; pattern?: string; patternAssetId?: string;
   elements: Element[]; layoutId?: string; order: number;
   templateOverlay?: string; templateBackground?: string; templateTextSchema?: number;
 }
@@ -46,7 +46,8 @@ export interface Book {
   defaultPageBackground?: string;
   bookStyle?: BookStyle;
   backCover?: BackCover;
-  workspacePattern?: string; workspaceImageId?: string;
+  workspacePattern?: string; workspaceImageId?: string; workspaceTextureId?: string;
+  textureAssets?: Asset[]; recentTextureIds?: string[];
   customLayouts?: Layout[];
   customCoverTemplates?: CoverTemplate[];
 }
@@ -149,6 +150,7 @@ export function migrateLegacyBrandBook(value:Book){
   };
   book.title=update(book.title);
   for(const asset of book.assets)asset.name=update(asset.name);
+  for(const asset of book.textureAssets??[])asset.name=update(asset.name);
   for(const page of book.pages){
     for(const element of page.elements){
       if(element.text)element.text=update(element.text);

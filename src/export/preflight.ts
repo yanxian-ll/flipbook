@@ -59,7 +59,7 @@ export function inspectExport(
   const includeBackCover=format==='share'&&selected.includes(0);
   const selectedSet=new Set(selected);
   if(includeBackCover)selectedSet.add(-1);
-  const metadata=new Map(book.assets.map(asset=>[asset.id,asset]));
+  const metadata=new Map([...book.assets,...(book.textureAssets??[])].map(asset=>[asset.id,asset]));
   const storedMissing=new Set(missingStoredAssetIds);
   const missingMetadataPages:number[]=[];
   const missingFilePages:number[]=[];
@@ -75,7 +75,7 @@ export function inspectExport(
       if(element.type==='image')return !!element.assetId;
       if(element.type==='text')return !!element.text?.trim();
       return true;
-    })||!!page.templateOverlay;
+    })||!!page.templateOverlay||!!page.pattern||!!page.patternAssetId;
 
     if(index>0&&!visibleContent)blankPages.push(index);
 
@@ -85,6 +85,10 @@ export function inspectExport(
       if(layout&&filled<layout.slots.length)emptyFramePages.push(index);
     }
 
+    if(page.patternAssetId){
+      if(!metadata.has(page.patternAssetId))missingMetadataPages.push(index);
+      else if(storedMissing.has(page.patternAssetId))missingFilePages.push(index);
+    }
     for(const image of images){
       if(!image.assetId)continue;
       const asset=metadata.get(image.assetId);
@@ -110,15 +114,15 @@ export function inspectExport(
   if(missingMetadataPages.length)issues.push({
     id:'missing-metadata',
     severity:'error',
-    title:'有图片素材引用已失效',
-    detail:`${pageList(missingMetadataPages)} 引用了画册素材列表中不存在的图片，导出时可能失败或出现空白。`,
+    title:'有图片或纹理引用已失效',
+    detail:`${pageList(missingMetadataPages)} 引用了画册中不存在的图片或纹理，导出时可能失败或出现空白。`,
     pages:unique(missingMetadataPages),
   });
   if(missingFilePages.length)issues.push({
     id:'missing-files',
     severity:'error',
-    title:'有本地图片文件缺失',
-    detail:`${pageList(missingFilePages)} 的图片元数据还在，但本地原始文件不存在，建议重新上传对应照片。`,
+    title:'有本地图片或纹理文件缺失',
+    detail:`${pageList(missingFilePages)} 的元数据还在，但本地原始文件不存在，建议重新上传对应照片或纹理。`,
     pages:unique(missingFilePages),
   });
   if(emptyFramePages.length)issues.push({
@@ -159,7 +163,10 @@ export async function findMissingStoredAssetIds(
   const selected=new Set(indices.filter(index=>index>=0&&index<book.pages.length));
   const ids=[...new Set([
     ...book.pages.flatMap((page,index)=>selected.has(index)
-      ?page.elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!)
+      ?[
+        ...page.elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!),
+        ...(page.patternAssetId?[page.patternAssetId]:[]),
+      ]
       :[]
     ),
     ...(selected.has(0)?backCoverPage(book).elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!):[]),

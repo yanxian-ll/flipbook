@@ -12,9 +12,22 @@ function rgba(hex:string,alpha:number){
 
 export function useWorkspaceBackground(book:Book|null|undefined):CSSProperties{
   const [image,setImage]=useState('');
-  useEffect(()=>{let live=true,url='';setImage('');if(book?.workspaceImageId)void repository.getAsset(book.workspaceImageId).then(asset=>{if(asset&&live){url=URL.createObjectURL(asset.preview);setImage(url);}}).catch(()=>{});return()=>{live=false;if(url)URL.revokeObjectURL(url);};},[book?.workspaceImageId]);
+  const textureId=book?.workspaceTextureId;
+  const legacyImageId=book?.workspaceImageId;
+  const imageId=textureId??legacyImageId;
+  useEffect(()=>{let live=true,url='';setImage('');if(imageId)void repository.getAsset(imageId).then(asset=>{if(asset&&live){url=URL.createObjectURL(asset.preview);setImage(url);}}).catch(()=>{});return()=>{live=false;if(url)URL.revokeObjectURL(url);};},[imageId]);
 
   const backgroundColor=book?.workspaceBackground??'#e9eaec';
+  if(image&&textureId){
+    const tint=rgba(backgroundColor,.45);
+    return {
+      backgroundColor,
+      backgroundImage:`linear-gradient(${tint},${tint}),url("${image}")`,
+      backgroundSize:'auto, 420px auto',
+      backgroundPosition:'center,center',
+      backgroundRepeat:'no-repeat,repeat',
+    };
+  }
   if(image)return {backgroundColor,backgroundImage:`url("${image}")`,backgroundSize:'cover',backgroundPosition:'center',backgroundRepeat:'no-repeat'};
 
   const pattern=book?.workspacePattern;

@@ -32,7 +32,12 @@ export async function loadPageFonts(page:Page){await Promise.all(page.elements.f
 export async function renderPage(page:Page,options:{scale?:number;quality?:'thumbnail'|'preview'|'original';mimeType?:'image/png'|'image/jpeg'}={}):Promise<Blob>{
   await loadPageFonts(page);
   const holder=document.createElement('div');const stage=new Konva.Stage({container:holder,width:W,height:H});const layer=new Konva.Layer();stage.add(layer);
-  try{layer.add(new Konva.Rect({width:W,height:H,fill:visualPageBackground(page)}));if(page.pattern){const pattern=await loadStaticImage(`/reference/${page.pattern}`);layer.add(new Konva.Image({image:pattern,width:W,height:H,opacity:.55}));}
+  try{
+    layer.add(new Konva.Rect({width:W,height:H,fill:visualPageBackground(page)}));
+    const pattern=page.patternAssetId
+      ?await loadAssetImage(page.patternAssetId,options.quality??'preview')
+      :page.pattern?await loadStaticImage(`/reference/${page.pattern}`):undefined;
+    if(pattern)layer.add(new Konva.Image({image:pattern,width:W,height:H,opacity:.55}));
     const ordered=page.templateOverlay?[...page.elements.filter(e=>e.type==='image'),...page.elements.filter(e=>e.type!=='image')]:page.elements;
     let overlayAdded=false;
     const addOverlay=async()=>{if(page.templateOverlay&&!overlayAdded){layer.add(new Konva.Image({image:await loadStaticImage(page.templateOverlay),width:W,height:H,listening:false}));overlayAdded=true;}};

@@ -33,17 +33,17 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
   },[book?.id,sideLibraries]);
 
   useEffect(()=>{
-    if(!wide||panel!=='page-background')return;
-    const root=document.querySelector<HTMLElement>('.studio.expanded.page-background-open');
+    if(!wide||(panel!=='page-background'&&panel!=='background'))return;
+    const root=document.querySelector<HTMLElement>('.studio.expanded');
     if(!root)return;
-    const panelNode=Array.from(root.children).find((node):node is HTMLElement=>node instanceof HTMLElement&&node.classList.contains('editor-panel')&&!node.classList.contains('panel-left')&&!node.classList.contains('panel-right'));
+    const panelNode=root.querySelector<HTMLElement>(':scope > .editor-panel.texture-background-panel');
     const header=panelNode?.querySelector<HTMLElement>('header');
     const spread=root.querySelector<HTMLElement>('.spread-area');
     if(!panelNode||!header||!spread)return;
 
     panelNode.classList.add('draggable-texture-panel');
     const previousTitle=header.getAttribute('title');
-    header.setAttribute('title','拖动底纹窗口');
+    header.setAttribute('title',panel==='background'?'拖动垫底背景窗口':'拖动底纹窗口');
     let offsetX=0,offsetY=0;
     let drag:null|{pointerId:number;startX:number;startY:number;baseX:number;baseY:number;minX:number;maxX:number;minY:number;maxY:number}=null;
     const clamp=(value:number,min:number,max:number)=>Math.min(Math.max(value,Math.min(min,max)),Math.max(min,max));
@@ -102,14 +102,16 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
     syncCoverPhotos(next);
     if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(true);return;}
     if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(true);return;}
-    if(next!=='photos'&&next!=='layouts'&&next!=='page-background'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
+    const floatingTexture=next==='page-background'||next==='background';
+    if(next!=='photos'&&next!=='layouts'&&!floatingTexture){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
     setPanel(next);
   }
   function toggleTool(next:PanelId){
     syncCoverPhotos(next);
     if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(open=>!open);return;}
     if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(open=>!open);return;}
-    if(next!=='photos'&&next!=='layouts'&&next!=='page-background'){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
+    const floatingTexture=next==='page-background'||next==='background';
+    if(next!=='photos'&&next!=='layouts'&&!floatingTexture){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
     setPanel(current=>current===next?null:next);
   }
   function closeAllPanels(){setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}

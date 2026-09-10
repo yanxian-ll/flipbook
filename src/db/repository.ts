@@ -44,8 +44,8 @@ async function referencedAssetIds(){
   ]);
   const draft=(draftEntry?.value??null) as CreateDraft|null;
   return new Set([
-    ...books.flatMap(book=>book.assets.map(asset=>asset.id)),
-    ...snapshots.flatMap(snapshot=>snapshot.book.assets.map(asset=>asset.id)),
+    ...books.flatMap(book=>[...book.assets,...(book.textureAssets??[])].map(asset=>asset.id)),
+    ...snapshots.flatMap(snapshot=>[...snapshot.book.assets,...(snapshot.book.textureAssets??[])].map(asset=>asset.id)),
     ...(draft?.assetIds??[]),
   ]);
 }

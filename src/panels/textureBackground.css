@@ -1,0 +1,97 @@
+.texture-background-panel .texture-background-body{
+  padding-top:0;
+}
+.texture-background-panel .settings-intro{
+  margin-bottom:18px;
+}
+.texture-background-panel .texture-color-swatches{
+  margin-bottom:4px;
+}
+.texture-background-panel .texture-custom-color{
+  margin:12px 0 18px;
+}
+.texture-background-panel .texture-field-label{
+  margin-top:4px;
+}
+.texture-background-panel .texture-grid{
+  grid-template-columns:repeat(3,minmax(0,1fr));
+}
+.texture-background-panel .texture-grid>button{
+  position:relative;
+  min-width:0;
+  min-height:68px;
+  overflow:hidden;
+  background-position:center;
+  background-size:cover;
+}
+.texture-background-panel .uploaded-texture-tile span{
+  position:absolute;
+  left:5px;
+  right:5px;
+  bottom:5px;
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+  padding:3px 5px;
+  border-radius:5px;
+  background:rgba(255,255,255,.82);
+  color:#555;
+  font-size:9px;
+  line-height:1.2;
+}
+.texture-background-panel .texture-upload-button{
+  margin-top:14px;
+}
+.texture-background-panel .texture-upload-hint{
+  margin:7px 2px 0;
+}
+
+@media(min-width:850px){
+  .studio.expanded > .editor-panel.texture-background-panel{
+    top:auto!important;
+    bottom:92px!important;
+    left:50%!important;
+    right:auto!important;
+    width:320px!important;
+    height:auto!important;
+    max-height:min(470px,calc(100% - 190px))!important;
+    transform:translateX(-50%);
+    border:1px solid #dfdfdc!important;
+    border-radius:16px!important;
+    box-shadow:0 12px 34px #0000001c!important;
+    animation:none!important;
+    z-index:24;
+  }
+  .studio.expanded.photo-library-open:not(.template-library-open) > .editor-panel.texture-background-panel{
+    left:calc(50% + 150px)!important;
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) > .editor-panel.texture-background-panel{
+    left:calc(50% - 150px)!important;
+  }
+  .studio.expanded > .editor-panel.texture-background-panel .panel-grabber{
+    display:none;
+  }
+  .studio.expanded > .editor-panel.texture-background-panel .panel-body{
+    padding:0 18px 18px;
+  }
+  .studio.expanded:has(.spread-area.zoom-spread) > .editor-panel.texture-background-panel.draggable-texture-panel header{
+    cursor:grab;
+    user-select:none;
+    touch-action:none;
+  }
+  .studio.expanded:has(.spread-area.zoom-spread) > .editor-panel.texture-background-panel.draggable-texture-panel.is-dragging header{
+    cursor:grabbing;
+  }
+  .studio.expanded > .editor-panel.texture-background-panel.draggable-texture-panel header .icon-btn{
+    cursor:pointer;
+  }
+}
+
+@media(min-width:1500px){
+  .studio.expanded.photo-library-open:not(.template-library-open) > .editor-panel.texture-background-panel{
+    left:calc(50% + 185px)!important;
+  }
+  .studio.expanded.template-library-open:not(.photo-library-open) > .editor-panel.texture-background-panel{
+    left:calc(50% - 185px)!important;
+  }
+}

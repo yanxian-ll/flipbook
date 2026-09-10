@@ -1,6 +1,6 @@
 import JSZip from 'jszip';
 import {repository} from './repository';
-import {type Book,type StoredAsset,uid,validateBook} from '../domain/model';
+import {type Asset,type Book,type StoredAsset,uid,validateBook} from '../domain/model';
 
 const BACKUP_FORMAT='flipbook-backup';
 const LIBRARY_BACKUP_FORMAT='flipbook-library-backup';
@@ -11,14 +11,18 @@ type LibraryManifest={format:typeof LIBRARY_BACKUP_FORMAT;version:1;exportedAt:n
 function safeName(name:string){return (name.trim()||'flipbook').replace(/[\\/:*?"<>|]+/g,'_').slice(0,80);}
 function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);}
 async function requireAssetFile(zip:JSZip,path:string,type:string){const entry=zip.file(path);if(!entry)throw new Error(`备份文件缺少素材数据：${path}`);const bytes=await entry.async('uint8array');return new Blob([bytes],{type});}
+function bookAssets(book:Book):Asset[]{
+  const seen=new Set<string>();
+  return [...book.assets,...(book.textureAssets??[])].filter(asset=>!seen.has(asset.id)&&seen.add(asset.id));
+}
 
 async function buildBookBackup(book:Book){
   const zip=new JSZip();
   const manifest:BackupManifest={format:BACKUP_FORMAT,version:1,exportedAt:Date.now(),book:structuredClone(book)};
   zip.file('manifest.json',JSON.stringify(manifest,null,2));
-  for(const metadata of book.assets){
+  for(const metadata of bookAssets(book)){
     const stored=await repository.getAsset(metadata.id);
-    if(!stored)throw new Error(`素材“${metadata.name}”的本地图片文件缺失，无法完成完整备份。`);
+    if(!stored)throw new Error(`素材或纹理“${metadata.name}”的本地图片文件缺失，无法完成完整备份。`);
     const base=`assets/${metadata.id}`;
     zip.file(`${base}/original`,stored.original);
     zip.file(`${base}/preview`,stored.preview);
@@ -64,7 +68,7 @@ export async function importBookBackup(file:File){
   if(existing.some(item=>item.id===book.id)){book.id=uid();book.title=`${book.title}（恢复副本）`;book.createdAt=Date.now();}
   book.updatedAt=Date.now();
   const storedAssets:StoredAsset[]=[];
-  for(const metadata of book.assets){
+  for(const metadata of bookAssets(book)){
     const base=`assets/${metadata.id}`;
     const original=await requireAssetFile(zip,`${base}/original`,metadata.mimeType||'application/octet-stream');
     const preview=await requireAssetFile(zip,`${base}/preview`,'image/webp');
