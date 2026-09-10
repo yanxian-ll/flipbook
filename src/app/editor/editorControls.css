@@ -215,35 +215,24 @@
   font-variant-numeric:tabular-nums;
 }
 
-/* Library footers share the same control treatment. */
-.studio .editor-panel:has(.asset-library-manager) .photo-library-actions,
-.studio .editor-panel:has(.all-layout-grid) .template-library-actions{
+/* Photo and template libraries use the exact same sticky footer treatment.
+   Only the number and meaning of the buttons differ. */
+.studio .editor-panel .photo-library-actions{
+  background:transparent!important;
   padding-top:10px;
   padding-bottom:2px;
   z-index:5;
 }
-.studio .editor-panel:has(.asset-library-manager) .photo-library-actions{
-  background:transparent!important;
-}
-.studio .editor-panel:has(.all-layout-grid) .template-library-actions{
-  grid-template-columns:1fr 1fr;
-  background:rgba(255,255,255,.86)!important;
-  backdrop-filter:none!important;
-  -webkit-backdrop-filter:none!important;
-}
-.studio .editor-panel:has(.asset-library-manager) .photo-library-actions .btn,
-.studio .editor-panel:has(.all-layout-grid) .template-library-actions .btn{
+.studio .editor-panel .photo-library-actions .btn{
   background:rgba(255,255,255,.68);
   border:1px solid rgba(208,208,203,.72);
   box-shadow:0 2px 8px #0000000d;
 }
-.studio .editor-panel:has(.asset-library-manager) .photo-library-actions .btn.primary,
-.studio .editor-panel:has(.all-layout-grid) .template-library-actions .btn.primary{
+.studio .editor-panel .photo-library-actions .btn.primary{
   background:rgba(25,25,25,.82);
   color:#fff;
 }
-.studio .editor-panel:has(.asset-library-manager) .photo-library-actions .btn.danger,
-.studio .editor-panel:has(.all-layout-grid) .template-library-actions .btn.danger{
+.studio .editor-panel .photo-library-actions .btn.danger{
   background:rgba(255,244,242,.68);
 }
 
