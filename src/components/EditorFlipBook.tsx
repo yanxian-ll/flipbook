@@ -58,9 +58,7 @@ function FlipLeafInner(
 ){
   if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-label="后封面"><BookBackCoverVisual book={book} className="editor-back-cover-visual"/></div>;
   if(kind==='blank')return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
-  if(kind==='add')return <div ref={ref} className="editor-flip-page editor-flip-add">
-    <button aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={28}/></button>
-  </div>;
+  if(kind==='add')return <div ref={ref} className="editor-flip-page editor-flip-add" aria-hidden/>;
 
   const page=book.pages[index];
   if(!page)return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
@@ -183,6 +181,7 @@ function EditorFlipBookInner(
   const pageHeight=Math.round(safeWidth*1696/1200);
   const imageScale=Math.max(.24,Math.min(.5,safeWidth/1200*1.15));
   const {lastReal,plusIndex,needsFiller,backIndex}=editorLeafPlan(book.pages.length);
+  const showCenteredAdd=displayedIndex===plusIndex||(plusIndex%2===0&&displayedIndex===lastReal);
 
   useImperativeHandle(ref,()=>({
     flipNext:()=>flip.current?.pageFlip?.().flipNext?.(flipbookMotion.corner),
@@ -258,6 +257,9 @@ function EditorFlipBookInner(
           <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false} priority={false}/>
         ])}
       </HTMLFlipBook>
+      {showCenteredAdd&&<div className="editor-flip-add" style={{position:'absolute',inset:0,zIndex:16,background:'transparent',pointerEvents:'none'}}>
+        <button aria-label="添加新页" title="添加新页" onClick={onAddPage} style={{pointerEvents:'auto'}}><Plus size={28}/></button>
+      </div>}
       {interactionMode==='spread'&&<>
         {activeIndex>0&&<button className="editor-flip-nav-zone previous" aria-label="翻到上一跨页" onClick={()=>flipPrevSafely(flip.current?.pageFlip?.())}/>}
         {activeIndex<lastReal&&<button className="editor-flip-nav-zone next" aria-label="翻到下一跨页" onClick={()=>flip.current?.pageFlip?.().flipNext?.(flipbookMotion.corner)}/>}
