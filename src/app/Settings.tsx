@@ -20,6 +20,7 @@ export function Settings(){
   const [stats,setStats]=useState<LocalDataStats>({books:0,assets:0,snapshots:0});
   const [storage,setStorage]=useState<{usage?:number;quota?:number}>({});
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[cleanupOpen,setCleanupOpen]=useState(false);
+  const [backupProgress,setBackupProgress]=useState<number|null>(null);
 
   async function refresh(){
     try{
@@ -34,10 +35,19 @@ export function Settings(){
   useEffect(()=>{void refresh();},[]);
 
   async function backupAll(){
-    if(busy)return;setBusy(true);setError('');setMessage('');
-    try{await exportLibraryBackup();setMessage('全部作品备份已生成。');}
+    if(busy)return;setBusy(true);setBackupProgress(0);setError('');setMessage('');
+    let lastProgress=-1;
+    try{
+      await exportLibraryBackup(progress=>{
+        const rounded=Math.round(progress);
+        if(rounded===lastProgress)return;
+        lastProgress=rounded;
+        setBackupProgress(rounded);
+      });
+      setMessage('全部作品备份已生成。');
+    }
     catch(cause){setError(friendlyError(cause));}
-    finally{setBusy(false);}
+    finally{setBusy(false);setBackupProgress(null);}
   }
 
   async function restore(file:File|undefined){
@@ -63,6 +73,7 @@ export function Settings(){
   }
 
   const usage=storage.usage??0,quota=storage.quota??0,ratio=quota?Math.min(100,usage/quota*100):0;
+  const backingUp=backupProgress!==null;
   return <main className="phone-shell settings-shell">
     <header className="settings-page-header"><IconButton label="返回书架" onClick={()=>navigate('/')}><ChevronLeft size={20}/></IconButton><div><h1>设置与存储</h1><p>本地数据、备份与快捷键</p></div><span/></header>
     <div className="settings-page-body">
@@ -79,7 +90,13 @@ export function Settings(){
 
       <section className="settings-card">
         <div className="settings-card-title"><Database size={18}/><div><h2>备份与恢复</h2><p>建议定期把完整作品备份到其他磁盘或云盘</p></div></div>
-        <div className="settings-action-grid"><Button disabled={busy||!stats.books} onClick={()=>void backupAll()}><Download size={15}/>备份全部作品</Button><Button disabled={busy} onClick={()=>restoreInput.current?.click()}><ArchiveRestore size={15}/>恢复备份</Button></div>
+        <div className="settings-action-grid">
+          <Button className={`backup-progress-button ${backingUp?'is-backing-up':''}`} disabled={busy||!stats.books} onClick={()=>void backupAll()} aria-label={backingUp?`正在备份 ${backupProgress}%`:'备份全部作品'}>
+            {backingUp&&<span className="backup-progress-fill" style={{width:`${backupProgress}%`}} aria-hidden/>}
+            <span className="backup-progress-content"><Download size={15}/>{backingUp?`备份中 ${backupProgress}%`:'备份全部作品'}</span>
+          </Button>
+          <Button disabled={busy} onClick={()=>restoreInput.current?.click()}><ArchiveRestore size={15}/>恢复备份</Button>
+        </div>
         <input ref={restoreInput} hidden type="file" accept=".flipbook-backup,.flipbook-library-backup,application/zip" onChange={event=>void restore(event.target.files?.[0])}/>
       </section>
 
