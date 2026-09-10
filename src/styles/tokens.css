@@ -1,0 +1,33 @@
+:root{
+  --ui-font:Arial,'Microsoft YaHei',sans-serif;
+  --ui-bg-app:#0a0a0a;
+  --ui-surface:#ffffff;
+  --ui-surface-soft:#f7f7f7;
+  --ui-surface-muted:#fafafa;
+  --ui-surface-hover:#ececec;
+  --ui-workspace:#e9eaec;
+  --ui-text:#1a1a1a;
+  --ui-text-soft:#555555;
+  --ui-text-muted:#999999;
+  --ui-text-faint:#b0b0b0;
+  --ui-border:#e2e2e2;
+  --ui-border-soft:#eeeeee;
+  --ui-accent:#1a1a1a;
+  --ui-focus:#3475e3;
+  --ui-danger:#dc4545;
+  --ui-danger-surface:#fff0ef;
+
+  --ui-radius-xs:6px;
+  --ui-radius-sm:8px;
+  --ui-radius-md:12px;
+  --ui-radius-lg:16px;
+  --ui-radius-xl:23px;
+
+  --ui-shadow-soft:0 4px 14px #00000012;
+  --ui-shadow-float:0 10px 30px #0000000c;
+  --ui-shadow-modal:0 24px 80px #0003;
+
+  --ui-duration-fast:150ms;
+  --ui-duration-normal:250ms;
+  --ui-ease:cubic-bezier(.2,.72,.2,1);
+}
