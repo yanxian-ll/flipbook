@@ -1,7 +1,7 @@
 import {useEffect,useRef,type PointerEvent as ReactPointerEvent,type RefObject,type WheelEvent as ReactWheelEvent} from 'react';
 import type {EditorFlipBookHandle} from '../../components/EditorFlipBook';
 import {flipbookMotion} from '../../flipbook/spec';
-import {PAGE_WHEEL_LOCK_MS,PAGE_WHEEL_RESET_MS,PAGE_WHEEL_THRESHOLD,PAN_CANCEL_DURATION,PAN_COMMIT_DURATION,PAN_COMMIT_PROGRESS,PAN_COMMIT_VELOCITY,SINGLE_PAGE_PEEK} from './constants';
+import {PAGE_WHEEL_LOCK_MS,PAGE_WHEEL_RESET_MS,PAGE_WHEEL_THRESHOLD,PAN_CANCEL_DURATION,PAN_COMMIT_DURATION,PAN_COMMIT_PROGRESS,PAN_COMMIT_VELOCITY,SINGLE_PAGE_FLIP_PHASE_GAP_MS,SINGLE_PAGE_PEEK,SINGLE_PAGE_PREFLIP_PAN_DURATION} from './constants';
 
 type PanGesture={pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean};
 
@@ -18,11 +18,12 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
 }){
   const panGesture=useRef<PanGesture|null>(null);
   const wheelAccumulator=useRef(0),wheelLocked=useRef(false),wheelTimer=useRef<number|null>(null),wheelResetTimer=useRef<number|null>(null);
-  const pendingSingleTarget=useRef<number|null>(null),singleCrossFlipActive=useRef(false),singleCommitTimer=useRef<number|null>(null),singleReleaseTimer=useRef<number|null>(null);
+  const pendingSingleTarget=useRef<number|null>(null),singleMotionActive=useRef(false),singlePanTimer=useRef<number|null>(null),singleCommitTimer=useRef<number|null>(null),singleReleaseTimer=useRef<number|null>(null);
 
   useEffect(()=>()=>{
     if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);
     if(wheelResetTimer.current!==null)window.clearTimeout(wheelResetTimer.current);
+    if(singlePanTimer.current!==null)window.clearTimeout(singlePanTimer.current);
     if(singleCommitTimer.current!==null)window.clearTimeout(singleCommitTimer.current);
     if(singleReleaseTimer.current!==null)window.clearTimeout(singleReleaseTimer.current);
   },[]);
@@ -34,22 +35,60 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
   function singleShiftFor(index:number){
     return index>0&&index%2===0?-pageCanvasWidth*(1-SINGLE_PAGE_PEEK):0;
   }
-  function releaseSingleCrossFlip(){
+  function releaseSingleMotion(){
     if(singleReleaseTimer.current!==null)window.clearTimeout(singleReleaseTimer.current);
-    singleReleaseTimer.current=window.setTimeout(()=>{singleCrossFlipActive.current=false;},80);
+    singleReleaseTimer.current=window.setTimeout(()=>{singleMotionActive.current=false;},80);
   }
   function commitPendingSingle(){
     const target=pendingSingleTarget.current;
     if(target===null)return;
     pendingSingleTarget.current=null;
+    if(singlePanTimer.current!==null){window.clearTimeout(singlePanTimer.current);singlePanTimer.current=null;}
     if(singleCommitTimer.current!==null){window.clearTimeout(singleCommitTimer.current);singleCommitTimer.current=null;}
     onSelectPage(target);
     requestAnimationFrame(()=>setTrackShift(singleShiftFor(target),'none'));
-    releaseSingleCrossFlip();
+    releaseSingleMotion();
+  }
+  function animateSinglePan(targetIndex:number){
+    singleMotionActive.current=true;
+    const targetShift=singleShiftFor(targetIndex);
+    setTrackShift(targetShift,`transform ${PAN_COMMIT_DURATION}ms cubic-bezier(.2,.76,.18,1)`);
+    if(singlePanTimer.current!==null)window.clearTimeout(singlePanTimer.current);
+    singlePanTimer.current=window.setTimeout(()=>{
+      singlePanTimer.current=null;
+      onSelectPage(targetIndex);
+      requestAnimationFrame(()=>setTrackShift(targetShift,'none'));
+      releaseSingleMotion();
+    },PAN_COMMIT_DURATION+16);
+  }
+  function startCrossFlip(targetIndex:number,controller:EditorFlipBookHandle){
+    pendingSingleTarget.current=targetIndex;
+    singleMotionActive.current=true;
+    const targetShift=singleShiftFor(targetIndex);
+    const startFlip=()=>{
+      if(pendingSingleTarget.current!==targetIndex)return;
+      if(targetIndex>pageIndex)controller.flipNext();else controller.flipPrev();
+      if(singleCommitTimer.current!==null)window.clearTimeout(singleCommitTimer.current);
+      singleCommitTimer.current=window.setTimeout(commitPendingSingle,flipbookMotion.flippingTime+180);
+    };
+    const needsPrePan=focusTrack.current!==null&&Math.abs(targetShift-focusedShift)>1;
+    if(!needsPrePan){startFlip();return;}
+
+    setTrackShift(targetShift,`transform ${SINGLE_PAGE_PREFLIP_PAN_DURATION}ms cubic-bezier(.2,.76,.18,1)`);
+    if(singlePanTimer.current!==null)window.clearTimeout(singlePanTimer.current);
+    singlePanTimer.current=window.setTimeout(()=>{
+      singlePanTimer.current=null;
+      if(pendingSingleTarget.current!==targetIndex)return;
+      setTrackShift(targetShift,'none');
+      singlePanTimer.current=window.setTimeout(()=>{
+        singlePanTimer.current=null;
+        startFlip();
+      },SINGLE_PAGE_FLIP_PHASE_GAP_MS);
+    },SINGLE_PAGE_PREFLIP_PAN_DURATION+16);
   }
   function navigateSinglePage(targetIndex:number){
     if(zoomMode!=='page'||targetIndex<0||targetIndex>=pageCount||targetIndex===pageIndex)return;
-    if(singleCrossFlipActive.current)return;
+    if(singleMotionActive.current)return;
 
     const distance=Math.abs(targetIndex-pageIndex);
     if(distance>1){
@@ -58,21 +97,16 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
       return;
     }
     if(sameContentSpread(pageIndex,targetIndex)){
-      onSelectPage(targetIndex);
+      animateSinglePan(targetIndex);
       return;
     }
 
     const controller=flipBook.current;
     if(!controller){onSelectPage(targetIndex);return;}
-    pendingSingleTarget.current=targetIndex;
-    singleCrossFlipActive.current=true;
-    setTrackShift(singleShiftFor(targetIndex),`transform ${flipbookMotion.flippingTime}ms cubic-bezier(.2,.76,.18,1)`);
-    if(targetIndex>pageIndex)controller.flipNext();else controller.flipPrev();
-    if(singleCommitTimer.current!==null)window.clearTimeout(singleCommitTimer.current);
-    singleCommitTimer.current=window.setTimeout(commitPendingSingle,flipbookMotion.flippingTime+180);
+    startCrossFlip(targetIndex,controller);
   }
   function handleBookFlip(index:number){
-    if(zoomMode==='page'&&(pendingSingleTarget.current!==null||singleCrossFlipActive.current))return;
+    if(zoomMode==='page'&&(pendingSingleTarget.current!==null||singleMotionActive.current))return;
     if(index>=0&&index<pageCount)onSelectPage(index);
   }
   function handleFlipState(state:string){
@@ -91,30 +125,52 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
     if(Math.abs(wheelAccumulator.current)<PAGE_WHEEL_THRESHOLD)return;
     const direction=wheelAccumulator.current>0?'next':'prev';
     wheelAccumulator.current=0;wheelLocked.current=true;
+    let lockDuration=PAGE_WHEEL_LOCK_MS;
     if(zoomMode==='spread'){
       if(direction==='next')flipBook.current?.flipNext();else flipBook.current?.flipPrev();
     }else{
-      const step=direction==='next'?1:-1;
-      navigateSinglePage(pageIndex+step);
+      const step=direction==='next'?1:-1,targetIndex=pageIndex+step;
+      const validTarget=targetIndex>=0&&targetIndex<pageCount;
+      if(validTarget){
+        const crossSpread=!sameContentSpread(pageIndex,targetIndex);
+        const targetShift=singleShiftFor(targetIndex);
+        const needsPrePan=crossSpread&&focusTrack.current!==null&&Math.abs(targetShift-focusedShift)>1;
+        lockDuration=crossSpread
+          ?Math.max(PAGE_WHEEL_LOCK_MS,(needsPrePan?SINGLE_PAGE_PREFLIP_PAN_DURATION+SINGLE_PAGE_FLIP_PHASE_GAP_MS:0)+flipbookMotion.flippingTime+160)
+          :Math.max(PAGE_WHEEL_LOCK_MS,PAN_COMMIT_DURATION+120);
+      }
+      navigateSinglePage(targetIndex);
     }
     if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);
-    const lockDuration=zoomMode==='page'?Math.max(PAGE_WHEEL_LOCK_MS,flipbookMotion.flippingTime+80):PAGE_WHEEL_LOCK_MS;
     wheelTimer.current=window.setTimeout(()=>{wheelLocked.current=false;},lockDuration);
   }
 
   function canPan(direction:'next'|'prev'){
-    if(zoomMode!=='page'||pageIndex===0||singleCrossFlipActive.current||(!neighborAvailable&&!showSingleAdd))return false;
+    if(zoomMode!=='page'||pageIndex===0||singleMotionActive.current||(!neighborAvailable&&!showSingleAdd))return false;
     return direction==='next'?!visualReverse:visualReverse;
   }
   function panTargetShift(direction:'next'|'prev'){return direction==='next'?-pageCanvasWidth*(1-SINGLE_PAGE_PEEK):0;}
   function clearPan(){panGesture.current=null;if(focusTrack.current)focusTrack.current.style.transition='';}
   function finishPan(commit:boolean){
     const gesture=panGesture.current;if(!gesture)return;
-    const duration=commit?PAN_COMMIT_DURATION:PAN_CANCEL_DURATION,targetShift=panTargetShift(gesture.direction);
+    const targetShift=panTargetShift(gesture.direction);
+    const remaining=commit?1-gesture.progress:gesture.progress;
+    const ratio=Math.max(commit?.42:.45,Math.min(1,remaining));
+    const baseDuration=commit?PAN_COMMIT_DURATION:PAN_CANCEL_DURATION;
+    const duration=Math.max(commit?150:120,Math.round(baseDuration*ratio));
+    singleMotionActive.current=true;
     setTrackShift(commit?targetShift:focusedShift,`transform ${duration}ms ${commit?'cubic-bezier(.2,.76,.18,1)':'cubic-bezier(.3,.72,.24,1)'}`);
-    window.setTimeout(()=>{
-      if(commit){if(neighborIndex>=0)onSelectPage(neighborIndex);else if(showSingleAdd)onAddPage();}
+    if(singlePanTimer.current!==null)window.clearTimeout(singlePanTimer.current);
+    singlePanTimer.current=window.setTimeout(()=>{
+      singlePanTimer.current=null;
+      if(commit){
+        if(neighborIndex>=0){
+          onSelectPage(neighborIndex);
+          requestAnimationFrame(()=>setTrackShift(singleShiftFor(neighborIndex),'none'));
+        }else if(showSingleAdd)onAddPage();
+      }
       clearPan();
+      releaseSingleMotion();
     },duration+16);
   }
   function startPan(direction:'next'|'prev',event:ReactPointerEvent<HTMLDivElement>){
@@ -138,7 +194,12 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
     const signedVelocity=gesture.direction==='next'?-gesture.velocity:gesture.velocity;
     const commit=gesture.started&&(gesture.progress>PAN_COMMIT_PROGRESS||signedVelocity>PAN_COMMIT_VELOCITY);
     if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
-    if(gesture.started)finishPan(commit);else{panGesture.current=null;if(neighborIndex>=0)onSelectPage(neighborIndex);else if(showSingleAdd)onAddPage();}
+    if(gesture.started)finishPan(commit);
+    else{
+      panGesture.current=null;
+      if(neighborIndex>=0)animateSinglePan(neighborIndex);
+      else if(showSingleAdd)onAddPage();
+    }
   }
   function cancelPan(event:ReactPointerEvent<HTMLDivElement>){
     const gesture=panGesture.current;if(!gesture||gesture.pointerId!==event.pointerId)return;
