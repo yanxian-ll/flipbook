@@ -39,6 +39,16 @@ describe('export preflight',()=>{
     expect(inspectExport({...book,assets:[asset('photo',3000,3000)]},[1],'collage',1).issues.some(issue=>issue.id==='low-resolution')).toBe(false);
   });
 
+  it('checks custom back-cover assets for shared HTML',()=>{
+    const photo=asset('back-photo',500,500);
+    const book=newBook('back','editorial',[photo]);
+    book.backCover={mode:'custom',background:'#eeeae3',assetId:photo.id,crop:{x:.5,y:.5,zoom:1},text:'THE END',textColor:'#222'};
+    const missing=inspectExport({...book,assets:[]},[0],'share',1);
+    expect(missing.issues.find(issue=>issue.id==='missing-metadata')?.pages).toContain(-1);
+    const low=inspectExport(book,[0],'share',1);
+    expect(low.issues.find(issue=>issue.id==='low-resolution')?.pages).toContain(-1);
+  });
+
   it('checks whether selected image blobs still exist in local storage',async()=>{
     const photo=asset('photo');
     const book=newBook('files','editorial',[photo]);
