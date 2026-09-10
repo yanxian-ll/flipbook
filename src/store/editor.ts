@@ -109,7 +109,7 @@ export const useEditor=create<EditorState>((set,get)=>({
     const removeSet=new Set(pageIds.filter(id=>removableIds.has(id)));
     if(!removeSet.size)return;
     const activeIndex=state.pageIndex,activeId=book.pages[activeIndex]?.id;
-    let fallbackId=activeId;
+    let fallbackId:string|undefined=activeId;
     if(!fallbackId||removeSet.has(fallbackId)){
       fallbackId=undefined;
       for(let index=activeIndex-1;index>=0;index--){
@@ -234,4 +234,3 @@ export const useEditor=create<EditorState>((set,get)=>({
   },
   async flush(){clearTimeout(saveTimer);const s=get();if(!s.book||s.status==='saved')return;const book=structuredClone(s.book),revision=s.revision;const task=saveQueue.catch(()=>{}).then(()=>repository.save(book));saveQueue=task;try{await task;if(get().book?.id===book.id&&get().revision===revision)set({status:'saved',error:''});}catch(e){set({status:'error',error:friendlyError(e)});throw e;}}
 }));
-
