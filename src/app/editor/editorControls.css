@@ -118,6 +118,17 @@
   .studio.expanded.page-background-open > .editor-panel:not(.panel-left):not(.panel-right) .panel-body{
     padding:0 18px 18px;
   }
+  .studio.expanded.page-background-open:has(.spread-area.zoom-spread) > .editor-panel.draggable-texture-panel header{
+    cursor:grab;
+    user-select:none;
+    touch-action:none;
+  }
+  .studio.expanded.page-background-open:has(.spread-area.zoom-spread) > .editor-panel.draggable-texture-panel.is-dragging header{
+    cursor:grabbing;
+  }
+  .studio.expanded.page-background-open > .editor-panel.draggable-texture-panel header .icon-btn{
+    cursor:pointer;
+  }
 }
 
 @media(min-width:1500px){
