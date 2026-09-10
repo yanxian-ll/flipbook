@@ -79,7 +79,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:100dvh;o
 .book-rendering .share-page[data-cover=true].--simple::after,.book-rendering .share-back-cover.--simple::after{display:none}
 .book-rendering .share-page.--simple.--left::after{background:linear-gradient(90deg,#00000008,transparent 3%,transparent 89%,#00000008 95%,#00000028 99%,#00000055)}
 .book-rendering .share-page.--simple.--right::after{background:linear-gradient(90deg,#00000040,#ffffff33 .6%,#00000015 2%,transparent 8%,transparent 97%,#00000008)}
-.load-error{position:absolute;inset:0;display:grid;place-items:center;padding:28px;text-align:center;color:#777;font-size:12px}
+.load-error{position:absolute;left:50%;top:14px;transform:translateX(-50%);z-index:8;padding:7px 11px;border-radius:999px;background:#ffffffdb;box-shadow:0 3px 12px #0001;color:#777;font-size:10px;text-align:center;pointer-events:none;white-space:nowrap}
 .load-error[hidden]{display:none}
 @media(max-width:640px){
   .top{padding:13px 16px}
@@ -330,7 +330,7 @@ export function buildShareHtmlDocument(input:ShareHtmlInput){
     `<div class="top"><span>${title}</span><span>FLIPBOOK</span></div>`,
     '<main class="stage" id="stage">',
     '<div class="book-host"><div id="book"></div></div>',
-    '<div id="load-error" class="load-error" hidden>翻页组件加载失败，请联网后重新打开这个文件。</div>',
+    '<div id="load-error" class="load-error" hidden>翻页组件加载失败，已切换静态阅读模式。</div>',
     '<span class="hint">拖动书角或滚轮翻页</span>',
     '</main>',
     '<div class="nav"><button id="prev" aria-label="上一页">‹</button><span id="count" class="count"></span><button id="next" aria-label="下一页">›</button></div>',
