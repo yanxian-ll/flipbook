@@ -1,4 +1,5 @@
 import {useEffect,useMemo,useRef,useState,type DragEvent as ReactDragEvent} from 'react';
+import {useShallow} from 'zustand/react/shallow';
 import {Plus,X,Upload,ArrowUp,ArrowDown,Copy,Trash2} from 'lucide-react';
 import {CoverSettingsPanel} from './CoverSettingsPanel';
 import {WorkspaceBackgroundPanel} from './WorkspaceBackgroundPanel';
@@ -17,6 +18,7 @@ import {Button,ErrorMessage,IconButton,Modal} from '../components/ui';
 export type PanelId='photos'|'layouts'|'text'|'stickers'|'background'|'page-background'|'cover'|'book-style'|'adjust';
 const names:Record<PanelId,string>={photos:'上传素材',layouts:'选择排版',text:'文字',stickers:'贴纸',background:'垫底背景','page-background':'页面背景',cover:'封面设置','book-style':'画册风格',adjust:'调整元素'};
 const colors=['#ffffff','#eeeae3','#f5ec30','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#1a1a1a'];
+const supportedTextFonts=['Domine','Arial','Georgia','KaiTi','sans-serif'] as const;
 const assetThumbnailCache=new Map<string,Blob>();
 const assetThumbnailPending=new Map<string,Promise<Blob|undefined>>();
 const ASSET_THUMBNAIL_CACHE_LIMIT=160;
@@ -72,7 +74,21 @@ type EditorPanelProps={
 };
 
 export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlledPhotoIds,onPhotoIdsChange,paired=false}:EditorPanelProps){
-  const s=useEditor();
+  const s=useEditor(useShallow(state=>({
+    book:state.book,
+    pageIndex:state.pageIndex,
+    selected:state.selected,
+    change:state.change,
+    updateElement:state.updateElement,
+    setPhotos:state.setPhotos,
+    select:state.select,
+    addAssets:state.addAssets,
+    removeAssets:state.removeAssets,
+    layout:state.layout,
+    addElement:state.addElement,
+    duplicateSelected:state.duplicateSelected,
+    deleteSelected:state.deleteSelected,
+  })));
   const book=s.book!;
   const page=book.pages[s.pageIndex];
   const contextSide=useCoverContext(state=>state.side);
@@ -88,8 +104,8 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const initialPhotoIds=()=>coverTarget
     ?coverAssetId?[coverAssetId]:[]
     :[...new Set(page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id))];
-  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[count,setCount]=useState(0),[localPhotoIds,setLocalPhotoIds]=useState<string[]>(initialPhotoIds),[dragAssetId,setDragAssetId]=useState<string|null>(null),[dragOverAssetId,setDragOverAssetId]=useState<string|null>(null),[assetFilter,setAssetFilter]=useState<'all'|'used'|'unused'>('all'),[assetSort,setAssetSort]=useState<'recent'|'oldest'|'name'>('recent'),[assetQuery,setAssetQuery]=useState('');
-  const input=useRef<HTMLInputElement>(null),suppressAssetClick=useRef(false);
+  const [error,setError]=useState(''),[busy,setBusy]=useState(false),[count,setCount]=useState(0),[localPhotoIds,setLocalPhotoIds]=useState<string[]>(initialPhotoIds),[dragAssetId,setDragAssetId]=useState<string|null>(null),[dragOverAssetId,setDragOverAssetId]=useState<string|null>(null),[assetFilter,setAssetFilter]=useState<'all'|'used'|'unused'>('all'),[assetSort,setAssetSort]=useState<'recent'|'oldest'|'name'>('recent'),[assetQuery,setAssetQuery]=useState(''),[assetDeleteOpen,setAssetDeleteOpen]=useState(false);
+  const input=useRef<HTMLInputElement>(null),suppressAssetClick=useRef(false),cancelUpload=useRef(false);
   const photoIds=coverTarget?localPhotoIds:(controlledPhotoIds??localPhotoIds);
   const setPhotoIds=(ids:string[])=>{
     const next=[...new Set(ids.filter(Boolean))].slice(0,coverTarget||page.type==='cover'?1:9);
@@ -172,28 +188,30 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
 
   async function upload(files:FileList|null){
     if(!files?.length)return;
-    setBusy(true);setError('');
+    setBusy(true);setError('');cancelUpload.current=false;
     const uploadBatch={id:uid(),at:Date.now()};
     try{
       const added=[];
       for(let i=0;i<files.length;i++){
+        if(cancelUpload.current)break;
         setCount(i+1);
-        added.push(await prepareAsset(files[i],uploadBatch));
+        const prepared=await prepareAsset(files[i],uploadBatch);
+        if(cancelUpload.current)break;
+        added.push(prepared);
       }
-      await s.addAssets(added);
-    }catch(e){setError(friendlyError(e));}
-    finally{setBusy(false);setCount(0);if(input.current)input.current.value='';}
+      if(added.length)await s.addAssets(added);
+    }catch(cause){setError(friendlyError(cause));}
+    finally{setBusy(false);setCount(0);cancelUpload.current=false;if(input.current)input.current.value='';}
   }
 
   async function removeSelectedAssets(){
     if(!photoIds.length)return;
-    const count=photoIds.length;
-    if(!window.confirm(`确定删除选中的 ${count} 张素材吗？\n已在页面中使用的这些照片也会一并移除，此操作不能撤销。`))return;
     setBusy(true);setError('');
     try{
       await s.removeAssets(photoIds);
       setPhotoIds([]);
-    }catch(e){setError(friendlyError(e));}
+      setAssetDeleteOpen(false);
+    }catch(cause){setError(friendlyError(cause));}
     finally{setBusy(false);}
   }
 
@@ -204,6 +222,12 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     if(book.backCover?.assetId)ids.add(book.backCover.assetId);
     return ids;
   },[book.pages,book.workspaceImageId,book.backCover?.assetId]);
+  const selectedUsedCount=useMemo(()=>photoIds.filter(id=>usedAssetIds.has(id)).length,[photoIds,usedAssetIds]);
+  const selectedUsePages=useMemo(()=>book.pages.filter(item=>item.elements.some(element=>element.type==='image'&&!!element.assetId&&photoIds.includes(element.assetId))).length,[book.pages,photoIds]);
+  const selectedSpecialUses=Number(!!book.backCover?.assetId&&photoIds.includes(book.backCover.assetId))+Number(!!book.workspaceImageId&&photoIds.includes(book.workspaceImageId));
+  const deleteDescription=selectedUsedCount
+    ?`其中 ${selectedUsedCount} 张正在 ${selectedUsePages} 个页面${selectedSpecialUses?`及 ${selectedSpecialUses} 个封面/背景位置`:''}中使用。删除后对应位置会变为空白；素材删除不进入普通撤销栈，但删除前会保留历史版本。`
+    :'这些素材当前没有被画册页面使用。删除后不会出现在素材库中。';
   const assetUsage=useMemo(()=>({
     used:book.assets.reduce((sum,asset)=>sum+Number(usedAssetIds.has(asset.id)),0),
     unused:book.assets.reduce((sum,asset)=>sum+Number(!usedAssetIds.has(asset.id)),0),
@@ -354,8 +378,8 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         </div>
         {!book.assets.length&&<p className="empty-panel">还没有照片<br/>从下方添加照片开始制作。</p>}
         <div className="photo-selection-actions photo-library-actions">
-          <Button disabled={busy} onClick={()=>input.current?.click()}><Upload size={15}/>{busy?`处理中 ${count}`:'添加照片'}</Button>
-          <Button className="danger" disabled={busy||!photoIds.length} onClick={()=>void removeSelectedAssets()}><Trash2 size={15}/>删除</Button>
+          {busy?<Button onClick={()=>{cancelUpload.current=true;}}>取消处理 {count?`· ${count}`:''}</Button>:<Button onClick={()=>input.current?.click()}><Upload size={15}/>添加照片</Button>}
+          <Button className="danger" disabled={busy||!photoIds.length} onClick={()=>setAssetDeleteOpen(true)}><Trash2 size={15}/>删除</Button>
           <Button className="primary" disabled={busy} onClick={()=>{
             if(coverTarget){applyCoverPhoto(photoIds[0]);if(!paired)onClose();return;}
             s.setPhotos(photoIds);
@@ -389,13 +413,13 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         {!layoutSourceIds.length&&<p className="muted">先在左侧素材库选择至少一张照片。模板仍可浏览。</p>}
         {!paired&&<Button className="full" onClick={()=>onPanel('photos')}>更换本页照片 · {photoIds.length||photoCount} 张</Button>}
         <Button className="full" onClick={()=>onPanel('page-background')}>页面底色与纹理</Button>
-        <Button className="full" disabled={!photoCount} onClick={openCustomTemplate}>修改模板</Button>
-        <p className="muted">模板照片少于已选数量时取前面的照片；模板照片更多时循环重复。图框内直接拖动位置，滚轮缩放。</p>
+        <Button className="full" disabled={!photoCount} onClick={openCustomTemplate}>基于当前页新建模板</Button>
+        <p className="muted">选择不同图数模板时会按模板图框数使用当前照片；多出的照片仍保留在素材库，不会被删除。图框内可拖动位置、滚轮缩放。</p>
       </>)}
 
       {panel==='text'&&(coverSide==='back'?<><p className="muted">后封面文字在“封面设置”中统一编辑，避免修改到最后一张内页。</p><Button className="full" onClick={()=>onPanel('cover')}>打开封面设置</Button></>:<>
         {templateTexts.length>0&&<section className="template-text-editor-list"><p className="field-label">本页模板文字</p>{templateTexts.map((element,index)=><label key={element.id} className="template-text-editor-item"><span>{index+1}</span><textarea rows={Math.min(3,Math.max(1,(element.text??'').split('\n').length))} value={element.text??''} onFocus={()=>s.select(element.id)} onChange={event=>s.updateElement(element.id,{text:event.target.value})}/></label>)}</section>}
-        {selected?.type==='text'?<><p className="field-label">{selected.templateTextKey?'当前模板文字':'当前文字'}</p><textarea aria-label="文字内容" value={selected.text} onChange={event=>update({text:event.target.value})} rows={3}/><label className="field">字体<select value={selected.fontFamily} onChange={event=>update({fontFamily:event.target.value})}>{selected.fontFamily&&!['Domine','Arial','Georgia','KaiTi','sans-serif','Mendl Sans Dusk','Mendl Sans Dusk Medium','FZLanTingHei'].includes(selected.fontFamily)&&<option value={selected.fontFamily}>{selected.fontFamily} · 模板字体</option>}<option value="Mendl Sans Dusk">Mendl Sans Dusk · 模板字体</option><option value="Mendl Sans Dusk Medium">Mendl Sans Dusk Medium · 模板中黑</option><option value="FZLanTingHei">方正兰亭黑 · 模板字体</option><option value="Domine">Domine · 杂志衬线</option><option value="Arial">Arial · 现代无衬线</option><option value="Georgia">Georgia · 经典</option><option value="KaiTi">楷体 · 手写</option><option value="sans-serif">黑体</option></select></label><label className="field">字号<input type="range" min={8} max={240} value={selected.fontSize} onChange={event=>update({fontSize:+event.target.value})}/><span>{Math.round(selected.fontSize??0)}</span></label><label className="field">颜色<input type="color" value={selected.color} onChange={event=>update({color:event.target.value})}/></label><div className="segments"><Button className={selected.fontWeight===700?'primary':''} onClick={()=>update({fontWeight:selected.fontWeight===700?400:700})}><b>B</b></Button><Button className={selected.fontStyle==='italic'?'primary':''} onClick={()=>update({fontStyle:selected.fontStyle==='italic'?'normal':'italic'})}><i>I</i></Button>{(['left','center','right'] as const).map((align,index)=><Button key={align} className={selected.align===align?'primary':''} onClick={()=>update({align})}>{['左','中','右'][index]}</Button>)}</div></>:templateTexts.length===0?<p className="muted">选择一段文字，或者添加新的文字</p>:null}
+        {selected?.type==='text'?<><p className="field-label">{selected.templateTextKey?'当前模板文字':'当前文字'}</p><textarea aria-label="文字内容" value={selected.text} onChange={event=>update({text:event.target.value})} rows={3}/><label className="field">字体<select value={selected.fontFamily} onChange={event=>update({fontFamily:event.target.value})}>{selected.fontFamily&&!supportedTextFonts.includes(selected.fontFamily as typeof supportedTextFonts[number])&&<option value={selected.fontFamily}>{selected.fontFamily} · 当前作品字体</option>}<option value="Domine">Domine · 杂志衬线</option><option value="Arial">Arial · 现代无衬线</option><option value="Georgia">Georgia · 经典</option><option value="KaiTi">楷体 · 系统字体</option><option value="sans-serif">系统无衬线</option></select></label><label className="field">字号<input type="range" min={8} max={240} value={selected.fontSize} onChange={event=>update({fontSize:+event.target.value})}/><span>{Math.round(selected.fontSize??0)}</span></label><label className="field">颜色<input type="color" value={selected.color} onChange={event=>update({color:event.target.value})}/></label><div className="segments"><Button className={selected.fontWeight===700?'primary':''} onClick={()=>update({fontWeight:selected.fontWeight===700?400:700})}><b>B</b></Button><Button className={selected.fontStyle==='italic'?'primary':''} onClick={()=>update({fontStyle:selected.fontStyle==='italic'?'normal':'italic'})}><i>I</i></Button>{(['left','center','right'] as const).map((align,index)=><Button key={align} className={selected.align===align?'primary':''} onClick={()=>update({align})}>{['左','中','右'][index]}</Button>)}</div></>:templateTexts.length===0?<p className="muted">选择一段文字，或者添加新的文字</p>:null}
         <div className="text-presets"><button onClick={()=>addText('写下这一刻',100)}>添加标题 <Plus size={16}/></button><button onClick={()=>addText('一些值得记住的小事',54)}>添加副标题 <Plus size={16}/></button><button onClick={()=>addText('你的段落文字',36)}>添加正文 <Plus size={16}/></button><button onClick={()=>addText(new Date().toLocaleDateString('zh-CN'),28)}>日期 / 注释 <Plus size={16}/></button></div>
       </>)}
 
@@ -407,7 +431,10 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
       {panel==='adjust'&&(coverSide==='back'?<p className="muted">后封面照片的位置和大小由封面模板决定；照片内容请在素材库中选择。</p>:selected?fixed?<><p className="muted">图框由模板固定。可以调整照片在框内的位置和缩放。</p>{(['x','y','zoom'] as const).map((key,index)=><label key={key} className="field">{['水平位置','垂直位置','缩放'][index]}<input type="range" min={key==='zoom'?1:0} max={key==='zoom'?4:1} step={.01} value={(selected.crop??{x:.5,y:.5,zoom:1})[key]} onChange={event=>update({crop:{...(selected.crop??{x:.5,y:.5,zoom:1}),[key]:+event.target.value}})}/></label>)}<Button onClick={()=>update({crop:{x:.5,y:.5,zoom:1}})}>重置照片</Button></>:<><label className="field">旋转<input type="range" min={-180} max={180} value={selected.rotation} onChange={event=>update({rotation:+event.target.value})}/><span>{Math.round(selected.rotation)}°</span></label><label className="field">透明度<input type="range" min={.05} max={1} step={.05} value={selected.opacity} onChange={event=>update({opacity:+event.target.value})}/></label><label className="field">锁定<input type="checkbox" checked={!!selected.locked} onChange={event=>update({locked:event.target.checked})}/></label><div className="segments"><Button onClick={()=>layer(-1)}><ArrowDown size={16}/>下移</Button><Button onClick={()=>layer(1)}><ArrowUp size={16}/>上移</Button></div>{selected.type==='image'&&<><label className="field">适配<select value={selected.fit??'cover'} onChange={event=>update({fit:event.target.value as 'cover'|'contain'})}><option value="cover">填充</option><option value="contain">完整显示</option></select></label><label className="field">阴影<input type="checkbox" checked={!!selected.shadow} onChange={event=>update({shadow:event.target.checked})}/></label></>}<div className="segments"><Button onClick={s.duplicateSelected}><Copy size={16}/>复制</Button><Button className="danger" onClick={s.deleteSelected}><Trash2 size={16}/>删除</Button></div></>:<p className="empty-panel">先在页面上选择一个元素</p>)}
     </div>
 
-    <Modal wide open={customOpen} onClose={()=>setCustomOpen(false)} title={coverTarget?'新增封面模板':'修改模板'} description={coverTarget?'拖动和缩放照片区域，模板只保存照片窗口几何，不保存封皮颜色或照片内容':'直接拖动和缩放图框，保存为自己的模板'}>
+    <Modal open={assetDeleteOpen} onClose={()=>setAssetDeleteOpen(false)} title={`删除选中的 ${photoIds.length} 张素材？`} description={deleteDescription}>
+      <div className="actions"><Button disabled={busy} onClick={()=>setAssetDeleteOpen(false)}>取消</Button><Button className="danger" disabled={busy} onClick={()=>void removeSelectedAssets()}>删除素材</Button></div>
+    </Modal>
+    <Modal wide open={customOpen} onClose={()=>setCustomOpen(false)} title={coverTarget?'新增封面模板':'新建自定义模板'} description={coverTarget?'拖动和缩放照片区域，模板只保存照片窗口几何，不保存封皮颜色或照片内容':'以当前页图框和文字为底稿保存一个新的自定义模板，不覆盖原模板'}>
       <label className="field stack">模板名称<input value={customName} onChange={event=>setCustomName(event.target.value)}/></label>
       <VisualTemplateEditor slots={customSlots} onChange={setCustomSlots} assetIds={coverTarget?photoIds:pagePhotoIds} background={coverTarget?coverBackground:page.templateBackground??page.background} overlay={coverTarget?undefined:page.templateOverlay} texts={coverTarget?(coverSide==='front'?page.elements.filter(element=>element.type==='text'):[]):page.elements.filter(element=>element.type==='text')} maxSlots={coverTarget?1:9}/>
       <ErrorMessage message={error}/>
