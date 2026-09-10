@@ -23,7 +23,7 @@ describe('editor preview page selection',()=>{
     expect(useEditor.getState().selectedPages).toEqual([book.pages[2].id]);
   });
 
-  it('deletes selected pages as one undoable edit and never removes the cover',()=>{
+  it('deletes selected pages as one undoable edit and never removes the cover',async()=>{
     const book=bookWithPages(5);
     const removedIds=[book.pages[2].id,book.pages[4].id];
     useEditor.getState().load(book);
@@ -41,5 +41,6 @@ describe('editor preview page selection',()=>{
 
     state.undo();
     expect(useEditor.getState().book?.pages).toHaveLength(book.pages.length);
+    await useEditor.getState().flush();
   });
 });
