@@ -21,11 +21,26 @@ export interface Page {
   templateOverlay?: string; templateBackground?: string; templateTextSchema?: number;
 }
 export interface CoverTemplate {id:string;name:string;slot:Slot}
+export interface BookStyle {
+  pageBackground:string;
+  textColor:string;
+  fontFamily:string;
+}
+export interface BackCover {
+  mode:'match-front'|'solid'|'custom';
+  background:string;
+  assetId?:string;
+  crop?:{x:number;y:number;zoom:number};
+  text?:string;
+  textColor?:string;
+}
 export interface Book {
   id: string; title: string; themeId: ThemeId; format: { width: number; height: number };
   coverPageId: string; pages: Page[]; assets: Asset[]; createdAt: number; updatedAt: number;
   version: number; workspaceBackground: string; coverTemplate: string;
   defaultPageBackground?: string;
+  bookStyle?: BookStyle;
+  backCover?: BackCover;
   workspacePattern?: string; workspaceImageId?: string;
   customLayouts?: Layout[];
   customCoverTemplates?: CoverTemplate[];
@@ -47,7 +62,7 @@ export function newBook(title: string, themeId: ThemeId, assets: Asset[] = []): 
   const cover = blankPage(0, themeId === 'scrapbook' ? '#f5ec30' : '#e8e2cf');
   if(assets[0]) cover.elements.push(imageElement(assets[0].id,{x:414,y:360,width:372,height:498}));
   cover.elements.push(textElement('TIME TO FLIPBOOK',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center',color:'#4a3f1a'}));
-  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3'};
+  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3',bookStyle:{pageBackground:'#eeeae3',textColor:'#252525',fontFamily:'Domine'},backCover:{mode:'match-front',background:cover.background,text:'',textColor:'#4a3f1a'}};
 }
 export function validateBook(value: unknown): asserts value is Book {
   const b = value as Book;
@@ -55,6 +70,46 @@ export function validateBook(value: unknown): asserts value is Book {
 }
 
 export function visualPageBackground(page:Page){return page.templateBackground??page.background;}
+
+export function bookStyleFor(book:Book):BookStyle{
+  return {
+    pageBackground:book.bookStyle?.pageBackground??book.defaultPageBackground??'#eeeae3',
+    textColor:book.bookStyle?.textColor??'#252525',
+    fontFamily:book.bookStyle?.fontFamily??'Domine',
+  };
+}
+export function backCoverFor(book:Book):BackCover{
+  const configured=book.backCover;
+  return {
+    mode:configured?.mode??'match-front',
+    background:configured?.background??book.pages[0]?.background??'#f2efe4',
+    assetId:configured?.assetId,
+    crop:configured?.crop??{x:.5,y:.5,zoom:1},
+    text:configured?.text??'',
+    textColor:configured?.textColor??'#4a3f1a',
+  };
+}
+export function backCoverPage(book:Book):Page{
+  const cover=backCoverFor(book);
+  const background=cover.mode==='match-front'?(book.pages[0]?.background??cover.background):cover.background;
+  const elements:Element[]=[];
+  if(cover.mode==='custom'&&cover.assetId){
+    elements.push({
+      id:`${book.id}:back-image`,type:'image',assetId:cover.assetId,
+      x:420,y:430,width:360,height:500,rotation:0,opacity:1,fit:'cover',
+      crop:cover.crop??{x:.5,y:.5,zoom:1},frameLocked:true,
+    });
+  }
+  if(cover.mode==='custom'&&cover.text?.trim()){
+    elements.push({
+      id:`${book.id}:back-text`,type:'text',text:cover.text,
+      x:180,y:1480,width:840,height:90,rotation:0,opacity:1,
+      fontFamily:bookStyleFor(book).fontFamily,fontSize:30,fontWeight:400,
+      color:cover.textColor??bookStyleFor(book).textColor,align:'center',
+    });
+  }
+  return {id:`${book.id}:back-cover`,type:'normal',background,elements,order:book.pages.length};
+}
 
 
 const LEGACY_BRAND=['FLIP','IN'].join('');
