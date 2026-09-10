@@ -119,6 +119,102 @@
   outline-offset:1px;
 }
 
+/* Paper tape is represented by the decoration itself, with its palette on the same row. */
+.studio .editor-panel .tape-creator{
+  margin:15px 0 10px;
+  padding:10px;
+  border:1px solid #e6e4de;
+  border-radius:12px;
+  background:#faf9f6;
+}
+.studio .editor-panel .tape-creator-row{
+  display:flex;
+  align-items:center;
+  gap:9px;
+  min-width:0;
+}
+.studio .editor-panel .tape-preview-button{
+  width:52px;
+  height:34px;
+  flex:0 0 52px;
+  display:grid;
+  place-items:center;
+  padding:0;
+  border:1px solid #e0ded7;
+  border-radius:8px;
+  background:#f2f0ea;
+  transition:background .15s ease,transform .15s ease;
+}
+.studio .editor-panel .tape-preview-button:hover{
+  background:#ece9e1;
+}
+.studio .editor-panel .tape-preview-button:active{
+  transform:scale(.97);
+}
+.studio .editor-panel .tape-preview{
+  position:relative;
+  display:block;
+  width:42px;
+  height:16px;
+  transform:rotate(-7deg);
+  clip-path:polygon(4% 8%,97% 0,100% 82%,94% 100%,3% 93%,0 18%);
+  box-shadow:0 2px 4px #00000022;
+}
+.studio .editor-panel .tape-preview::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,#ffffff45,transparent 44%,#0000000d);
+  pointer-events:none;
+}
+.studio .editor-panel .tape-color-controls,
+.studio .editor-panel .tape-color-swatches{
+  display:flex;
+  align-items:center;
+  min-width:0;
+}
+.studio .editor-panel .tape-color-controls{
+  flex:1;
+  gap:6px;
+}
+.studio .editor-panel .tape-color-controls input[type=color]{
+  width:30px;
+  height:28px;
+  flex:0 0 30px;
+}
+.studio .editor-panel .tape-color-swatches{
+  gap:3px;
+}
+.studio .editor-panel .tape-color-swatch{
+  width:18px;
+  height:18px;
+  min-width:18px;
+  padding:0;
+  border:1px solid #d2d0ca;
+  border-radius:4px;
+  box-shadow:inset 0 0 0 1px #ffffff70;
+}
+.studio .editor-panel .tape-color-swatch.chosen{
+  outline:2px solid #222;
+  outline-offset:1px;
+}
+.studio .editor-panel .tape-opacity-field{
+  display:grid;
+  grid-template-columns:auto minmax(70px,1fr) 34px;
+  align-items:center;
+  gap:8px;
+  margin-top:10px;
+  color:#777;
+  font-size:10px;
+}
+.studio .editor-panel .tape-opacity-field input[type=range]{
+  width:100%;
+}
+.studio .editor-panel .tape-opacity-field>span:last-child{
+  text-align:right;
+  font-variant-numeric:tabular-nums;
+}
+
 /* Library footers stay pinned without a solid panel that hides photos/templates. */
 .studio .editor-panel:has(.asset-library-manager) .photo-library-actions{
   background:transparent!important;
