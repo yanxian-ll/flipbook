@@ -13,5 +13,6 @@ describe('bounded rendering work',()=>{
 describe('template grid snapping',()=>{
   it('aligns a nearby edge without changing frame size',()=>{const next=snapSlot({x:.203,y:.302,width:.3,height:.4},'move',280,396);expect(next.x).toBeCloseTo(.2);expect(next.y).toBeCloseTo(.3);expect(next.width).toBe(.3);expect(next.height).toBe(.4);});
   it('snaps a resize edge while leaving its opposite edge fixed',()=>{const next=snapSlot({x:.2,y:.2,width:.297,height:.399},'se',280,396);expect(next.x).toBe(.2);expect(next.y).toBe(.2);expect(next.width).toBeCloseTo(.3);expect(next.height).toBeCloseTo(.4);});
+  it('uses the configured grid size instead of assuming five percent',()=>{const next=snapSlot({x:.123,y:.184,width:.3,height:.4},'move',400,400,.02);expect(next.x).toBeCloseTo(.12);expect(next.y).toBeCloseTo(.18);});
   it('does not pull a distant resize edge or cross the page boundary',()=>{const slot={x:.2,y:.2,width:.325,height:.325};expect(snapSlot(slot,'se',400,400)).toEqual(slot);const edge=snapSlot({x:.69,y:.69,width:.31,height:.31},'move',280,396);expect(edge.x+edge.width).toBeLessThanOrEqual(1);expect(edge.y+edge.height).toBeLessThanOrEqual(1);});
 });
