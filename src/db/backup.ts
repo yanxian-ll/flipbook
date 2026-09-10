@@ -56,7 +56,7 @@ export async function exportBookBackup(bookId:string,onProgress?:BackupProgress,
   const stamp=new Date().toISOString().slice(0,10);
   const filename=`${safeName(suggestedTitle)}-${stamp}.flipbook-backup`;
   let sink;
-  try{sink=await createZipSink(filename,'.flipbook-backup');}
+  try{sink=await createZipSink(filename);}
   catch(cause){if(isAbortError(cause))return false;throw cause;}
   const writer=new StreamZipWriter(sink);
   try{
@@ -77,7 +77,7 @@ export async function exportLibraryBackup(onProgress?:BackupProgress){
   const stamp=new Date().toISOString().slice(0,10);
   const filename=`flipbook-library-${stamp}.flipbook-library-backup`;
   let sink;
-  try{sink=await createZipSink(filename,'.flipbook-library-backup');}
+  try{sink=await createZipSink(filename);}
   catch(cause){if(isAbortError(cause))return false;throw cause;}
   const writer=new StreamZipWriter(sink);
   try{
