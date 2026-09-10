@@ -157,6 +157,10 @@ export const useEditor=create<EditorState>((set,get)=>({
     const next=produce(currentBook,draft=>{
       draft.assets=draft.assets.filter(asset=>!removeSet.has(asset.id));
       if(draft.workspaceImageId&&removeSet.has(draft.workspaceImageId))draft.workspaceImageId=undefined;
+      if(draft.backCover?.assetId&&removeSet.has(draft.backCover.assetId)){
+        draft.backCover.assetId=undefined;
+        draft.backCover.crop={x:.5,y:.5,zoom:1};
+      }
       for(const page of draft.pages){
         page.elements=page.elements.filter(element=>!(element.type==='image'&&element.assetId&&removeSet.has(element.assetId)));
       }
