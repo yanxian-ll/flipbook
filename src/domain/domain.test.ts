@@ -1,6 +1,6 @@
 import {describe,it,expect,beforeEach} from 'vitest';
 import 'fake-indexeddb/auto';
-import {newBook,blankPage,textElement,W,H,type Asset} from './model';
+import {newBook,blankPage,textElement,W,H,backCoverFor,backCoverPage,bookStyleFor,type Asset} from './model';
 import {autoLayout,layouts,layoutsForCount,applyLayout,defaultLayout} from './layouts';
 import {db,repository} from '../db/repository';
 import {useEditor} from '../store/editor';
@@ -36,6 +36,25 @@ describe('fixed photo frames and persistence',()=>{
   it('protects fixed images from duplicate and delete shortcuts',async()=>{const book=autoLayout(newBook('Frames','scrapbook',assets),assets);useEditor.getState().load(book);useEditor.getState().setPage(1);useEditor.getState().select(book.pages[1].elements[0].id);useEditor.getState().duplicateSelected();useEditor.getState().deleteSelected();expect(useEditor.getState().book!.pages[1].elements).toHaveLength(2);await useEditor.getState().flush();});
   it('saves manual templates and reapplies their fixed geometry',async()=>{const book=autoLayout(newBook('Custom','scrapbook',assets),assets);book.customLayouts=[{id:'custom-test',name:'Custom',minImages:2,maxImages:2,slots:[{x:.1,y:.1,width:.3,height:.2},{x:.6,y:.4,width:.2,height:.3}]}];useEditor.getState().load(book);useEditor.getState().setPage(1);useEditor.getState().layout('custom-test');await useEditor.getState().flush();const saved=await repository.get(book.id);expect(saved.customLayouts).toEqual(book.customLayouts);expect(saved.pages[1].elements[0]).toMatchObject({x:W*.1,y:H*.1,width:W*.3,height:H*.2,frameLocked:true});});
   it('roundtrips rename and duplication and preserves cover on page operations',async()=>{const book=autoLayout(newBook('Original','editorial',assets),assets);await repository.create(book,[]);await repository.rename(book.id,'Renamed');expect((await repository.get(book.id)).title).toBe('Renamed');const copy=await repository.duplicate(book.id);expect(copy.id).not.toBe(book.id);await repository.remove(copy.id);useEditor.getState().load(book);useEditor.getState().removePage();expect(useEditor.getState().book!.pages).toHaveLength(6);useEditor.getState().setPage(1);useEditor.getState().duplicatePage();expect(useEditor.getState().book!.pages).toHaveLength(7);useEditor.getState().reorderPage(2,3);expect(useEditor.getState().book!.pages[0].id).toBe(book.coverPageId);await useEditor.getState().flush();});
+});
+
+describe('book presentation settings',()=>{
+  it('provides stable global style defaults for existing books',()=>{
+    const book=newBook('Style','editorial',assets);
+    expect(bookStyleFor(book)).toEqual({pageBackground:'#eeeae3',textColor:'#252525',fontFamily:'Domine'});
+    delete book.bookStyle;
+    expect(bookStyleFor(book)).toEqual({pageBackground:'#eeeae3',textColor:'#252525',fontFamily:'Domine'});
+  });
+  it('builds custom back-cover content without adding it to editable page order',()=>{
+    const book=newBook('Back','editorial',assets);
+    book.backCover={mode:'custom',background:'#ffffff',assetId:assets[1].id,crop:{x:.2,y:.7,zoom:1.4},text:'THE END',textColor:'#333333'};
+    const page=backCoverPage(book);
+    expect(backCoverFor(book).mode).toBe('custom');
+    expect(page.background).toBe('#ffffff');
+    expect(page.elements.find(element=>element.type==='image')).toMatchObject({assetId:assets[1].id,crop:{x:.2,y:.7,zoom:1.4}});
+    expect(page.elements.find(element=>element.type==='text')).toMatchObject({text:'THE END',color:'#333333'});
+    expect(book.pages).toHaveLength(1);
+  });
 });
 
 describe('cover and workspace settings',()=>{
