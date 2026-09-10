@@ -1,5 +1,5 @@
 import {useEffect,useRef,useState} from 'react';
-import {Check,ChevronLeft,Eye,History,Maximize2,Minimize2,Palette,SlidersHorizontal,Undo2,Redo2,Upload} from 'lucide-react';
+import {Check,ChevronLeft,Download,Eye,History,Maximize2,Minimize2,Palette,SlidersHorizontal,Undo2,Redo2} from 'lucide-react';
 import {Button,IconButton,Modal} from '../../components/ui';
 import {useEditor} from '../../store/editor';
 import {commitEditorTitle} from './editorTitle';
@@ -53,7 +53,7 @@ export function WorkspaceToolbar({onHistory,onBookStyle,onBackground,onPreview,o
       <IconButton label="画册风格" onClick={onBookStyle}><SlidersHorizontal size={16}/></IconButton>
       <IconButton label="垫底背景" onClick={onBackground}><Palette size={16}/></IconButton>
       <IconButton label="翻页预览" onClick={onPreview}><Eye size={16}/></IconButton>
-      <IconButton label="导出 Flipbook" onClick={onExport}><Upload size={16}/></IconButton>
+      <IconButton label="导出 Flipbook" onClick={onExport}><Download size={16}/></IconButton>
     </div>
     <div className={`save-status workspace-save-status ${status}`} role="status" aria-live="polite">
       {status==='saved'?<><Check size={10}/>已保存</>:status==='saving'?'保存中…':<button onClick={()=>void useEditor.getState().flush().catch(()=>{})}>保存失败，点此重试</button>}
