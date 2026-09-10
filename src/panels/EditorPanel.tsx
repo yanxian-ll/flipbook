@@ -18,10 +18,39 @@ import {Button,ErrorMessage,IconButton,Modal} from '../components/ui';
 export type PanelId='photos'|'layouts'|'text'|'stickers'|'background'|'page-background'|'cover'|'book-style'|'adjust';
 const names:Record<PanelId,string>={photos:'上传素材',layouts:'选择排版',text:'文字',stickers:'贴纸',background:'垫底背景','page-background':'页面背景',cover:'封面设置','book-style':'画册风格',adjust:'调整元素'};
 const colors=['#ffffff','#eeeae3','#f5ec30','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#1a1a1a'];
-const supportedTextFonts=['Domine','Arial','Georgia','KaiTi','sans-serif'] as const;
+const supportedTextFonts=['Domine','Arial','Georgia','KaiTi','STKaiti','cursive','sans-serif'] as const;
+const defaultRecentTextColors=['#252525','#e63457','#ffffff','#4f6b8f'];
+const recentTextColorsKey='flipbook:recent-text-colors';
 const assetThumbnailCache=new Map<string,Blob>();
 const assetThumbnailPending=new Map<string,Promise<Blob|undefined>>();
 const ASSET_THUMBNAIL_CACHE_LIMIT=160;
+
+function normalizedHexColor(value:string|undefined){
+  const color=(value??'').trim();
+  if(/^#[0-9a-f]{6}$/i.test(color))return color.toLowerCase();
+  if(/^#[0-9a-f]{3}$/i.test(color)){
+    const [r,g,b]=color.slice(1).split('');
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return '#252525';
+}
+function loadRecentTextColors(){
+  try{
+    const parsed=JSON.parse(localStorage.getItem(recentTextColorsKey)??'[]') as unknown;
+    const saved=Array.isArray(parsed)?parsed.filter((value):value is string=>typeof value==='string'):[];
+    return [...new Set([...saved,...defaultRecentTextColors].map(normalizedHexColor))].slice(0,4);
+  }catch{return [...defaultRecentTextColors];}
+}
+function ColorMemoryField({value,recent,onChange}:{value:string|undefined;recent:string[];onChange:(color:string)=>void}){
+  const current=normalizedHexColor(value);
+  return <div className="field color-memory-field">
+    <span>颜色</span>
+    <div className="color-memory-controls">
+      <input type="color" aria-label="选择颜色" value={current} onChange={event=>onChange(event.target.value)}/>
+      <span className="recent-color-swatches" aria-label="最近使用的颜色">{recent.slice(0,4).map(color=><button key={color} type="button" aria-label={`使用颜色 ${color}`} title={color} className={`recent-color-swatch ${normalizedHexColor(color)===current?'chosen':''}`} style={{backgroundColor:color}} onClick={()=>onChange(color)}/>)}</span>
+    </div>
+  </div>;
+}
 
 async function assetThumbnail(id:string){
   const hit=assetThumbnailCache.get(id);
@@ -105,6 +134,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     ?coverAssetId?[coverAssetId]:[]
     :[...new Set(page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id))];
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[count,setCount]=useState(0),[localPhotoIds,setLocalPhotoIds]=useState<string[]>(initialPhotoIds),[dragAssetId,setDragAssetId]=useState<string|null>(null),[dragOverAssetId,setDragOverAssetId]=useState<string|null>(null),[assetFilter,setAssetFilter]=useState<'all'|'used'|'unused'>('all'),[assetSort,setAssetSort]=useState<'recent'|'oldest'|'name'>('recent'),[assetQuery,setAssetQuery]=useState(''),[assetDeleteOpen,setAssetDeleteOpen]=useState(false);
+  const [recentTextColors,setRecentTextColors]=useState<string[]>(loadRecentTextColors);
   const input=useRef<HTMLInputElement>(null),suppressAssetClick=useRef(false),cancelUpload=useRef(false);
   const photoIds=coverTarget?localPhotoIds:(controlledPhotoIds??localPhotoIds);
   const setPhotoIds=(ids:string[])=>{
@@ -343,6 +373,16 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const fixed=selected?frameIsFixed(page,selected):false;
   const templateTexts=page.elements.filter((element):element is Element=>element.type==='text'&&!!element.templateTextKey);
   const update=(patch:Partial<Element>)=>{if(selected)s.updateElement(selected.id,patch);};
+  const rememberColor=(color:string)=>{
+    const normalized=normalizedHexColor(color);
+    setRecentTextColors(current=>{
+      const next=[...new Set([normalized,...current,...defaultRecentTextColors].map(normalizedHexColor))].slice(0,4);
+      try{localStorage.setItem(recentTextColorsKey,JSON.stringify(next));}catch{}
+      return next;
+    });
+    return normalized;
+  };
+  const updateColor=(color:string)=>{if(selected)s.updateElement(selected.id,{color:rememberColor(color)});};
   const addText=(text:string,size:number)=>{const style=book.bookStyle??{fontFamily:'Domine',textColor:'#252525'};s.addElement(textElement(text,{fontSize:size,fontFamily:style.fontFamily??'Domine',color:style.textColor??'#252525'}));};
   const layer=(direction:number)=>{if(!selected)return;s.change(draft=>{const elements=draft.pages[s.pageIndex].elements;const index=elements.findIndex(element=>element.id===selected.id);const [element]=elements.splice(index,1);elements.splice(Math.max(0,Math.min(elements.length,index+direction)),0,element);});};
   const coverLabel=coverSide==='back'?'后封面':'前封面';
@@ -419,11 +459,16 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
 
       {panel==='text'&&(coverSide==='back'?<><p className="muted">后封面文字在“封面设置”中统一编辑，避免修改到最后一张内页。</p><Button className="full" onClick={()=>onPanel('cover')}>打开封面设置</Button></>:<>
         {templateTexts.length>0&&<section className="template-text-editor-list"><p className="field-label">本页模板文字</p>{templateTexts.map((element,index)=><label key={element.id} className="template-text-editor-item"><span>{index+1}</span><textarea rows={Math.min(3,Math.max(1,(element.text??'').split('\n').length))} value={element.text??''} onFocus={()=>s.select(element.id)} onChange={event=>s.updateElement(element.id,{text:event.target.value})}/></label>)}</section>}
-        {selected?.type==='text'?<><p className="field-label">{selected.templateTextKey?'当前模板文字':'当前文字'}</p><textarea aria-label="文字内容" value={selected.text} onChange={event=>update({text:event.target.value})} rows={3}/><label className="field">字体<select value={selected.fontFamily} onChange={event=>update({fontFamily:event.target.value})}>{selected.fontFamily&&!supportedTextFonts.includes(selected.fontFamily as typeof supportedTextFonts[number])&&<option value={selected.fontFamily}>{selected.fontFamily} · 当前作品字体</option>}<option value="Domine">Domine · 杂志衬线</option><option value="Arial">Arial · 现代无衬线</option><option value="Georgia">Georgia · 经典</option><option value="KaiTi">楷体 · 系统字体</option><option value="sans-serif">系统无衬线</option></select></label><label className="field">字号<input type="range" min={8} max={240} value={selected.fontSize} onChange={event=>update({fontSize:+event.target.value})}/><span>{Math.round(selected.fontSize??0)}</span></label><label className="field">颜色<input type="color" value={selected.color} onChange={event=>update({color:event.target.value})}/></label><div className="segments"><Button className={selected.fontWeight===700?'primary':''} onClick={()=>update({fontWeight:selected.fontWeight===700?400:700})}><b>B</b></Button><Button className={selected.fontStyle==='italic'?'primary':''} onClick={()=>update({fontStyle:selected.fontStyle==='italic'?'normal':'italic'})}><i>I</i></Button>{(['left','center','right'] as const).map((align,index)=><Button key={align} className={selected.align===align?'primary':''} onClick={()=>update({align})}>{['左','中','右'][index]}</Button>)}</div></>:templateTexts.length===0?<p className="muted">选择一段文字，或者添加新的文字</p>:null}
+        {selected?.type==='text'?<><p className="field-label">{selected.templateTextKey?'当前模板文字':'当前文字'}</p><textarea aria-label="文字内容" value={selected.text} onChange={event=>update({text:event.target.value})} rows={3}/><label className="field">字体<select value={selected.fontFamily??'Domine'} onChange={event=>update({fontFamily:event.target.value})}>{selected.fontFamily&&!supportedTextFonts.includes(selected.fontFamily as typeof supportedTextFonts[number])&&<option value={selected.fontFamily}>{selected.fontFamily} · 当前作品字体</option>}<option value="Domine">Domine · 杂志衬线</option><option value="Arial">Arial · 现代无衬线</option><option value="Georgia">Georgia · 经典</option><option value="KaiTi">楷体 · 手写感</option><option value="STKaiti">华文楷体 · 手写感</option><option value="cursive">手写体 · 系统</option><option value="sans-serif">系统无衬线</option></select></label><label className="field">字号<input type="range" min={8} max={240} value={selected.fontSize} onChange={event=>update({fontSize:+event.target.value})}/><span>{Math.round(selected.fontSize??0)}</span></label><ColorMemoryField value={selected.color} recent={recentTextColors} onChange={updateColor}/><div className="segments"><Button className={selected.fontWeight===700?'primary':''} onClick={()=>update({fontWeight:selected.fontWeight===700?400:700})}><b>B</b></Button><Button className={selected.fontStyle==='italic'?'primary':''} onClick={()=>update({fontStyle:selected.fontStyle==='italic'?'normal':'italic'})}><i>I</i></Button>{(['left','center','right'] as const).map((align,index)=><Button key={align} className={selected.align===align?'primary':''} onClick={()=>update({align})}>{['左','中','右'][index]}</Button>)}</div></>:templateTexts.length===0?<p className="muted">选择一段文字，或者添加新的文字</p>:null}
         <div className="text-presets"><button onClick={()=>addText('写下这一刻',100)}>添加标题 <Plus size={16}/></button><button onClick={()=>addText('一些值得记住的小事',54)}>添加副标题 <Plus size={16}/></button><button onClick={()=>addText('你的段落文字',36)}>添加正文 <Plus size={16}/></button><button onClick={()=>addText(new Date().toLocaleDateString('zh-CN'),28)}>日期 / 注释 <Plus size={16}/></button></div>
       </>)}
 
-      {panel==='stickers'&&(coverSide==='back'?<p className="muted">后封面目前只使用封面模板、照片与文字设置，避免装饰误加到最后一张内页。</p>:<><p className="muted">给回忆加一点小装饰</p><div className="sticker-grid">{['★','♡','✿','↗','✦','♥','☀','✈','✽','☻','❀','➜','✉','♫','☁','✧'].map(sticker=><button key={sticker} onClick={()=>s.addElement({...textElement(sticker,{fontSize:180,width:240,height:260,fontFamily:'Arial',color:'#e63457'}),type:'sticker'})}>{sticker}</button>)}</div><Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:280,y:180,width:460,height:90,rotation:-7,opacity:.65,color:'#ddd0a4'})}>添加纸胶带</Button><Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:140,y:250,width:800,height:1050,rotation:3,opacity:1,color:'#fff',shadow:true})}>添加拍立得底纸</Button></>)}
+      {panel==='stickers'&&(coverSide==='back'?<p className="muted">后封面目前只使用封面模板、照片与文字设置，避免装饰误加到最后一张内页。</p>:<>
+        <p className="muted">给回忆加一点小装饰</p>
+        {selected?.type==='sticker'&&<><p className="field-label">当前贴纸</p><ColorMemoryField value={selected.color} recent={recentTextColors} onChange={updateColor}/></>}
+        <div className="sticker-grid">{['★','♡','✿','↗','✦','♥','☀','✈','✽','☻','❀','➜','✉','♫','☁','✧'].map(sticker=><button key={sticker} onClick={()=>s.addElement({...textElement(sticker,{fontSize:180,width:240,height:260,fontFamily:'Arial',color:'#e63457'}),type:'sticker'})}>{sticker}</button>)}</div>
+        <Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:280,y:180,width:460,height:90,rotation:-7,opacity:.65,color:'#ddd0a4'})}>添加纸胶带</Button><Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:140,y:250,width:800,height:1050,rotation:3,opacity:1,color:'#fff',shadow:true})}>添加拍立得底纸</Button>
+      </>)}
       {panel==='background'&&<WorkspaceBackgroundPanel/>}
       {panel==='book-style'&&<BookStylePanel/>}
       {panel==='page-background'&&<><p className="settings-intro">只修改当前内页的纸张底色和纹理。</p><label className="field">当前页面背景<input type="color" value={page.background} onChange={event=>s.change(draft=>{draft.pages[s.pageIndex].background=event.target.value;draft.pages[s.pageIndex].templateBackground=undefined;})}/></label><div className="swatches">{colors.map(color=><button key={color} aria-label={`背景 ${color}`} style={{backgroundColor:color}} className={page.background===color?'chosen':''} onClick={()=>s.change(draft=>{draft.pages[s.pageIndex].background=color;draft.pages[s.pageIndex].templateBackground=undefined;})}/>)}</div><p className="field-label">纸张与纹理</p><div className="background-grid">{['','bg-dots.jpg','bg-grid.jpg','bg2.jpg','bg3.jpg','bg4.jpg','bg5.jpg'].map((name,index)=><button key={name} className={page.pattern===name?'chosen':''} onClick={()=>s.change(draft=>{draft.pages[s.pageIndex].pattern=name||undefined;})} style={name?{backgroundImage:`url(/reference/${name})`}:{}}>{index===0?'纯色':['','波点','格纹','纸张','织物','纹理','牛皮纸'][index]}</button>)}</div></>}
