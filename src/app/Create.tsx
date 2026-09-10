@@ -7,6 +7,7 @@ import {autoLayout} from '../domain/layouts';
 import {repository,friendlyError} from '../db/repository';
 import {Modal,Button,ErrorMessage} from '../components/ui';
 import {Bookshelf} from './Bookshelf';
+import '../styles/create.css';
 
 export function Create(){
   const [step,setStep]=useState(1),[theme,setTheme]=useState<ThemeId>('scrapbook'),[assets,setAssets]=useState<StoredAsset[]>([]),[error,setError]=useState(''),[processing,setProcessing]=useState(false),[progress,setProgress]=useState(''),[examples,setExamples]=useState(false),[restoredDraft,setRestoredDraft]=useState(false);
