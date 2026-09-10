@@ -8,7 +8,7 @@ import {initializeDemo} from '../domain/demo';
 import {BookCover} from '../components/BookCover';
 import {IconButton,Modal,Button,Loading,ErrorMessage} from '../components/ui';
 export function Bookshelf({creating=false}:{creating?:boolean}){
-  const [books,setBooks]=useState<Book[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[grid,setGrid]=useState(false),[index,setIndex]=useState(0),[deleting,setDeleting]=useState(false),[rename,setRename]=useState(false),[title,setTitle]=useState(''),[menu,setMenu]=useState(false),[transferring,setTransferring]=useState(false),[wide,setWide]=useState(true);
+  const [books,setBooks]=useState<Book[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[grid,setGrid]=useState(true),[index,setIndex]=useState(0),[deleting,setDeleting]=useState(false),[rename,setRename]=useState(false),[title,setTitle]=useState(''),[menu,setMenu]=useState(false),[transferring,setTransferring]=useState(false),[wide,setWide]=useState(true);
   const navigate=useNavigate();const startX=useRef(0),restoreInput=useRef<HTMLInputElement>(null);const current=books[Math.min(index,books.length-1)];
   async function refresh(){try{setBooks(await repository.list());}catch(e){setError(friendlyError(e));}finally{setLoading(false);}}
   useEffect(()=>{void initializeDemo().then(refresh).catch(e=>{setError(friendlyError(e));setLoading(false);});},[]);
