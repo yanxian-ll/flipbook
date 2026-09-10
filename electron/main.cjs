@@ -1,4 +1,4 @@
-const {app,BrowserWindow,shell}=require('electron');
+const {app,BrowserWindow,screen,shell}=require('electron');
 const http=require('node:http');
 const fs=require('node:fs');
 const path=require('node:path');
@@ -77,16 +77,27 @@ function startRendererServer(){
   });
 }
 
+function compactContentSize(){
+  const {width,height}=screen.getPrimaryDisplay().workAreaSize;
+  return {
+    width:Math.min(430,Math.max(320,width-32)),
+    height:Math.min(932,Math.max(560,height-48)),
+  };
+}
+
 async function createWindow(){
   if(!serverOrigin)await startRendererServer();
 
+  const contentSize=compactContentSize();
   const window=new BrowserWindow({
-    width:1280,
-    height:860,
-    minWidth:900,
-    minHeight:640,
+    width:contentSize.width,
+    height:contentSize.height,
+    useContentSize:true,
+    resizable:false,
+    maximizable:false,
+    fullscreenable:false,
     show:false,
-    backgroundColor:'#f5f3ef',
+    backgroundColor:'#ffffff',
     autoHideMenuBar:true,
     webPreferences:{
       contextIsolation:true,
@@ -95,6 +106,7 @@ async function createWindow(){
     },
   });
 
+  window.center();
   window.once('ready-to-show',()=>window.show());
   window.webContents.setWindowOpenHandler(({url})=>{
     if(url.startsWith(serverOrigin))return {action:'allow'};
