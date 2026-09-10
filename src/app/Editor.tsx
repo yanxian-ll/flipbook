@@ -21,6 +21,15 @@ import {useEditorPanels} from './editor/useEditorPanels';
 import {usePageNavigation} from './editor/usePageNavigation';
 import {PAGE_ASPECT_RATIO} from './editor/constants';
 
+const LAST_PAGE_KEY_PREFIX='flipbook:last-page:';
+function lastPageKey(bookId:string){return `${LAST_PAGE_KEY_PREFIX}${bookId}`;}
+function readLastPageId(bookId:string){
+  try{return localStorage.getItem(lastPageKey(bookId));}catch{return null;}
+}
+function rememberLastPage(bookId:string,pageId:string){
+  try{localStorage.setItem(lastPageKey(bookId),pageId);}catch{/* Browsing can continue even when local storage is unavailable. */}
+}
+
 const editorTools=([
   ['photos',Images,'素材库'],
   ['layouts',Grid2X2,'模版'],
@@ -37,6 +46,7 @@ export function Editor(){
   const selectedIds=useEditor(state=>state.selected);
   const editorError=useEditor(state=>state.error);
   const workspaceStyle=useWorkspaceBackground(book);
+  const activePageId=book?.pages[pageIndex]?.id;
 
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
@@ -100,7 +110,13 @@ export function Editor(){
     setLoading(true);
     void repository.get(bookId!).then(loaded=>{
       if(!live)return;
-      useEditor.getState().load(loaded);
+      const editor=useEditor.getState();
+      editor.load(loaded);
+      const lastPageId=readLastPageId(loaded.id);
+      if(lastPageId){
+        const lastPageIndex=loaded.pages.findIndex(page=>page.id===lastPageId);
+        if(lastPageIndex>=0)editor.setPage(lastPageIndex);
+      }
       setLoading(false);
     }).catch(cause=>{
       setError(friendlyError(cause));
@@ -112,6 +128,11 @@ export function Editor(){
       clearImageCache();
     };
   },[bookId]);
+
+  useEffect(()=>{
+    if(loading||!bookId||book?.id!==bookId||!activePageId)return;
+    rememberLastPage(bookId,activePageId);
+  },[loading,bookId,book?.id,activePageId]);
 
   useEffect(()=>{
     const node=workspace.current;if(!node)return;
