@@ -72,7 +72,7 @@ export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose
             <div className="composition-nav"><Button type="button" disabled={busy||currentGroup===0} onClick={()=>setPreviewIndex(currentGroup-1)}>上一组</Button><span>{groups?currentGroup+1:0} / {groups} 个画面</span><Button type="button" disabled={busy||currentGroup>=groups-1} onClick={()=>setPreviewIndex(currentGroup+1)}>下一组</Button></div>
           </div>}
           <fieldset disabled={busy} className="export-settings-pane">
-          {format==='share'&&<div className="composition-toggles"><label><input type="checkbox" checked={!!options.bookStyle} onChange={e=>setOptions({...options,bookStyle:e.target.checked})}/>模拟书本 · 书脊与阴影</label><p className="export-hint">开启后，网页中的画册会显示纸边、投影和跨页书脊；关闭时使用平面页面。</p></div>}
+          {format==='share'&&<p className="export-hint">分享网页固定使用与编辑区一致的模拟书本、书脊、页边与翻页阴影。</p>}
           {format!=='share'&&<>
             <div className="export-collage-count"><div><b>每个画面放几页？</b><small>按书中顺序排列，双页并排，多跨页上下排列</small></div><div className="segments">{[1,2,4,6,8].map(value=><Button key={value} type="button" aria-pressed={pagesPerCollage===value} className={pagesPerCollage===value?'primary':''} onClick={()=>{setOptions({...options,pagesPerCollage:value});setPreviewIndex(0);}}>{value} 页</Button>)}</div></div>
             <div className="composition-toggles"><label><input type="checkbox" checked={!!options.frame} onChange={e=>setOptions({...options,frame:e.target.checked})}/>留白相框</label><label><input type="checkbox" checked={!!options.bookStyle} onChange={e=>setOptions({...options,bookStyle:e.target.checked})}/>模拟书本 · 书脊与阴影</label></div>
