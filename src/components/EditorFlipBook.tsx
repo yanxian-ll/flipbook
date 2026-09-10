@@ -1,4 +1,4 @@
-import {Children,Component,forwardRef,useEffect,useImperativeHandle,useRef,useState,type ForwardedRef,type ReactNode} from 'react';
+import {Children,Component,forwardRef,memo,useEffect,useImperativeHandle,useMemo,useRef,useState,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import type {Book} from '../domain/model';
 import {BookBackCoverVisual,BookCoverEditor,BookCoverVisual} from './BookCover';
@@ -84,8 +84,23 @@ function FlipLeafInner(
     }
   </div>;
 }
-const FlipLeaf=forwardRef(FlipLeafInner);
-FlipLeaf.displayName='FlipLeaf';
+const ForwardedFlipLeaf=forwardRef(FlipLeafInner);
+ForwardedFlipLeaf.displayName='FlipLeaf';
+const FlipLeaf=memo(ForwardedFlipLeaf,(prev,next)=>{
+  if(prev.index!==next.index||prev.kind!==next.kind||prev.active!==next.active||prev.priority!==next.priority||prev.width!==next.width||prev.scale!==next.scale)return false;
+  if(prev.kind==='page'){
+    if(prev.book.pages[prev.index]!==next.book.pages[next.index])return false;
+    if(prev.index===0&&prev.book.coverTemplate!==next.book.coverTemplate)return false;
+    return true;
+  }
+  if(prev.kind==='back'){
+    return prev.book.backCover===next.book.backCover
+      &&prev.book.bookStyle===next.book.bookStyle
+      &&prev.book.pages[0]?.background===next.book.pages[0]?.background;
+  }
+  return true;
+});
+FlipLeaf.displayName='MemoFlipLeaf';
 
 type EditorFlipBookProps={
   book:Book;
@@ -146,6 +161,16 @@ function EditorFlipBookInner(
   const flip=useRef<any>(null);
   const [editingSurfaceHovered,setEditingSurfaceHovered]=useState(false);
   const [displayedIndex,setDisplayedIndex]=useState(activeIndex);
+  const actionRefs=useRef({onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage});
+  actionRefs.current={onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage};
+  const stableActions=useMemo(()=>({
+    onSelect:(index:number)=>actionRefs.current.onSelect(index),
+    onAddPage:()=>actionRefs.current.onAddPage(),
+    onTextEdit:()=>actionRefs.current.onTextEdit(),
+    onCrop:()=>actionRefs.current.onCrop(),
+    onImageSelect:()=>actionRefs.current.onImageSelect(),
+    onBlankPage:()=>actionRefs.current.onBlankPage(),
+  }),[]);
   const hasSelectedElement=useEditor(state=>state.selected.length>0);
   const nativeFlipLocked=editingSurfaceHovered||hasSelectedElement;
   const safeWidth=Math.max(40,Math.floor(pageWidth));
@@ -164,7 +189,7 @@ function EditorFlipBookInner(
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
   useEffect(()=>setDisplayedIndex(activeIndex),[activeIndex,resetKey]);
   const openCover=()=>flip.current?.pageFlip?.().flipNext?.();
-  const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover:openCover,onInteractionChange:setEditingSurfaceHovered,scale:imageScale};
+  const leafProps={book,width:safeWidth,...stableActions,onOpenCover:openCover,onInteractionChange:setEditingSurfaceHovered,scale:imageScale};
 
   const fallback=<StaticBookFallback
     book={book}
