@@ -1,9 +1,10 @@
 import type {Book} from '../domain/model';
-import {H} from '../domain/model';
+import {H,backCoverFor,backCoverPage} from '../domain/model';
 import {drawComposition,compositionGeometry,defaultComposition,type CompositionOptions} from './composition';
 import {renderPage} from '../editor/renderer';
-import {flipbookBrowserBundle,flipbookMotion,readerLeafPlan,sharedViewerSize} from '../flipbook/spec';
+import {flipbookMotion,readerLeafPlan,sharedViewerSize} from '../flipbook/spec';
 import {buildShareHtmlDocument} from './shareHtml';
+import {loadEmbeddedPageFlipBundle} from './pageFlipBundle';
 
 export type ExportFormat='collage'|'mp4'|'pdf'|'share';
 export type ExportOptions=CompositionOptions;
@@ -121,17 +122,6 @@ async function exportMp4(book:Book,indices:number[],quality:number,onProgress:(n
     if(recorder.state!=='inactive')recorder.stop();
   }
 }
-async function loadPageFlipBundle(){
-  const cdn=flipbookBrowserBundle.cdn;
-  try{
-    const response=await fetch(cdn);
-    if(!response.ok)throw new Error('page-flip bundle unavailable');
-    return {source:(await response.text()).replace(/<\/script/gi,'<\\/script'),cdn};
-  }catch{
-    return {source:'',cdn};
-  }
-}
-
 async function loadCoverTextureDataUrl(){
   try{
     const response=await fetch('/reference/cover-texture.png');
@@ -154,12 +144,16 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
 
   const labels=indices.map(index=>index===0?'封面':'第 '+index+' 页');
   const showCover=indices[0]===0;
-  const [pageFlipBundle,coverTexture]=await Promise.all([loadPageFlipBundle(),loadCoverTextureDataUrl()]);
+  const back=backCoverFor(book);
+  const [pageFlipSource,coverTexture,backBlob]=await Promise.all([
+    loadEmbeddedPageFlipBundle(),
+    loadCoverTextureDataUrl(),
+    showCover?renderPage(backCoverPage(book),{scale,quality:'original',mimeType:'image/jpeg'}):Promise.resolve(null),
+  ]);
+  const backPage=backBlob?await blobToDataUrl(backBlob):'';
   onProgress(.92);
 
-  const libraryScript=pageFlipBundle.source
-    ?'<script>'+pageFlipBundle.source+'</'+'script>'
-    :'<script src="'+pageFlipBundle.cdn+'"></'+'script>';
+  const libraryScript='<script>'+pageFlipSource+'</'+'script>';
 
   const html=buildShareHtmlDocument({
     title:book.title,
@@ -167,7 +161,8 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
     labels,
     showCover,
     coverTexture,
-    backColor:book.pages[0]?.background??'#f2efe4',
+    backColor:back.mode==='match-front'?(book.pages[0]?.background??back.background):back.background,
+    backPage,
     leafPlan:readerLeafPlan(pages.length),
     viewerConfig:{...sharedViewerSize,...flipbookMotion},
     libraryScript,
