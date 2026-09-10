@@ -51,8 +51,9 @@
   display:none;
 }
 
-/* On the front-cover page, use the shorter material-library title requested by the editor UI. */
-.studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2{
+/* Library titles. Keep the dedicated front-cover wording, and use shorter labels elsewhere. */
+.studio .editor-panel:has(.asset-library-manager) header h2,
+.studio .editor-panel:has(.all-layout-grid) header h2{
   font-size:0!important;
 }
 .studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2::after{
@@ -60,8 +61,35 @@
   font-size:14px;
   font-weight:600;
 }
+.studio:not(:has(.editor-cover-actions)) .editor-panel:has(.asset-library-manager) header h2::after{
+  content:'选择照片';
+  font-size:14px;
+  font-weight:600;
+}
+.studio .editor-panel:has(.all-layout-grid) header h2::after{
+  content:'选择模板';
+  font-size:14px;
+  font-weight:600;
+}
+
+/* White template pages need a quiet visual edge so neighboring cards stay distinguishable. */
+.studio .all-layout-grid .layout-mini{
+  overflow:hidden;
+  border:1px solid #deded9;
+  border-radius:3px;
+  background:#fff;
+  box-shadow:0 1px 4px #0000000a;
+  transition:border-color .15s ease,box-shadow .15s ease;
+}
+.studio .all-layout-grid>button:hover .layout-mini{
+  border-color:#c9c9c4;
+  box-shadow:0 2px 6px #00000010;
+}
+
 @media(min-width:1500px){
-  .studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2::after{
+  .studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2::after,
+  .studio:not(:has(.editor-cover-actions)) .editor-panel:has(.asset-library-manager) header h2::after,
+  .studio .editor-panel:has(.all-layout-grid) header h2::after{
     font-size:17px;
   }
 }
