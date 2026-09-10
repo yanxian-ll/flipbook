@@ -32,9 +32,9 @@ function safeFilePath(root,pathname){
 }
 
 function startRendererServer(){
-  const root=path.join(app.getAppPath(),'dist');
+  const root=path.resolve(__dirname,'..','dist');
   if(!fs.existsSync(path.join(root,'index.html'))){
-    throw new Error('Desktop renderer is missing. Run `npm run build` before starting Electron.');
+    throw new Error(`Desktop renderer is missing at ${root}. Run \`npm run build\` before starting Electron.`);
   }
 
   return new Promise((resolve,reject)=>{
