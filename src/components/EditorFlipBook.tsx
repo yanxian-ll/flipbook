@@ -99,6 +99,39 @@ type EditorFlipBookProps={
   onBlankPage:()=>void;
 };
 
+/**
+ * page-flip@2.0.7 calculates programmatic previous turns from x=10
+ * instead of rect.left+10. When the book is centered in a wider workspace,
+ * that point sits outside the book and the reverse turn is distorted.
+ * User-driven drags already provide the correct global pointer coordinate.
+ */
+function flipPrevSafely(pageFlip:any){
+  const rect=pageFlip?.getBoundsRect?.();
+  const controller=pageFlip?.getFlipController?.();
+  if(controller?.flip&&rect&&Number.isFinite(rect.left)){
+    controller.flip({x:rect.left+10,y:1});
+    return;
+  }
+  pageFlip?.flipPrev?.('top');
+}
+
+function flipToSafely(pageFlip:any,page:number){
+  if(!pageFlip)return;
+  const collection=pageFlip.getPageCollection?.();
+  const currentSpread=collection?.getCurrentSpreadIndex?.();
+  const targetSpread=collection?.getSpreadIndexByPage?.(page);
+  if(Number.isFinite(currentSpread)&&Number.isFinite(targetSpread)&&targetSpread<currentSpread){
+    try{
+      collection.setCurrentSpreadIndex(targetSpread+1);
+      flipPrevSafely(pageFlip);
+      return;
+    }catch{
+      // Fall back to the public API if the internal spread state changed.
+    }
+  }
+  pageFlip.flip?.(page,'top');
+}
+
 type BoundaryProps={resetKey:string;fallback:ReactNode;children:ReactNode};
 class FlipBookBoundary extends Component<BoundaryProps,{failed:boolean}>{
   state={failed:false};
@@ -155,9 +188,9 @@ function EditorFlipBookInner(
   const backIndex=plusIndex+(needsFiller?2:1);
 
   useImperativeHandle(ref,()=>({
-    flipNext:()=>flip.current?.pageFlip?.().flipNext?.(),
-    flipPrev:()=>flip.current?.pageFlip?.().flipPrev?.(),
-    flipTo:(page:number)=>flip.current?.pageFlip?.().flip?.(Math.max(0,Math.min(lastReal,page))),
+    flipNext:()=>flip.current?.pageFlip?.().flipNext?.('top'),
+    flipPrev:()=>flipPrevSafely(flip.current?.pageFlip?.()),
+    flipTo:(page:number)=>flipToSafely(flip.current?.pageFlip?.(),Math.max(0,Math.min(lastReal,page))),
     turnTo:(page:number)=>flip.current?.pageFlip?.().turnToPage?.(Math.max(0,Math.min(lastReal,page))),
     current:()=>flip.current?.pageFlip?.().getCurrentPageIndex?.()??0,
   }),[lastReal]);
@@ -220,8 +253,8 @@ function EditorFlipBookInner(
           <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false} priority={false}/>
         ])}
       </HTMLFlipBook>
-      {activeIndex>0&&<button className="editor-flip-nav-zone previous" aria-label="翻到上一跨页" onClick={()=>flip.current?.pageFlip?.().flipPrev?.()}/>}
-      {activeIndex<lastReal&&<button className="editor-flip-nav-zone next" aria-label="翻到下一跨页" onClick={()=>flip.current?.pageFlip?.().flipNext?.()}/>}
+      {activeIndex>0&&<button className="editor-flip-nav-zone previous" aria-label="翻到上一跨页" onClick={()=>flipPrevSafely(flip.current?.pageFlip?.())}/>}
+      {activeIndex<lastReal&&<button className="editor-flip-nav-zone next" aria-label="翻到下一跨页" onClick={()=>flip.current?.pageFlip?.().flipNext?.('top')}/>}
     </div>
   </FlipBookBoundary>;
 }

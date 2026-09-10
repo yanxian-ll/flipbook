@@ -1359,13 +1359,21 @@
 .export-dialog .composition-stage{height:clamp(140px,calc(90dvh - 500px),440px)}
 .export-footer{position:relative;z-index:2}
 @media(max-width:720px){.export-dialog .composition-stage{height:240px}.export-dialog-composing .export-workspace{flex:0 0 auto}.export-footer{position:sticky}}
-/* Permanent book shading follows the leaf in both editing modes. */
-.native-book-stage .editor-flip-page[data-book-side]::after,
+/* Keep StPageFlip's animated leaves in its absolute-positioned render layer.
+   HTMLPage.draw() relies on .stf__item for position:absolute; our page component
+   otherwise wins the cascade with position:relative and can leak a turning page
+   below the book while the transform is active. */
+.native-book-stage .editor-flip-page.stf__item{position:absolute}
+
+/* Permanent book shading is only for pages resting in the spread. StPageFlip
+   removes --simple while a leaf is moving and draws its own directional shadows,
+   so the reverse turn remains the true mirror of the forward turn. */
+.native-book-stage .editor-flip-page[data-book-side].--simple::after,
 .single-page-editor-shell .book-page::after{content:'';position:absolute;inset:0;z-index:15;pointer-events:none;border:1px solid #00000012}
-.native-book-stage .editor-flip-page[data-book-side=cover]::after{display:none}
+.native-book-stage .editor-flip-page[data-book-side=cover].--simple::after{display:none}
 .single-page-editor-shell .book-page{position:relative}
-.native-book-stage .editor-flip-page[data-book-side=left]::after,
+.native-book-stage .editor-flip-page[data-book-side=left].--simple::after,
 .single-page-editor-shell .book-page-left::after{background:linear-gradient(90deg,#00000008,transparent 3%,transparent 89%,#00000008 95%,#00000028 99%,#00000055)}
-.native-book-stage .editor-flip-page[data-book-side=right]::after,
+.native-book-stage .editor-flip-page[data-book-side=right].--simple::after,
 .single-page-editor-shell .book-page-right::after{background:linear-gradient(90deg,#00000040,#ffffff33 .6%,#00000015 2%,transparent 8%,transparent 97%,#00000008)}
 .native-book-stage .editor-fallback-spread>.spine-shadow{width:28px;background:linear-gradient(90deg,transparent,#0003 45%,#0006 50%,#fff4 54%,transparent)}
