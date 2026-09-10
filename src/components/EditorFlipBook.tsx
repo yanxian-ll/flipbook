@@ -1,6 +1,6 @@
 import {Children,Component,forwardRef,memo,useEffect,useImperativeHandle,useMemo,useRef,useState,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
-import type {Book} from '../domain/model';
+import {visualPageBackground,type Book} from '../domain/model';
 import {BookBackCoverVisual,BookCoverEditor,BookCoverVisual} from './BookCover';
 import {PageThumbnail} from './PageThumbnail';
 import {EditorCanvas} from '../editor/EditorCanvas';
@@ -74,7 +74,7 @@ function FlipLeafInner(
           <EditorCanvas page={page} width={width} onTextEdit={onTextEdit} onCrop={onCrop} onImageSelect={onImageSelect} onBackgroundClick={onBlankPage}/>
         </LiveEditorSurface>
         :<>
-          <PageThumbnail page={page} scale={scale} immediate={priority}/>
+          {priority?<PageThumbnail page={page} scale={scale} immediate/>:<div className="thumbnail-placeholder editor-flip-distant-placeholder" style={{background:visualPageBackground(page)}}/>}
           <button
             className="editor-flip-select-page"
             aria-label={`编辑第 ${index} 页`}
