@@ -183,7 +183,7 @@ export function Editor(){
       <div className="view-mode-switch" style={!wide&&zoomMode==='spread'?{top:`max(46px, calc(50% - ${spreadUnitWidth*1.4133333333/2+52}px))`}:undefined} role="group" aria-label="页面显示模式"><button type="button" className={zoomMode==='spread'?'active':''} aria-pressed={zoomMode==='spread'} onClick={()=>changeViewMode('spread')}>双页</button><button type="button" className={zoomMode==='page'?'active':''} aria-pressed={zoomMode==='page'} onClick={()=>changeViewMode('page')}>单页</button></div>
       <div className="save-status" role="status">{s.status==='saved'?<><Check size={10}/>已保存</>:s.status==='saving'?'保存中…':<button onClick={()=>void s.flush().catch(()=>{})}>保存失败，点此重试</button>}</div>
       {selected&&!frameIsFixed(page,selected)&&<div className="context-toolbar"><IconButton label="复制元素" onClick={s.duplicateSelected}><Copy size={16}/></IconButton><IconButton label="删除元素" onClick={s.deleteSelected}><Trash2 size={16}/></IconButton></div>}
-      <div ref={spreadStage} className={`spread-area native-book-stage ${panel||photoSideOpen||templateSideOpen?'panel-open':''} zoom-${zoomMode}`} onWheelCapture={handlePageWheel} title={zoomMode==='spread'?'滚轮切换跨页；点击另一页切换编辑页；拖书角或两侧翻页':'滚轮逐页切换；单页编辑；旁边保留同跨页预览'}>
+      <div ref={spreadStage} className={`spread-area native-book-stage ${panel||photoSideOpen||templateSideOpen?'panel-open':''} zoom-${zoomMode}`} onWheelCapture={handlePageWheel}>
         {zoomMode==='spread'
           ?<EditorFlipBook
             ref={flipBook}
