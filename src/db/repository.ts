@@ -1,8 +1,11 @@
 import Dexie, {type Table} from 'dexie';
-import {type Book, type StoredAsset, validateBook, uid, migrateLegacyBrandBook} from '../domain/model';
+import {type Book, type StoredAsset, type ThemeId, validateBook, uid, migrateLegacyBrandBook} from '../domain/model';
 import {migrateBookTemplateTexts} from '../domain/layouts';
 
 export interface BookSnapshot {id:string;bookId:string;createdAt:number;reason:string;book:Book}
+export interface CreateDraft {themeId:ThemeId;assetIds:string[];updatedAt:number}
+export interface LocalDataStats {books:number;assets:number;snapshots:number}
+const CREATE_DRAFT_KEY='create-draft-v1';
 const AUTO_SNAPSHOT_INTERVAL=5*60*1000;
 const MAX_SNAPSHOTS_PER_BOOK=24;
 export class StudioDatabase extends Dexie {
@@ -32,6 +35,19 @@ async function maybeCreateAutoSnapshot(existing:Book){
   if(latest&&Date.now()-latest.createdAt<AUTO_SNAPSHOT_INTERVAL)return;
   if(latest?.book.updatedAt===existing.updatedAt)return;
   await createSnapshot(existing,'自动版本');
+}
+async function referencedAssetIds(){
+  const [books,snapshots,draftEntry]=await Promise.all([
+    db.books.toArray(),
+    db.snapshots.toArray(),
+    db.settings.get(CREATE_DRAFT_KEY),
+  ]);
+  const draft=(draftEntry?.value??null) as CreateDraft|null;
+  return new Set([
+    ...books.flatMap(book=>book.assets.map(asset=>asset.id)),
+    ...snapshots.flatMap(snapshot=>snapshot.book.assets.map(asset=>asset.id)),
+    ...(draft?.assetIds??[]),
+  ]);
 }
 export const repository = {
   async list(){
@@ -70,19 +86,36 @@ export const repository = {
   },
   async removeSnapshot(snapshotId:string){await db.snapshots.delete(snapshotId);},
   async create(book:Book,assets:StoredAsset[]){const migrated=migrateBook(book).book;validateBook(migrated);await db.transaction('rw',db.books,db.assets,async()=>{await db.assets.bulkPut(assets);await db.books.add(structuredClone(migrated));});},
-  async remove(id:string){await db.transaction('rw',db.books,db.assets,db.snapshots,async()=>{await db.books.delete(id);await db.snapshots.where('bookId').equals(id).delete();const books=await db.books.toArray();const snapshots=await db.snapshots.toArray();const used=new Set([...books.flatMap(b=>b.assets.map(a=>a.id)),...snapshots.flatMap(snapshot=>snapshot.book.assets.map(asset=>asset.id))]);const all=await db.assets.toCollection().primaryKeys();await db.assets.bulkDelete(all.filter(key=>!used.has(key)));});},
+  async remove(id:string){await db.transaction('rw',db.books,db.assets,db.snapshots,db.settings,async()=>{await db.books.delete(id);await db.snapshots.where('bookId').equals(id).delete();const used=await referencedAssetIds();const all=await db.assets.toCollection().primaryKeys();await db.assets.bulkDelete(all.filter(key=>!used.has(key)));});},
   async rename(id:string,title:string){const book=await this.get(id);book.title=title.trim()||book.title;book.updatedAt=Date.now();await this.save(book);},
   async duplicate(id:string){const book=await this.get(id);const copy=structuredClone(book);copy.id=uid();copy.title+=' 副本';copy.createdAt=copy.updatedAt=Date.now();await this.save(copy);return copy;},
   getAsset:(id:string)=>db.assets.get(id),
+  async getAssets(ids:string[]){
+    const records=await db.assets.bulkGet(ids);
+    return records.filter((asset):asset is StoredAsset=>!!asset);
+  },
   putAssets:(assets:StoredAsset[])=>db.assets.bulkPut(assets),
   async removeAssets(ids:string[]){
     const unique=[...new Set(ids)];
     if(!unique.length)return;
-    await db.transaction('rw',db.books,db.assets,db.snapshots,async()=>{
-      const books=await db.books.toArray();
-      const snapshots=await db.snapshots.toArray();
-      const used=new Set([...books.flatMap(book=>book.assets.map(asset=>asset.id)),...snapshots.flatMap(snapshot=>snapshot.book.assets.map(asset=>asset.id))]);
+    await db.transaction('rw',db.books,db.assets,db.snapshots,db.settings,async()=>{
+      const used=await referencedAssetIds();
       await db.assets.bulkDelete(unique.filter(id=>!used.has(id)));
+    });
+  },
+  async saveCreateDraft(draft:CreateDraft){await db.settings.put({key:CREATE_DRAFT_KEY,value:structuredClone(draft)});},
+  async getCreateDraft(){return ((await db.settings.get(CREATE_DRAFT_KEY))?.value??null) as CreateDraft|null;},
+  async clearCreateDraft(){await db.settings.delete(CREATE_DRAFT_KEY);},
+  async getSetting<T>(key:string,fallback:T){const entry=await db.settings.get(key);return entry?entry.value as T:fallback;},
+  async setSetting<T>(key:string,value:T){await db.settings.put({key,value});},
+  async localDataStats():Promise<LocalDataStats>{const [books,assets,snapshots]=await Promise.all([db.books.count(),db.assets.count(),db.snapshots.count()]);return {books,assets,snapshots};},
+  async cleanupUnusedAssets(){
+    return await db.transaction('rw',db.books,db.assets,db.snapshots,db.settings,async()=>{
+      const used=await referencedAssetIds();
+      const all=await db.assets.toArray();
+      const removable=all.filter(asset=>!used.has(asset.id)&&Date.now()-asset.createdAt>60*60*1000).map(asset=>asset.id);
+      if(removable.length)await db.assets.bulkDelete(removable);
+      return removable.length;
     });
   },
   async initialized(){return !!(await db.settings.get('initialized'));},
