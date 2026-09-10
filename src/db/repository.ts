@@ -1,8 +1,12 @@
 import Dexie, {type Table} from 'dexie';
 import {type Book, type StoredAsset, validateBook, uid, migrateLegacyBrandBook} from '../domain/model';
 import {migrateBookTemplateTexts} from '../domain/layouts';
+
+export interface BookSnapshot {id:string;bookId:string;createdAt:number;reason:string;book:Book}
+const AUTO_SNAPSHOT_INTERVAL=5*60*1000;
+const MAX_SNAPSHOTS_PER_BOOK=24;
 export class StudioDatabase extends Dexie {
-  books!: Table<Book,string>; assets!: Table<StoredAsset,string>; settings!: Table<{key:string;value:unknown},string>;
+  books!: Table<Book,string>; assets!: Table<StoredAsset,string>; settings!: Table<{key:string;value:unknown},string>; snapshots!: Table<BookSnapshot,string>;
   constructor(name='flipbookStudio'){super(name);this.version(1).stores({books:'id,updatedAt',assets:'id',settings:'key',snapshots:'id,bookId,createdAt'});}
 }
 export const db = new StudioDatabase();
@@ -10,6 +14,24 @@ function migrateBook(value:Book){
   const brand=migrateLegacyBrandBook(value);
   const template=migrateBookTemplateTexts(brand.book);
   return {book:template.book,changed:brand.changed||template.changed};
+}
+async function trimSnapshots(bookId:string){
+  const items=await db.snapshots.where('bookId').equals(bookId).sortBy('createdAt');
+  const excess=items.length-MAX_SNAPSHOTS_PER_BOOK;
+  if(excess>0)await db.snapshots.bulkDelete(items.slice(0,excess).map(item=>item.id));
+}
+async function createSnapshot(book:Book,reason:string){
+  validateBook(book);
+  const snapshot:BookSnapshot={id:uid(),bookId:book.id,createdAt:Date.now(),reason,book:structuredClone(book)};
+  await db.snapshots.put(snapshot);
+  await trimSnapshots(book.id);
+  return snapshot;
+}
+async function maybeCreateAutoSnapshot(existing:Book){
+  const latest=(await db.snapshots.where('bookId').equals(existing.id).sortBy('createdAt')).at(-1);
+  if(latest&&Date.now()-latest.createdAt<AUTO_SNAPSHOT_INTERVAL)return;
+  if(latest?.book.updatedAt===existing.updatedAt)return;
+  await createSnapshot(existing,'自动版本');
 }
 export const repository = {
   async list(){
@@ -27,9 +49,28 @@ export const repository = {
     if(changed)await db.books.put(structuredClone(book));
     return book;
   },
-  async save(book:Book){const migrated=migrateBook(book).book;validateBook(migrated);await db.books.put(structuredClone(migrated));},
+  async save(book:Book){
+    const migrated=migrateBook(book).book;validateBook(migrated);
+    const existing=await db.books.get(migrated.id);
+    if(existing&&existing.updatedAt!==migrated.updatedAt)await maybeCreateAutoSnapshot(existing);
+    await db.books.put(structuredClone(migrated));
+  },
+  async createSnapshot(book:Book,reason='手动版本'){return await createSnapshot(book,reason);},
+  async listSnapshots(bookId:string){return (await db.snapshots.where('bookId').equals(bookId).sortBy('createdAt')).reverse();},
+  async restoreSnapshot(snapshotId:string){
+    const snapshot=await db.snapshots.get(snapshotId);
+    if(!snapshot)throw new Error('这个历史版本已经不存在。');
+    const current=await db.books.get(snapshot.bookId);
+    if(current)await createSnapshot(current,'恢复前版本');
+    const restored=migrateBook(structuredClone(snapshot.book)).book;
+    restored.updatedAt=Date.now();
+    validateBook(restored);
+    await db.books.put(restored);
+    return restored;
+  },
+  async removeSnapshot(snapshotId:string){await db.snapshots.delete(snapshotId);},
   async create(book:Book,assets:StoredAsset[]){const migrated=migrateBook(book).book;validateBook(migrated);await db.transaction('rw',db.books,db.assets,async()=>{await db.assets.bulkPut(assets);await db.books.add(structuredClone(migrated));});},
-  async remove(id:string){await db.transaction('rw',db.books,db.assets,async()=>{await db.books.delete(id);const books=await db.books.toArray();const used=new Set(books.flatMap(b=>b.assets.map(a=>a.id)));const all=await db.assets.toCollection().primaryKeys();await db.assets.bulkDelete(all.filter(key=>!used.has(key)));});},
+  async remove(id:string){await db.transaction('rw',db.books,db.assets,db.snapshots,async()=>{await db.books.delete(id);await db.snapshots.where('bookId').equals(id).delete();const books=await db.books.toArray();const snapshots=await db.snapshots.toArray();const used=new Set([...books.flatMap(b=>b.assets.map(a=>a.id)),...snapshots.flatMap(snapshot=>snapshot.book.assets.map(asset=>asset.id))]);const all=await db.assets.toCollection().primaryKeys();await db.assets.bulkDelete(all.filter(key=>!used.has(key)));});},
   async rename(id:string,title:string){const book=await this.get(id);book.title=title.trim()||book.title;book.updatedAt=Date.now();await this.save(book);},
   async duplicate(id:string){const book=await this.get(id);const copy=structuredClone(book);copy.id=uid();copy.title+=' 副本';copy.createdAt=copy.updatedAt=Date.now();await this.save(copy);return copy;},
   getAsset:(id:string)=>db.assets.get(id),
@@ -37,9 +78,10 @@ export const repository = {
   async removeAssets(ids:string[]){
     const unique=[...new Set(ids)];
     if(!unique.length)return;
-    await db.transaction('rw',db.books,db.assets,async()=>{
+    await db.transaction('rw',db.books,db.assets,db.snapshots,async()=>{
       const books=await db.books.toArray();
-      const used=new Set(books.flatMap(book=>book.assets.map(asset=>asset.id)));
+      const snapshots=await db.snapshots.toArray();
+      const used=new Set([...books.flatMap(book=>book.assets.map(asset=>asset.id)),...snapshots.flatMap(snapshot=>snapshot.book.assets.map(asset=>asset.id))]);
       await db.assets.bulkDelete(unique.filter(id=>!used.has(id)));
     });
   },
