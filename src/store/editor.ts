@@ -177,6 +177,33 @@ export const useEditor=create<EditorState>((set,get)=>({
         return;
       }
 
+      if(page.layoutSlots?.length){
+        const existingFrames=page.elements.filter(element=>element.type==='image'&&!element.freeImage);
+        const fitted=fitAssetIds(ids,page.layoutSlots.length);
+        const frames=fitted.map((assetId,index)=>{
+          const slot=page.layoutSlots![index];
+          const existing=existingFrames[index];
+          if(existing){
+            existing.assetId=assetId;
+            existing.x=slot.x*W;
+            existing.y=slot.y*H;
+            existing.width=slot.width*W;
+            existing.height=slot.height*H;
+            existing.frameLocked=true;
+            existing.frameShape=slot.shape;
+            return existing;
+          }
+          return imageElement(assetId,{x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape});
+        });
+        const nonTemplateElements=page.elements.filter(element=>element.type!=='image'||element.freeImage);
+        page.elements=[...frames,...nonTemplateElements];
+        if(page.layoutId==='tpl2_p3_right'&&fitted[0]){
+          const caption=page.elements.find(element=>element.type==='text'&&element.templateTextKey==='caption');
+          if(caption&&isSinglePhotoTemplateCaption(caption.text??''))caption.text=singlePhotoTemplateCaption(fitted[0],page.id);
+        }
+        return;
+      }
+
       if(page.layoutId){
         const layout=[...layouts,...(b.customLayouts??[])].find(item=>item.id===page.layoutId);
         const existingFrames=page.elements.filter(element=>element.type==='image'&&!element.freeImage);
