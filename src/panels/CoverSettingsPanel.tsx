@@ -1,5 +1,4 @@
 import {Images,LayoutTemplate} from 'lucide-react';
-import {BookBackCoverVisual,BookCoverVisual} from '../components/BookCover';
 import {Button} from '../components/ui';
 import {backCoverFor,coverTemplateFor,textElement} from '../domain/model';
 import {useCoverContext} from '../store/coverContext';
@@ -50,18 +49,13 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:PanelId)=>void}){
   }
 
   return <>
-    <div className="cover-side-tabs" role="tablist" aria-label="选择封面">
-      <button type="button" role="tab" aria-selected={side==='front'} className={side==='front'?'active':''} onClick={()=>setSide('front')}>前封面</button>
-      <button type="button" role="tab" aria-selected={side==='back'} className={side==='back'?'active':''} onClick={()=>setSide('back')}>后封面</button>
+    <div className="segments back-cover-mode" style={{gridTemplateColumns:'repeat(2,1fr)'}} role="tablist" aria-label="选择封面">
+      <button type="button" role="tab" aria-selected={side==='front'} className={side==='front'?'selected':''} onClick={()=>setSide('front')}>前封面</button>
+      <button type="button" role="tab" aria-selected={side==='back'} className={side==='back'?'selected':''} onClick={()=>setSide('back')}>后封面</button>
     </div>
 
-    <div className="cover-settings-preview" aria-label={side==='front'?'前封面预览':'后封面预览'}>
-      {side==='front'?<BookCoverVisual book={book}/>:<BookBackCoverVisual book={book}/>} 
-    </div>
-
-    <div className="cover-library-links">
-      <div><small>当前模板</small><b>{template.name}</b></div>
-      <div><small>当前照片</small><b title={assetName}>{assetName}</b></div>
+    <div className="settings-section-heading" style={{marginTop:14}}><b>当前模板 · {template.name}</b><small title={assetName}>{assetName}</small></div>
+    <div className="segments">
       <Button onClick={()=>onPanel('photos')}><Images size={14}/>选择照片</Button>
       <Button onClick={()=>onPanel('layouts')}><LayoutTemplate size={14}/>选择模板</Button>
     </div>
@@ -80,7 +74,7 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:PanelId)=>void}){
     </>:<>
       <div className="settings-section-heading"><b>后封面样式</b><small>颜色与文字独立于模板</small></div>
       <p className="settings-intro">模板只决定后封面是否显示照片以及照片窗口的位置。背景颜色和文字由这里单独控制。</p>
-      <div className="segments back-cover-background-mode" role="group" aria-label="后封面背景方式">
+      <div className="segments back-cover-mode" style={{gridTemplateColumns:'repeat(2,1fr)'}} role="group" aria-label="后封面背景方式">
         <button type="button" className={back.backgroundMode==='match-front'?'selected':''} onClick={()=>updateBack({backgroundMode:'match-front'})}>跟随前封面</button>
         <button type="button" className={back.backgroundMode==='custom'?'selected':''} onClick={()=>updateBack({backgroundMode:'custom'})}>自定义颜色</button>
       </div>
