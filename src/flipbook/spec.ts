@@ -5,11 +5,6 @@ export const flipbookMotion={
   corner:'top' as const,
 };
 
-export const flipbookBrowserBundle={
-  version:'2.0.7',
-  cdn:'https://cdn.jsdelivr.net/npm/page-flip@2.0.7/dist/js/page-flip.browser.js',
-};
-
 export const sharedViewerSize={
   width:480,
   height:678,
