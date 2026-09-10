@@ -12,7 +12,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
-    "desktop:dev": "npm run build && npx --yes electron@44.3.0 electron/main.cjs",
+    "desktop:dev": "npm run build && npx --yes electron@44.3.0 .",
     "desktop:pack": "npm run build && npx --yes electron-builder@26.16.1 --dir --publish never",
     "desktop:win": "npm run build && npx --yes electron-builder@26.16.1 --win nsis --x64 --publish never",
     "desktop:mac": "npm run build && npx --yes electron-builder@26.16.1 --mac dmg --x64 --arm64 --publish never",
