@@ -86,6 +86,11 @@
   box-shadow:0 2px 6px #00000010;
 }
 
+/* Template cards stay fully readable while their apply action is unavailable. */
+.studio .all-layout-grid>button:disabled{
+  opacity:1;
+}
+
 /* Keep the fixed six-color palette beside the native picker. */
 .studio .editor-panel .color-memory-field{
   justify-content:flex-start;
