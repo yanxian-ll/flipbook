@@ -1,7 +1,7 @@
 import {Children,Component,forwardRef,useEffect,useImperativeHandle,useRef,useState,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import type {Book} from '../domain/model';
-import {BookCoverEditor,BookCoverVisual} from './BookCover';
+import {BookBackCoverVisual,BookCoverEditor,BookCoverVisual} from './BookCover';
 import {PageThumbnail} from './PageThumbnail';
 import {EditorCanvas} from '../editor/EditorCanvas';
 import {Plus} from 'lucide-react';
@@ -55,7 +55,7 @@ function FlipLeafInner(
   {book,index,kind,active,priority,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,onInteractionChange,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
-  if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" style={{backgroundColor:book.pages[0]?.background??'#f2efe4'}} aria-hidden><span className="cover-grain"/><span className="cover-spine"/></div>;
+  if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-label="后封面"><BookBackCoverVisual book={book} className="editor-back-cover-visual"/></div>;
   if(kind==='blank')return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
   if(kind==='add')return <div ref={ref} className="editor-flip-page editor-flip-add">
     <button aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={28}/></button>
