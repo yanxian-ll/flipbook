@@ -2,7 +2,7 @@ import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
 import {Children,forwardRef,memo,useEffect,useRef,useState} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import {useNavigate,useParams,useSearchParams} from 'react-router-dom';
-import {ChevronLeft,ChevronRight,Download,Maximize2,Pencil} from 'lucide-react';
+import {ChevronLeft,ChevronRight,Download,Maximize2} from 'lucide-react';
 import {backCoverPage,type Book,type Page} from '../domain/model';
 import {frontCoverRenderPage} from '../domain/coverPresentation';
 import {repository,friendlyError} from '../db/repository';
@@ -76,7 +76,7 @@ export function Preview(){
   const [expanded,setExpanded]=useState(initialView.wide??defaultExpanded());
   const [exporting,setExporting]=useState(query.has('export'));
   const workspaceStyle=useWorkspaceBackground(book);
-  const flip=useRef<any>(null),shell=useRef<HTMLDivElement>(null);
+  const flip=useRef<any>(null),shell=useRef<HTMLDivElement>(null),stage=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
     let live=true;
@@ -97,6 +97,33 @@ export function Preview(){
     return()=>window.removeEventListener('keydown',key);
   },[]);
 
+  useEffect(()=>{
+    const node=stage.current;
+    if(!node||!book)return;
+    let wheelSum=0,wheelLocked=false,wheelTimer:number|undefined;
+    const wheel=(event:WheelEvent)=>{
+      if(document.querySelector('[role=dialog]'))return;
+      const delta=Math.abs(event.deltaY)>=Math.abs(event.deltaX)?event.deltaY:event.deltaX;
+      if(Math.abs(delta)<2)return;
+      event.preventDefault();
+      if(wheelLocked)return;
+      wheelSum+=delta;
+      if(Math.abs(wheelSum)<28)return;
+      const forward=wheelSum>0;
+      wheelSum=0;
+      wheelLocked=true;
+      const pageFlip=flip.current?.pageFlip?.();
+      forward?pageFlip?.flipNext?.(flipbookMotion.corner):flipPrevSafely(pageFlip);
+      if(wheelTimer)window.clearTimeout(wheelTimer);
+      wheelTimer=window.setTimeout(()=>{wheelLocked=false;},360);
+    };
+    node.addEventListener('wheel',wheel,{passive:false});
+    return()=>{
+      node.removeEventListener('wheel',wheel);
+      if(wheelTimer)window.clearTimeout(wheelTimer);
+    };
+  },[book?.id]);
+
   const plan=book?readerLeafPlan(book.pages.length):null;
   const lastIndex=plan?.backIndex??0;
   const backCover=!!plan&&index>=plan.backIndex;
@@ -114,7 +141,7 @@ export function Preview(){
     </header>
     <ErrorMessage message={error}/>
     {error?<Button onClick={()=>navigate('/')}>返回书架</Button>:!book||!plan?<Loading text="正在打开画册…"/>:<>
-      <div className={`flip-stage ${index===0?'is-cover':''} ${backCover?'is-back-cover':''}`}>
+      <div ref={stage} className={`flip-stage ${index===0?'is-cover':''} ${backCover?'is-back-cover':''}`}>
         <HTMLFlipBook
           ref={flip}
           width={sharedViewerSize.width}
@@ -154,8 +181,7 @@ export function Preview(){
         <span>{pageLabel}</span>
         <IconButton label="下一页" disabled={index>=lastIndex} onClick={()=>flip.current?.pageFlip?.().flipNext?.(flipbookMotion.corner)}><ChevronRight/></IconButton>
       </div>
-      <p className="preview-hint">轻拖书页一角，翻开下一段回忆</p>
-      <Button className="back-to-edit" onClick={()=>navigate(`/editor/${bookId}`)}><Pencil size={15}/>继续编辑</Button>
+      <p className="preview-hint">滚动鼠标滚轮，或轻拖书页一角翻页</p>
     </>}
     {book&&<ExportDialog book={book} open={exporting} onClose={()=>setExporting(false)}/>}
   </main>;

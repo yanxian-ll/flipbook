@@ -103,13 +103,13 @@
   text-align:center;
   color:#969696;
   font-size:10px;
-  margin:16px 0;
+  margin:16px 0 28px;
 }
-.preview-shell .back-to-edit{
-  align-self:center;
-  margin:0 0 28px;
-  background:#ffffffba;
-  font-size:11px;
+@media(min-width:500px){
+  .preview-shell{
+    height:calc(100dvh - 32px);
+    max-height:min(932px,calc(100dvh - 32px));
+  }
 }
 @media(min-width:850px){
   .preview-shell.expanded{
@@ -132,9 +132,6 @@
   }
   .preview-shell .preview-hint{
     display:none;
-  }
-  .preview-shell .back-to-edit{
-    margin-bottom:max(18px,env(safe-area-inset-bottom));
   }
 }
 .preview-shell:fullscreen{
