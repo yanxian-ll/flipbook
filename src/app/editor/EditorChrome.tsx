@@ -7,9 +7,15 @@ import './editorControls.css';
 
 export function EditorHeader({wide,onBack,onToggleWide}:{wide:boolean;onBack:()=>void;onToggleWide:()=>void}){
   const title=useEditor(state=>state.book?.title??'');
+  const bookId=useEditor(state=>state.book?.id);
+  const pageIndex=useEditor(state=>state.pageIndex);
   const [draft,setDraft]=useState(title);
   const cancelCommit=useRef(false);
   useEffect(()=>setDraft(title),[title]);
+  useEffect(()=>{
+    if(!bookId)return;
+    try{sessionStorage.setItem(`flipbook:editor-view:${bookId}`,JSON.stringify({wide,pageIndex}));}catch{}
+  },[bookId,wide,pageIndex]);
 
   function commit(){
     if(cancelCommit.current){cancelCommit.current=false;setDraft(title);return;}
