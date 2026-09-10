@@ -163,7 +163,6 @@ export function Editor(){
     <div className="editor-workspace" ref={workspace} style={workspaceStyle}>
       <WorkspaceToolbar
         onHistory={()=>setHistoryOpen(true)}
-        onBookStyle={()=>panels.toggleTool('book-style')}
         onBackground={()=>panels.toggleTool('background')}
         onPreview={()=>void leave(`/preview/${book.id}`)}
         onExport={()=>setExporting(true)}
