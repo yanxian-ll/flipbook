@@ -1,24 +1,26 @@
 import {useEffect,useRef,useState,type CSSProperties} from 'react';
-import {H,W,type Book,type Element} from '../domain/model';
+import {H,W,backCoverFor,bookStyleFor,type Book,type Element} from '../domain/model';
 import {dragCrop} from '../domain/crop';
 import {repository} from '../db/repository';
 import {useEditor} from '../store/editor';
 
-function useCoverImage(book:Book,quality:'thumbnail'|'preview'='thumbnail'){
+function useAssetImage(assetId:string|undefined,quality:'thumbnail'|'preview'='thumbnail'){
   const [src,setSrc]=useState('');
-  const image=book.pages[0].elements.find(element=>element.type==='image');
   useEffect(()=>{
     let url='',disposed=false;
     setSrc('');
-    if(image?.assetId)void repository.getAsset(image.assetId).then(asset=>{
+    if(assetId)void repository.getAsset(assetId).then(asset=>{
       if(asset&&!disposed){
         url=URL.createObjectURL(asset[quality]);
         setSrc(url);
       }
     }).catch(()=>{});
     return()=>{disposed=true;if(url)URL.revokeObjectURL(url);};
-  },[image?.assetId,quality]);
+  },[assetId,quality]);
   return src;
+}
+function useCoverImage(book:Book,quality:'thumbnail'|'preview'='thumbnail'){
+  return useAssetImage(book.pages[0].elements.find(element=>element.type==='image')?.assetId,quality);
 }
 
 function coverCropStyle(image?:Element){
@@ -64,6 +66,21 @@ export function BookCover({book,onClick}:{book:Book;onClick?:()=>void}){
   const cover=book.pages[0];
   return <button className={`book-cover ${coverTemplateClass(book)}`} style={{backgroundColor:cover.background}} onClick={onClick} aria-label={`打开 ${book.title}`}><CoverContents book={book}/></button>;
 }
+
+export function BookBackCoverVisual({book,className=''}:{book:Book;className?:string}){
+  const back=backCoverFor(book);
+  const custom=back.mode==='custom';
+  const background=back.mode==='match-front'?(book.pages[0]?.background??back.background):back.background;
+  const src=useAssetImage(custom?back.assetId:undefined,'preview');
+  const style=bookStyleFor(book);
+  return <div className={`book-back-cover ${className}`.trim()} style={{backgroundColor:background}}>
+    <span className="cover-grain"/>
+    <span className="cover-spine"/>
+    {custom&&src&&<span className="back-cover-window"><img src={src} alt="画册后封面照片" style={coverCropStyle({crop:back.crop} as Element)}/></span>}
+    {custom&&back.text?.trim()&&<span className="back-cover-caption" style={{color:back.textColor??style.textColor,fontFamily:style.fontFamily}}>{back.text}</span>}
+  </div>;
+}
+
 
 export function BookCoverEditor({
   book,
