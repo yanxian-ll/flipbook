@@ -15,12 +15,17 @@
   pointer-events:auto;
   opacity:1;
 }
-.studio .clean-page-strip .spread-thumb-page.preview-page-selected{
-  box-shadow:inset 0 0 0 1.5px #8c8c8c;
+.studio .clean-page-strip .spread-thumb-page.preview-page-selected::after{
+  content:'';
+  position:absolute;
+  inset:0;
+  z-index:3;
+  border:1.5px solid #8c8c8c;
+  pointer-events:none;
 }
-.studio .clean-page-strip .spread-thumb-page.preview-page-active{
-  box-shadow:inset 0 0 0 2px #202020;
-  z-index:1;
+.studio .clean-page-strip .spread-thumb-page.preview-page-active::after{
+  border-width:2px;
+  border-color:#202020;
 }
 .studio .clean-page-strip .single-page-thumb.preview-page-selected{
   border-color:#8c8c8c;
