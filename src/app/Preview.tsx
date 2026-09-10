@@ -1,5 +1,7 @@
 import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
 import {useEffect,useRef,useState} from 'react';
+// page-flip 2.0.7 ships its browser bundle without TypeScript declarations.
+// @ts-expect-error The runtime export is the same PageFlip constructor used by the exported HTML viewer.
 import {PageFlip} from 'page-flip';
 import {useNavigate,useParams,useSearchParams} from 'react-router-dom';
 import {ChevronLeft,ChevronRight,Download,Maximize2} from 'lucide-react';
@@ -113,7 +115,7 @@ export function Preview(){
     const host=flipHost.current;
     if(!host||!book)return;
     let live=true;
-    let instance:PageFlip|undefined;
+    let instance:any;
     const urls:string[]=[];
     const plan=readerLeafPlan(book.pages.length);
     const view=savedEditorView(bookId);
@@ -167,9 +169,9 @@ export function Preview(){
         const next=Number.isFinite(direct)?direct:Number(instance?.getCurrentPageIndex?.()??0)||0;
         setIndex(next);
       };
-      instance.on('flip',event=>sync(event.data));
-      instance.on('init',event=>sync(event.data?.page));
-      instance.on('update',event=>sync(event.data?.page));
+      instance.on('flip',(event:any)=>sync(event.data));
+      instance.on('init',(event:any)=>sync(event.data?.page));
+      instance.on('update',(event:any)=>sync(event.data?.page));
       instance.on('changeOrientation',()=>sync(undefined));
       instance.loadFromHTML(root.querySelectorAll<HTMLElement>('.flip-page'));
       setReady(true);
