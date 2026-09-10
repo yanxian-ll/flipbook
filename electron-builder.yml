@@ -1,0 +1,43 @@
+appId: com.yanxian.flipbookstudio
+productName: Flipbook Studio
+electronVersion: 44.3.0
+asar: true
+npmRebuild: false
+compression: maximum
+
+directories:
+  output: release
+
+files:
+  - dist/**/*
+  - electron/**/*
+  - package.json
+
+artifactName: "${productName}-${version}-${os}-${arch}.${ext}"
+
+win:
+  target:
+    - target: nsis
+      arch:
+        - x64
+
+nsis:
+  oneClick: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+
+mac:
+  category: public.app-category.photography
+  target:
+    - target: dmg
+      arch:
+        - x64
+        - arm64
+
+linux:
+  category: Graphics
+  target:
+    - target: AppImage
+      arch:
+        - x64
