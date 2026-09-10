@@ -121,4 +121,9 @@ export const repository = {
   async initialized(){return !!(await db.settings.get('initialized'));},
   async markInitialized(){await db.settings.put({key:'initialized',value:true});},
 };
-export function friendlyError(error:unknown){const e=error as Error;if(e?.name==='QuotaExceededError')return '本地存储空间不足，请先导出备份，再清理空间。';return e?.message||'操作失败，请重试。';}
+export function friendlyError(error:unknown){
+  const e=error as Error;
+  if(e?.name==='QuotaExceededError')return '本地存储空间不足，请先导出备份，再清理空间。';
+  if(e?.name==='NotReadableError')return '无法读取这个备份文件。请确认文件已经完整保存到本地、没有被移动或其他程序占用，然后重新选择。';
+  return e?.message||'操作失败，请重试。';
+}
