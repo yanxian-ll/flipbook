@@ -87,9 +87,6 @@ function resolveRendererPort(){
   const remembered=readRememberedRendererPort();
   if(remembered)return remembered;
 
-  // Older desktop builds used server.listen(0), which created a different
-  // browser origin on every launch. Reuse the most recently touched legacy
-  // IndexedDB origin once so existing local books remain reachable.
   const legacy=findMostRecentLegacyRendererPort();
   const port=legacy??DEFAULT_RENDERER_PORT;
   rememberRendererPort(port);
@@ -210,11 +207,9 @@ async function createWindow(){
   await window.loadURL(serverOrigin);
 }
 
-ipcMain.handle('desktop-window:close',event=>{
-  const window=BrowserWindow.fromWebContents(event.sender);
-  if(!window)return false;
-  window.close();
-  return true;
+ipcMain.on('desktop-window:close',event=>{
+  const window=BrowserWindow.fromWebContents(event.sender)??BrowserWindow.getFocusedWindow();
+  if(window&&!window.isDestroyed())window.close();
 });
 
 ipcMain.handle('desktop-window:set-expanded',(event,expanded)=>{
