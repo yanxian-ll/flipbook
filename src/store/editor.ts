@@ -68,14 +68,15 @@ export const useEditor=create<EditorState>((set,get)=>({
       return;
     }
     const contentIds=new Set(book.pages.slice(1).map(page=>page.id));
-    const selectedPages=[...new Set(state.selectedPages.filter(id=>contentIds.has(id)))];
     const activeId=book.pages[state.pageIndex]?.id;
+    const selectedPages=[...new Set(state.selectedPages.filter(id=>contentIds.has(id)))];
+    if(activeId&&contentIds.has(activeId)&&!selectedPages.includes(activeId))selectedPages.unshift(activeId);
+    if(pageId===activeId){set({selected:[]});return;}
     if(selectedPages.includes(pageId)){
-      if(pageId===activeId||selectedPages.length<=1)return;
-      set({selectedPages:selectedPages.filter(id=>id!==pageId)});
+      set({selected:[],selectedPages:selectedPages.filter(id=>id!==pageId)});
       return;
     }
-    set({pageIndex,selected:[],selectedPages:[...selectedPages,pageId]});
+    set({selected:[],selectedPages:[...selectedPages,pageId]});
   },
   updateElement(id,patch){get().change(b=>{const page=b.pages[get().pageIndex],e=page?.elements.find(e=>e.id===id);if(!e)return;if(frameIsFixed(page,e)){if(patch.assetId)e.assetId=patch.assetId;if(patch.crop)e.crop={x:Math.max(0,Math.min(1,patch.crop.x)),y:Math.max(0,Math.min(1,patch.crop.y)),zoom:Math.max(1,Math.min(4,patch.crop.zoom))};}else Object.assign(e,patch);});},
   addElement(element){get().change(b=>{b.pages[get().pageIndex].elements.push(element);});set({selected:[element.id]});},
