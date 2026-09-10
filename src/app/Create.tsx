@@ -90,6 +90,7 @@ export function Create(){
       setProgress('正在装订画册…');
       await repository.create(book,assetsRef.current);
       await repository.clearCreateDraft();
+      try{sessionStorage.setItem(`flipbook:auto-open-libraries:${book.id}`,'1');}catch{}
       navigate(`/editor/${book.id}`,{replace:true});
     }catch(cause){setStep(2);setError(friendlyError(cause));}
   }

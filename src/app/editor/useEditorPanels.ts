@@ -1,4 +1,4 @@
-import {useEffect,useState} from 'react';
+import {useEffect,useRef,useState} from 'react';
 import type {Book} from '../../domain/model';
 import type {PanelId} from '../../panels/EditorPanel';
 import {useEditor} from '../../store/editor';
@@ -9,6 +9,7 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
   const [photoDraft,setPhotoDraft]=useState<string[]>([]);
   const [photoLibraryOpen,setPhotoLibraryOpen]=useState(false);
   const [templateLibraryOpen,setTemplateLibraryOpen]=useState(false);
+  const autoOpenedBook=useRef<string|null>(null);
 
   useEffect(()=>{
     const page=book?.pages[pageIndex];if(!page)return;
@@ -16,6 +17,21 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
   },[pageIndex,book?.pages[pageIndex]?.id]);
 
   const sideLibraries=wide&&viewWidth>=DESKTOP_SIDE_LIBRARY_MIN_WIDTH;
+  useEffect(()=>{
+    if(!book||!sideLibraries||autoOpenedBook.current===book.id)return;
+    let shouldOpen=false;
+    try{
+      const key=`flipbook:auto-open-libraries:${book.id}`;
+      shouldOpen=sessionStorage.getItem(key)==='1';
+      if(shouldOpen)sessionStorage.removeItem(key);
+    }catch{}
+    if(!shouldOpen)return;
+    autoOpenedBook.current=book.id;
+    setPanel(null);
+    setPhotoLibraryOpen(true);
+    setTemplateLibraryOpen(true);
+  },[book?.id,sideLibraries]);
+
   function syncCoverPhotos(next:PanelId){
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
     if(next==='photos'&&currentPage?.type==='cover')setPhotoDraft(currentPage.elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!));

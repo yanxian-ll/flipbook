@@ -45,3 +45,23 @@
     width:fit-content!important;
   }
 }
+
+/* Material-library copy: keep the controls self-explanatory and remove the helper sentence. */
+.studio .editor-panel:has(.asset-library-manager) .panel-body>p.muted:first-child{
+  display:none;
+}
+
+/* On the front-cover page, use the shorter material-library title requested by the editor UI. */
+.studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2{
+  font-size:0!important;
+}
+.studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2::after{
+  content:'选择封面照片';
+  font-size:14px;
+  font-weight:600;
+}
+@media(min-width:1500px){
+  .studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2::after{
+    font-size:17px;
+  }
+}
