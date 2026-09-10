@@ -104,7 +104,7 @@ export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose
             {!assetCheckBusy&&preflight.issues.length>0&&<details><summary>查看检查结果</summary><div className="export-preflight-list">{preflight.issues.map(issue=><article key={issue.id} data-severity={issue.severity}><b>{issue.title}</b><p>{issue.detail}</p></article>)}</div></details>}
           </div>}
           {format==='mp4'&&<p className="export-hint">每组拼页作为一个视频画面，组间滑动切换。视频宽度最高 1080 px，保持所选相框比例。</p>}
-          {format==='share'&&<p className="export-hint">生成一个自包含 HTML。支持系统文件分享时会直接调起分享面板，否则下载网页文件。</p>}
+          {format==='share'&&<p className="export-hint">生成一个完全离线的单文件 HTML，页面图片与翻页组件都会内嵌。支持系统文件分享时会直接调起分享面板，否则下载网页文件。</p>}
           {format==='collage'&&selectedCount>pagesPerCollage&&<p className="export-hint">页数超过单张容量时，会生成多张拼图并打包为 ZIP。</p>}
           </fieldset>
         </div>
