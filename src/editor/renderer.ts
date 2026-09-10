@@ -12,11 +12,21 @@ export function elementProps(e:Element){return {id:e.id,x:e.x,y:e.y,width:e.widt
 export function textProps(e:Element){const style=[e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';return {...elementProps(e),text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:style,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
 export function frameClip(e:Element){return (ctx:Konva.Context)=>{ctx.beginPath();if(e.frameShape==='ellipse')ctx.ellipse(e.width/2,e.height/2,e.width/2,e.height/2,0,0,Math.PI*2);else ctx.rect(0,0,e.width,e.height);ctx.closePath();};}
 export function photoProps(e:Element,image:HTMLImageElement){const common={...elementProps(e),image,strokeWidth:0,strokeEnabled:false};if(e.fit==='contain'){const ratio=Math.min(e.width/image.naturalWidth,e.height/image.naturalHeight);return {...common,width:image.naturalWidth*ratio,height:image.naturalHeight*ratio};}return {...common,crop:imageCrop(e,image)};}
-export function pageTextureProps(image:HTMLImageElement,uploaded:boolean){
+export function pageTextureProps(image:HTMLImageElement,_uploaded:boolean){
   const sourceWidth=Math.max(1,image.naturalWidth||image.width||1);
-  const targetWidth=uploaded?420:240;
-  const patternScale=targetWidth/sourceWidth;
-  return {width:W,height:H,fillPatternImage:image,fillPatternRepeat:'repeat' as const,fillPatternScaleX:patternScale,fillPatternScaleY:patternScale,opacity:.55};
+  const sourceHeight=Math.max(1,image.naturalHeight||image.height||1);
+  const scale=Math.max(W/sourceWidth,H/sourceHeight);
+  const scaledWidth=sourceWidth*scale;
+  const scaledHeight=sourceHeight*scale;
+  return {
+    width:W,height:H,
+    fillPatternImage:image,
+    fillPatternRepeat:'no-repeat' as const,
+    fillPatternScaleX:scale,fillPatternScaleY:scale,
+    fillPatternX:(W-scaledWidth)/2,
+    fillPatternY:(H-scaledHeight)/2,
+    opacity:.55,
+  };
 }
 const images=new Map<string,Promise<HTMLImageElement>>();
 const imageBytes=new Map<string,number>();
