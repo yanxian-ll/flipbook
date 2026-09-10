@@ -21,6 +21,33 @@ const builtInCoverTemplates:CoverTemplate[]=[
   {id:'basic',name:'基础封面',slot:{x:80/W,y:100/H,width:1040/W,height:1300/H}},
   {id:'cutout',name:'镂空笔记本',slot:{x:414/W,y:360/H,width:372/W,height:498/H}},
 ];
+const assetThumbnailCache=new Map<string,Blob>();
+const assetThumbnailPending=new Map<string,Promise<Blob|undefined>>();
+const ASSET_THUMBNAIL_CACHE_LIMIT=160;
+async function assetThumbnail(id:string){
+  const hit=assetThumbnailCache.get(id);
+  if(hit){
+    assetThumbnailCache.delete(id);
+    assetThumbnailCache.set(id,hit);
+    return hit;
+  }
+  const pending=assetThumbnailPending.get(id);
+  if(pending)return pending;
+  const task=repository.getAsset(id).then(asset=>{
+    const blob=asset?.thumbnail;
+    if(blob){
+      assetThumbnailCache.set(id,blob);
+      while(assetThumbnailCache.size>ASSET_THUMBNAIL_CACHE_LIMIT){
+        const oldest=assetThumbnailCache.keys().next().value as string|undefined;
+        if(!oldest)break;
+        assetThumbnailCache.delete(oldest);
+      }
+    }
+    return blob;
+  }).finally(()=>assetThumbnailPending.delete(id));
+  assetThumbnailPending.set(id,task);
+  return task;
+}
 type EditorPanelProps={
   panel:PanelId;
   onClose:()=>void;
@@ -201,4 +228,4 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   </div><Modal wide open={customOpen} onClose={()=>setCustomOpen(false)} title={page.type==='cover'?'新增封面模板':'修改模板'} description={page.type==='cover'?'拖动和缩放封面照片区域，保存为新的封面模板':'直接拖动和缩放图框，保存为自己的模板'}><label className="field stack">模板名称<input value={customName} onChange={e=>setCustomName(e.target.value)}/></label><VisualTemplateEditor slots={customSlots} onChange={setCustomSlots} assetIds={pagePhotoIds} background={page.type==='cover'?page.background:page.templateBackground??page.background} overlay={page.type==='cover'?undefined:page.templateOverlay} texts={page.elements.filter(e=>e.type==='text')} maxSlots={page.type==='cover'?1:9}/>
 <ErrorMessage message={error}/><Button className="primary full" onClick={saveCustomTemplate}>保存并应用模板</Button></Modal></aside>;
 }
-function AssetTile({asset,selectionIndex,onClick,used=false,draggable=false,dragging=false,dragOver=false,onDragStart,onDragEnter,onDragOver,onDrop,onDragEnd}:{asset:Asset;selectionIndex:number;onClick:()=>void;used?:boolean;draggable?:boolean;dragging?:boolean;dragOver?:boolean;onDragStart?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnter?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDragOver?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDrop?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnd?:()=>void}){const [url,setUrl]=useState('');useEffect(()=>{let url='',active=true;void repository.getAsset(asset.id).then(a=>{if(a&&active){url=URL.createObjectURL(a.thumbnail);setUrl(url);}}).catch(()=>{});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[asset.id]);return <button draggable={draggable} className={`${selectionIndex?'asset-tile-selected':''} ${dragging?'asset-tile-dragging':''} ${dragOver?'asset-tile-drag-over':''}`.trim()} title={selectionIndex?`已选第 ${selectionIndex} 张 · 可拖动排序 · ${asset.name}`:used?`已使用 · ${asset.name}`:asset.name} aria-pressed={selectionIndex>0} onDragStart={onDragStart} onDragEnter={onDragEnter} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}><img src={url||undefined} alt={asset.name} loading="lazy" decoding="async"/>{selectionIndex>0&&<span className="asset-selection-index" aria-label={`第 ${selectionIndex} 张`}>{selectionIndex}</span>}{!selectionIndex&&used&&<span className="asset-usage-badge">已用</span>}</button>;}
+function AssetTile({asset,selectionIndex,onClick,used=false,draggable=false,dragging=false,dragOver=false,onDragStart,onDragEnter,onDragOver,onDrop,onDragEnd}:{asset:Asset;selectionIndex:number;onClick:()=>void;used?:boolean;draggable?:boolean;dragging?:boolean;dragOver?:boolean;onDragStart?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnter?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDragOver?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDrop?:(e:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnd?:()=>void}){const [url,setUrl]=useState('');useEffect(()=>{let url='',active=true;void assetThumbnail(asset.id).then(blob=>{if(blob&&active){url=URL.createObjectURL(blob);setUrl(url);}}).catch(()=>{});return()=>{active=false;if(url)URL.revokeObjectURL(url);};},[asset.id]);return <button draggable={draggable} className={`${selectionIndex?'asset-tile-selected':''} ${dragging?'asset-tile-dragging':''} ${dragOver?'asset-tile-drag-over':''}`.trim()} title={selectionIndex?`已选第 ${selectionIndex} 张 · 可拖动排序 · ${asset.name}`:used?`已使用 · ${asset.name}`:asset.name} aria-pressed={selectionIndex>0} onDragStart={onDragStart} onDragEnter={onDragEnter} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}><img src={url||undefined} alt={asset.name} loading="lazy" decoding="async"/>{selectionIndex>0&&<span className="asset-selection-index" aria-label={`第 ${selectionIndex} 张`}>{selectionIndex}</span>}{!selectionIndex&&used&&<span className="asset-usage-badge">已用</span>}</button>;}
