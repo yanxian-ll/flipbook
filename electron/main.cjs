@@ -21,6 +21,8 @@ const MIME_TYPES={
   '.woff2':'font/woff2',
 };
 
+const DEFAULT_RENDERER_PORT=41731;
+const RENDERER_PORT_FILE='renderer-port.txt';
 let server=null;
 let serverOrigin='';
 
@@ -31,11 +33,76 @@ function safeFilePath(root,pathname){
   return candidate===path.resolve(root)||candidate.startsWith(rootPrefix)?candidate:null;
 }
 
+function validPort(value){
+  const port=Number(value);
+  return Number.isInteger(port)&&port>=1024&&port<=65535?port:null;
+}
+
+function rendererPortFile(){
+  return path.join(app.getPath('userData'),RENDERER_PORT_FILE);
+}
+
+function readRememberedRendererPort(){
+  try{
+    if(!fs.existsSync(rendererPortFile()))return null;
+    return validPort(fs.readFileSync(rendererPortFile(),'utf8').trim());
+  }catch(error){
+    console.warn('Unable to read remembered renderer port.',error);
+    return null;
+  }
+}
+
+function findMostRecentLegacyRendererPort(){
+  const indexedDbRoot=path.join(app.getPath('userData'),'IndexedDB');
+  try{
+    if(!fs.existsSync(indexedDbRoot))return null;
+    const candidates=[];
+    for(const name of fs.readdirSync(indexedDbRoot)){
+      const match=/^http_127\.0\.0\.1_(\d+)\.indexeddb\.leveldb$/.exec(name);
+      if(!match)continue;
+      const port=validPort(match[1]);
+      if(!port)continue;
+      const fullPath=path.join(indexedDbRoot,name);
+      const stats=fs.statSync(fullPath);
+      candidates.push({port,modified:stats.mtimeMs});
+    }
+    candidates.sort((a,b)=>b.modified-a.modified);
+    return candidates[0]?.port??null;
+  }catch(error){
+    console.warn('Unable to inspect legacy desktop IndexedDB origins.',error);
+    return null;
+  }
+}
+
+function rememberRendererPort(port){
+  try{
+    fs.mkdirSync(app.getPath('userData'),{recursive:true});
+    fs.writeFileSync(rendererPortFile(),String(port),'utf8');
+  }catch(error){
+    console.warn('Unable to remember renderer port.',error);
+  }
+}
+
+function resolveRendererPort(){
+  const remembered=readRememberedRendererPort();
+  if(remembered)return remembered;
+
+  // Older desktop builds used server.listen(0), which created a different
+  // browser origin on every launch. Reuse the most recently touched legacy
+  // IndexedDB origin once so existing local books remain reachable.
+  const legacy=findMostRecentLegacyRendererPort();
+  const port=legacy??DEFAULT_RENDERER_PORT;
+  rememberRendererPort(port);
+  if(legacy)console.info(`Reusing legacy Flipbook Studio storage origin on port ${port}.`);
+  return port;
+}
+
 function startRendererServer(){
   const root=path.resolve(__dirname,'..','dist');
   if(!fs.existsSync(path.join(root,'index.html'))){
     throw new Error(`Desktop renderer is missing at ${root}. Run \`npm run build\` before starting Electron.`);
   }
+  const rendererPort=resolveRendererPort();
 
   return new Promise((resolve,reject)=>{
     server=http.createServer((request,response)=>{
@@ -64,14 +131,15 @@ function startRendererServer(){
       }
     });
 
-    server.once('error',reject);
-    server.listen(0,'127.0.0.1',()=>{
-      const address=server.address();
-      if(!address||typeof address==='string'){
-        reject(new Error('Unable to determine the local renderer port.'));
+    server.once('error',error=>{
+      if(error&&error.code==='EADDRINUSE'){
+        reject(new Error(`Flipbook Studio desktop storage port ${rendererPort} is already in use. Close the other Flipbook Studio instance or the program using this port, then try again.`));
         return;
       }
-      serverOrigin=`http://127.0.0.1:${address.port}`;
+      reject(error);
+    });
+    server.listen(rendererPort,'127.0.0.1',()=>{
+      serverOrigin=`http://127.0.0.1:${rendererPort}`;
       resolve(serverOrigin);
     });
   });
