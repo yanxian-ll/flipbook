@@ -108,7 +108,9 @@ type EditorFlipBookProps={
   book:Book;
   pageWidth:number;
   activeIndex:number;
+  interactionMode?:'spread'|'single';
   onFlip:(index:number)=>void;
+  onFlipState?:(state:string)=>void;
   onSelect:(index:number)=>void;
   onAddPage:()=>void;
   onTextEdit:()=>void;
@@ -127,7 +129,7 @@ class FlipBookBoundary extends Component<BoundaryProps,{failed:boolean}>{
   render(){return this.state.failed?this.props.fallback:this.props.children;}
 }
 
-function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage}:Omit<EditorFlipBookProps,'onFlip'>){
+function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage}:Omit<EditorFlipBookProps,'onFlip'|'onFlipState'|'interactionMode'>){
   const pageHeight=Math.round(pageWidth*1696/1200);
   if(activeIndex===0){
     return <div className="editor-pageflip-shell static-book-fallback is-cover" style={{width:pageWidth*2,height:pageHeight}}>
@@ -157,7 +159,7 @@ function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTex
 }
 
 function EditorFlipBookInner(
-  {book,pageWidth,activeIndex,onFlip,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage}:EditorFlipBookProps,
+  {book,pageWidth,activeIndex,interactionMode='spread',onFlip,onFlipState,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage}:EditorFlipBookProps,
   ref:ForwardedRef<EditorFlipBookHandle>
 ){
   const flip=useRef<any>(null);
@@ -176,6 +178,7 @@ function EditorFlipBookInner(
   }),[]);
   const hasSelectedElement=useEditor(state=>state.selected.length>0);
   const nativeFlipLocked=editingSurfaceHovered||hasSelectedElement;
+  const nativeFlipEnabled=interactionMode==='spread'&&!nativeFlipLocked;
   const safeWidth=Math.max(40,Math.floor(pageWidth));
   const pageHeight=Math.round(safeWidth*1696/1200);
   const imageScale=Math.max(.24,Math.min(.5,safeWidth/1200*1.15));
@@ -213,7 +216,7 @@ function EditorFlipBookInner(
   if(!book.pages.length)return fallback;
 
   return <FlipBookBoundary resetKey={resetKey} fallback={fallback}>
-    <div className={`editor-pageflip-shell ${displayedIndex===0?'is-cover':''} ${displayedIndex>=backIndex?'is-back-cover':''} ${nativeFlipLocked?'native-flip-locked':''}`} style={{width:safeWidth*2,height:pageHeight}}>
+    <div className={`editor-pageflip-shell ${displayedIndex===0?'is-cover':''} ${displayedIndex>=backIndex?'is-back-cover':''} ${nativeFlipLocked?'native-flip-locked':''} ${interactionMode==='single'?'single-flip-interaction':''}`} style={{width:safeWidth*2,height:pageHeight}}>
       <HTMLFlipBook
         key={resetKey}
         ref={flip}
@@ -233,13 +236,14 @@ function EditorFlipBookInner(
         showCover
         mobileScrollSupport
         clickEventForward
-        useMouseEvents={!nativeFlipLocked}
+        useMouseEvents={nativeFlipEnabled}
         swipeDistance={flipbookMotion.swipeDistance}
-        showPageCorners={!nativeFlipLocked}
+        showPageCorners={nativeFlipEnabled}
         disableFlipByClick
         startPage={Math.max(0,Math.min(lastReal,activeIndex))}
         className="editor-flip-book"
         style={{}}
+        onChangeState={(e:any)=>onFlipState?.(String(e.data??''))}
         onFlip={(e:any)=>{
           const index=Number(e.data);
           if(!Number.isFinite(index)||index<0)return;
@@ -254,8 +258,10 @@ function EditorFlipBookInner(
           <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false} priority={false}/>
         ])}
       </HTMLFlipBook>
-      {activeIndex>0&&<button className="editor-flip-nav-zone previous" aria-label="翻到上一跨页" onClick={()=>flipPrevSafely(flip.current?.pageFlip?.())}/>}
-      {activeIndex<lastReal&&<button className="editor-flip-nav-zone next" aria-label="翻到下一跨页" onClick={()=>flip.current?.pageFlip?.().flipNext?.(flipbookMotion.corner)}/>}
+      {interactionMode==='spread'&&<>
+        {activeIndex>0&&<button className="editor-flip-nav-zone previous" aria-label="翻到上一跨页" onClick={()=>flipPrevSafely(flip.current?.pageFlip?.())}/>}
+        {activeIndex<lastReal&&<button className="editor-flip-nav-zone next" aria-label="翻到下一跨页" onClick={()=>flip.current?.pageFlip?.().flipNext?.(flipbookMotion.corner)}/>}
+      </>}
     </div>
   </FlipBookBoundary>;
 }

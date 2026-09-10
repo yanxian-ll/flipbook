@@ -1,12 +1,10 @@
 import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
 import {useEffect,useRef,useState} from 'react';
 import {useNavigate,useParams} from 'react-router-dom';
-import {Grid2X2,Images,Palette,Plus,Sticker,Type} from 'lucide-react';
+import {Grid2X2,Images,Palette,Sticker,Type} from 'lucide-react';
 import {repository,friendlyError} from '../db/repository';
 import {useEditor} from '../store/editor';
-import {EditorCanvas} from '../editor/EditorCanvas';
 import {clearImageCache} from '../editor/renderer';
-import {PageThumbnail} from '../components/PageThumbnail';
 import {EditorFlipBook,type EditorFlipBookHandle} from '../components/EditorFlipBook';
 import {Button,Loading,ErrorMessage} from '../components/ui';
 import {EditorPanel,type PanelId} from '../panels/EditorPanel';
@@ -148,7 +146,7 @@ export function Editor(){
   if(loading)return <main className="phone-shell"><Loading/></main>;
   if(!book||!layout||error&&book.id!==bookId)return <main className="phone-shell"><ErrorMessage message={error}/><Button onClick={()=>navigate('/')}>返回书架</Button></main>;
 
-  const {page,neighborIndex,neighborPage,showSingleAdd,spreadUnitWidth,pageCanvasWidth,pageHeight,visualReverse,activeSide,pairSide,focusWindowWidth,focusTrackWidth,focusedShift}=layout;
+  const {page,neighborPage,showSingleAdd,spreadUnitWidth,pageCanvasWidth,pageHeight,visualReverse,focusWindowWidth,focusedShift}=layout;
   const fixed=selected?frameIsFixed(page,selected):false;
 
   return <main className={`phone-shell studio ${wide?'expanded':''} ${panels.bothSideOpen?'libraries-open':''} ${panels.photoSideOpen?'photo-library-open':''} ${panels.templateSideOpen?'template-library-open':''} ${panels.compactPanel==='page-background'?'page-background-open':''}`}>
@@ -186,7 +184,7 @@ export function Editor(){
             book={book}
             pageWidth={spreadUnitWidth}
             activeIndex={pageIndex}
-            onFlip={index=>{if(index<book.pages.length)useEditor.getState().setPage(index);}}
+            onFlip={pageNavigation.handleBookFlip}
             onSelect={selectPage}
             onAddPage={addPageAndOpenPhotos}
             onTextEdit={openTextEditor}
@@ -200,8 +198,10 @@ export function Editor(){
               book={book}
               pageWidth={spreadUnitWidth}
               activeIndex={0}
-              onFlip={index=>{if(index<book.pages.length)useEditor.getState().setPage(index);}}
-              onSelect={selectPage}
+              interactionMode="single"
+              onFlip={pageNavigation.handleBookFlip}
+              onFlipState={pageNavigation.handleFlipState}
+              onSelect={pageNavigation.navigateSinglePage}
               onAddPage={addPageAndOpenPhotos}
               onTextEdit={openTextEditor}
               onCrop={()=>panels.openTool('photos')}
@@ -209,11 +209,22 @@ export function Editor(){
               onBlankPage={()=>panels.openTool('photos')}
             />
             :<div className="focused-book-shell single-page-editor-shell" style={{width:focusWindowWidth,height:pageHeight}}>
-              <div ref={focusTrack} className="spread book-track focused-book-track" style={{width:focusTrackWidth,flexDirection:visualReverse?'row-reverse':'row',transform:`translateX(${focusedShift}px)`}}>
-                <div className={`active-page book-page book-page-${activeSide}`}><EditorCanvas page={page} width={pageCanvasWidth} onTextEdit={openTextEditor} onCrop={()=>panels.openTool('photos')} onImageSelect={()=>panels.openTool('photos')} onBackgroundClick={()=>panels.openTool('photos')}/></div>
-                {neighborPage&&<button className={`paired-page book-page book-page-${pairSide}`} aria-label={`编辑第 ${neighborIndex} 页`} style={{width:pageCanvasWidth}} onClick={()=>{selectPage(neighborIndex);if(!neighborPage.elements.some(element=>element.type==='image'))requestAnimationFrame(()=>panels.openTool('photos'));}}><PageThumbnail page={neighborPage} scale={.5} immediate/></button>}
-                {showSingleAdd&&<button className="paired-page book-page book-page-right empty-spread-page" aria-label="添加下一页" style={{width:pageCanvasWidth}} onClick={addPageAndOpenPhotos}><Plus size={28}/></button>}
-                {(neighborPage||showSingleAdd)&&<div className="spine-shadow"/>}
+              <div ref={focusTrack} className="book-track focused-book-track single-page-flip-track" style={{width:pageCanvasWidth*2,height:pageHeight,transform:`translateX(${focusedShift}px)`}}>
+                <EditorFlipBook
+                  ref={flipBook}
+                  book={book}
+                  pageWidth={pageCanvasWidth}
+                  activeIndex={pageIndex}
+                  interactionMode="single"
+                  onFlip={pageNavigation.handleBookFlip}
+                  onFlipState={pageNavigation.handleFlipState}
+                  onSelect={pageNavigation.navigateSinglePage}
+                  onAddPage={addPageAndOpenPhotos}
+                  onTextEdit={openTextEditor}
+                  onCrop={()=>panels.openTool('photos')}
+                  onImageSelect={()=>panels.openTool('photos')}
+                  onBlankPage={()=>panels.openTool('photos')}
+                />
               </div>
               {(neighborPage||showSingleAdd)&&<div className={`page-pan-zone ${visualReverse?'previous':'next'}`} style={{width:Math.max(72,pageCanvasWidth*.22)}} onPointerDown={event=>pageNavigation.startPan(visualReverse?'prev':'next',event)} onPointerMove={pageNavigation.movePan} onPointerUp={pageNavigation.endPan} onPointerCancel={pageNavigation.cancelPan} title={showSingleAdd?'拖动添加下一页':visualReverse?'拖动回到同一跨页左页':'拖动到同一跨页右页'}/>}
             </div>
@@ -223,7 +234,7 @@ export function Editor(){
         </div>}
       </div>
 
-      <EditorPreviewRail book={book} mode={zoomMode} flipBook={flipBook} onAddPage={addPageAndOpenPhotos} onRequestDelete={()=>setPageDeleteOpen(true)}/>
+      <EditorPreviewRail book={book} mode={zoomMode} flipBook={flipBook} onNavigatePage={pageNavigation.navigateSinglePage} onAddPage={addPageAndOpenPhotos} onRequestDelete={()=>setPageDeleteOpen(true)}/>
     </div>
 
     <nav className="editor-tools">{editorTools.map(([id,Icon,label])=>{
