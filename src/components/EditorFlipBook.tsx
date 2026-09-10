@@ -54,7 +54,7 @@ function FlipLeafInner(
   {book,index,kind,active,priority,width,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,onInteractionChange,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
-  if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-hidden/>;
+  if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" style={{backgroundColor:book.pages[0]?.background??'#f2efe4'}} aria-hidden><span className="cover-grain"/><span className="cover-spine"/></div>;
   if(kind==='blank')return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
   if(kind==='add')return <div ref={ref} className="editor-flip-page editor-flip-add">
     <button aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={28}/></button>
@@ -177,6 +177,7 @@ function EditorFlipBookInner(
 ){
   const flip=useRef<any>(null);
   const [editingSurfaceHovered,setEditingSurfaceHovered]=useState(false);
+  const [displayedIndex,setDisplayedIndex]=useState(activeIndex);
   const hasSelectedElement=useEditor(state=>state.selected.length>0);
   const nativeFlipLocked=editingSurfaceHovered||hasSelectedElement;
   const safeWidth=Math.max(40,Math.floor(pageWidth));
@@ -196,6 +197,7 @@ function EditorFlipBookInner(
   }),[lastReal]);
 
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
+  useEffect(()=>setDisplayedIndex(activeIndex),[activeIndex,resetKey]);
   const openCover=()=>flip.current?.pageFlip?.().flipNext?.();
   const leafProps={book,width:safeWidth,onSelect,onAddPage,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover:openCover,onInteractionChange:setEditingSurfaceHovered,scale:imageScale};
 
@@ -214,7 +216,7 @@ function EditorFlipBookInner(
   if(!book.pages.length)return fallback;
 
   return <FlipBookBoundary resetKey={resetKey} fallback={fallback}>
-    <div className={`editor-pageflip-shell ${activeIndex===0?'is-cover':''} ${nativeFlipLocked?'native-flip-locked':''}`} style={{width:safeWidth*2,height:pageHeight}}>
+    <div className={`editor-pageflip-shell ${displayedIndex===0?'is-cover':''} ${displayedIndex>=backIndex?'is-back-cover':''} ${nativeFlipLocked?'native-flip-locked':''}`} style={{width:safeWidth*2,height:pageHeight}}>
       <HTMLFlipBook
         key={resetKey}
         ref={flip}
@@ -243,7 +245,9 @@ function EditorFlipBookInner(
         style={{}}
         onFlip={(e:any)=>{
           const index=Number(e.data);
-          if(Number.isFinite(index)&&index>=0&&index<=lastReal)onFlip(index);
+          if(!Number.isFinite(index)||index<0)return;
+          setDisplayedIndex(index);
+          if(index<=lastReal)onFlip(index);
         }}
       >
         {Children.toArray([
