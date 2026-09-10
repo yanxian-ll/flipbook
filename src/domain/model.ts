@@ -20,15 +20,20 @@ export interface Page {
   elements: Element[]; layoutId?: string; order: number;
   templateOverlay?: string; templateBackground?: string; templateTextSchema?: number;
 }
-export interface CoverTemplate {id:string;name:string;slot:Slot}
+export interface CoverTemplate {id:string;name:string;slot?:Slot}
 export interface BookStyle {
   pageBackground:string;
   textColor:string;
   fontFamily:string;
 }
 export interface BackCover {
-  mode:'match-front'|'solid'|'custom';
+  /** Legacy field kept so existing local books and backups stay readable. */
+  mode?:'match-front'|'solid'|'custom';
+  /** Background styling is independent from the cover template. */
+  backgroundMode?:'match-front'|'custom';
   background:string;
+  /** Cover templates only describe whether/where a photo window exists. */
+  templateId?:string;
   assetId?:string;
   crop?:{x:number;y:number;zoom:number};
   text?:string;
@@ -49,6 +54,16 @@ export interface StoredAsset extends Asset { original: Blob; preview: Blob; thum
 export const W = 1200;
 export const H = 1696;
 export const uid = () => crypto.randomUUID();
+
+export const builtInCoverTemplates:CoverTemplate[]=[
+  {id:'plain',name:'纯色封面'},
+  {id:'basic',name:'基础大图',slot:{x:80/W,y:100/H,width:1040/W,height:1300/H}},
+  {id:'cutout',name:'中间小窗',slot:{x:414/W,y:360/H,width:372/W,height:498/H}},
+];
+
+export function coverTemplatesFor(book:Book){return [...builtInCoverTemplates,...(book.customCoverTemplates??[])];}
+export function coverTemplateFor(book:Book,id:string|undefined){return coverTemplatesFor(book).find(template=>template.id===id)??builtInCoverTemplates[2];}
+
 export function blankPage(order: number, background = '#eeeae3'): Page {
   return { id: uid(), type: order === 0 ? 'cover' : 'normal', background, elements: [], order };
 }
@@ -62,7 +77,7 @@ export function newBook(title: string, themeId: ThemeId, assets: Asset[] = []): 
   const cover = blankPage(0, themeId === 'scrapbook' ? '#f5ec30' : '#e8e2cf');
   if(assets[0]) cover.elements.push(imageElement(assets[0].id,{x:414,y:360,width:372,height:498}));
   cover.elements.push(textElement('TIME TO FLIPBOOK',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center',color:'#4a3f1a'}));
-  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3',bookStyle:{pageBackground:'#eeeae3',textColor:'#252525',fontFamily:'Domine'},backCover:{mode:'match-front',background:cover.background,text:'',textColor:'#4a3f1a'}};
+  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3',bookStyle:{pageBackground:'#eeeae3',textColor:'#252525',fontFamily:'Domine'},backCover:{mode:'match-front',backgroundMode:'match-front',background:cover.background,templateId:'plain',text:'',textColor:'#4a3f1a'}};
 }
 export function validateBook(value: unknown): asserts value is Book {
   const b = value as Book;
@@ -78,39 +93,43 @@ export function bookStyleFor(book:Book):BookStyle{
     fontFamily:book.bookStyle?.fontFamily??'Domine',
   };
 }
-export function backCoverFor(book:Book):BackCover{
+export function backCoverFor(book:Book){
   const configured=book.backCover;
+  const backgroundMode=configured?.backgroundMode??(configured?.mode==='match-front'||!configured?'match-front':'custom');
+  const templateId=configured?.templateId??(configured?.mode==='custom'?'cutout':'plain');
   return {
-    mode:configured?.mode??'match-front',
+    mode:configured?.mode??(backgroundMode==='match-front'?'match-front':templateId==='plain'?'solid':'custom'),
+    backgroundMode,
     background:configured?.background??book.pages[0]?.background??'#f2efe4',
+    templateId,
     assetId:configured?.assetId,
     crop:configured?.crop??{x:.5,y:.5,zoom:1},
     text:configured?.text??'',
     textColor:configured?.textColor??'#4a3f1a',
-  };
+  } as const;
 }
 export function backCoverPage(book:Book):Page{
   const cover=backCoverFor(book);
-  const background=cover.mode==='match-front'?(book.pages[0]?.background??cover.background):cover.background;
+  const background=cover.backgroundMode==='match-front'?(book.pages[0]?.background??cover.background):cover.background;
+  const template=coverTemplateFor(book,cover.templateId);
   const elements:Element[]=[];
-  if(cover.mode==='custom'&&cover.assetId){
+  if(template.slot&&cover.assetId){
     elements.push({
       id:`${book.id}:back-image`,type:'image',assetId:cover.assetId,
-      x:420,y:430,width:360,height:500,rotation:0,opacity:1,fit:'cover',
-      crop:cover.crop??{x:.5,y:.5,zoom:1},frameLocked:true,
+      x:template.slot.x*W,y:template.slot.y*H,width:template.slot.width*W,height:template.slot.height*H,
+      rotation:0,opacity:1,fit:'cover',crop:cover.crop,frameLocked:true,frameShape:template.slot.shape,
     });
   }
-  if(cover.mode==='custom'&&cover.text?.trim()){
+  if(cover.text.trim()){
     elements.push({
       id:`${book.id}:back-text`,type:'text',text:cover.text,
       x:180,y:1480,width:840,height:90,rotation:0,opacity:1,
       fontFamily:bookStyleFor(book).fontFamily,fontSize:30,fontWeight:400,
-      color:cover.textColor??bookStyleFor(book).textColor,align:'center',
+      color:cover.textColor,align:'center',
     });
   }
   return {id:`${book.id}:back-cover`,type:'normal',background,elements,order:book.pages.length};
 }
-
 
 const LEGACY_BRAND=['FLIP','IN'].join('');
 function replaceLegacyBrandText(value:string){
