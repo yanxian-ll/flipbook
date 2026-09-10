@@ -30,12 +30,11 @@ function defaultExpanded(){return typeof window==='undefined'?true:window.matchM
 type PreviewLeafProps={
   book:Book;
   page?:Page;
-  nearby:boolean;
   index:number;
   kind:'page'|'blank'|'back';
 };
 
-const PreviewLeafBase=forwardRef<HTMLDivElement,PreviewLeafProps>(({book,page,nearby,index,kind},ref)=>{
+const PreviewLeafBase=forwardRef<HTMLDivElement,PreviewLeafProps>(({book,page,index,kind},ref)=>{
   if(kind==='back'){
     const backPage=backCoverPage(book);
     return <div ref={ref} className="flip-page preview-back-cover" data-density="hard" aria-label="后封面">
@@ -54,11 +53,11 @@ const PreviewLeafBase=forwardRef<HTMLDivElement,PreviewLeafProps>(({book,page,ne
       <span className="preview-cover-spine"/>
     </div>;
   }
-  return <div ref={ref} className="flip-page" data-density="soft">{nearby?<PageThumbnail page={page} scale={.72} immediate alt={`第 ${index} 页`}/>:<div className="thumbnail-placeholder" style={{background:page.templateBackground??page.background,width:'100%',height:'100%'}}/>}</div>;
+  return <div ref={ref} className="flip-page" data-density="soft"><PageThumbnail page={page} scale={.72} immediate alt={`第 ${index} 页`}/></div>;
 });
 PreviewLeafBase.displayName='PreviewLeaf';
 const PreviewLeaf=memo(PreviewLeafBase,(prev,next)=>{
-  if(prev.kind!==next.kind||prev.index!==next.index||prev.nearby!==next.nearby||prev.page!==next.page)return false;
+  if(prev.kind!==next.kind||prev.index!==next.index||prev.page!==next.page)return false;
   if(prev.kind==='back')return prev.book.backCover===next.book.backCover&&prev.book.bookStyle===next.book.bookStyle&&prev.book.customCoverTemplates===next.book.customCoverTemplates&&prev.book.pages[0]?.background===next.book.pages[0]?.background;
   if(prev.index===0)return prev.book.coverTemplate===next.book.coverTemplate&&prev.book.customCoverTemplates===next.book.customCoverTemplates&&prev.book.pages[0]===next.book.pages[0];
   return true;
@@ -167,12 +166,13 @@ export function Preview(){
           swipeDistance={flipbookMotion.swipeDistance}
           showPageCorners
           disableFlipByClick={false}
+          renderOnlyPageLengthChange
           onFlip={event=>setIndex(Number(event.data)||0)}
         >
           {Children.toArray([
-            ...book.pages.map((page,pageIndex)=><PreviewLeaf key={page.id} book={book} page={page} index={pageIndex} nearby={Math.abs(pageIndex-index)<=5} kind="page"/>),
-            plan.needsFiller?<PreviewLeaf key="__preview_blank__" book={book} index={plan.fillerIndex} nearby={false} kind="blank"/>:null,
-            <PreviewLeaf key="__preview_back__" book={book} index={plan.backIndex} nearby={true} kind="back"/>
+            ...book.pages.map((page,pageIndex)=><PreviewLeaf key={page.id} book={book} page={page} index={pageIndex} kind="page"/>),
+            plan.needsFiller?<PreviewLeaf key="__preview_blank__" book={book} index={plan.fillerIndex} kind="blank"/>:null,
+            <PreviewLeaf key="__preview_back__" book={book} index={plan.backIndex} kind="back"/>
           ])}
         </HTMLFlipBook>
       </div>
