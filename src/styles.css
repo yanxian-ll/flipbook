@@ -1986,3 +1986,20 @@
   font-size:8px;
   line-height:1;
 }
+
+
+/* Large-book rendering containment */
+.virtual-asset-library{
+  contain:layout style paint;
+}
+.virtual-asset-row{
+  contain:layout paint;
+}
+.page-thumbnail-host{
+  contain:paint;
+}
+.editor-flip-distant-placeholder{
+  position:absolute;
+  inset:0;
+  min-height:0;
+}
