@@ -2,7 +2,7 @@
 
 interface Window {
   desktopWindow?: {
-    close:()=>Promise<boolean>;
+    close:()=>void;
     setExpanded:(expanded:boolean)=>Promise<{x:number;y:number;width:number;height:number}|null>;
   };
 }
