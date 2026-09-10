@@ -66,6 +66,13 @@ export function Editor(){
     requestAnimationFrame(()=>panels.openTool('photos'));
   }
   function openTextEditor(){
+    const state=useEditor.getState();
+    const activePage=state.book?.pages[state.pageIndex];
+    const activeElement=activePage?.elements.find(element=>state.selected.includes(element.id));
+    if(activeElement?.type==='sticker'){
+      panels.openTool('stickers');
+      return;
+    }
     panels.openTool('text');
     requestAnimationFrame(()=>requestAnimationFrame(()=>document.querySelector<HTMLTextAreaElement>('.editor-panel textarea[aria-label="文字内容"]')?.focus()));
   }
