@@ -1896,3 +1896,15 @@
   border-radius:var(--ui-radius-md);
   background:var(--ui-surface-muted);
 }
+
+
+.back-cover-settings-preview{
+  width:min(148px,58%);
+  aspect-ratio:1200/1696;
+  margin:12px auto 16px;
+  border-radius:3px 1px 1px 3px;
+  filter:drop-shadow(0 8px 12px #00000018);
+}
+.back-cover-settings-preview .book-back-cover{
+  box-shadow:none;
+}
