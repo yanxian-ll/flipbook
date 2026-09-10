@@ -77,7 +77,7 @@ function startRendererServer(){
   });
 }
 
-function compactContentSize(){
+function initialContentSize(){
   const {width,height}=screen.getPrimaryDisplay().workAreaSize;
   return {
     width:Math.min(430,Math.max(320,width-32)),
@@ -88,14 +88,18 @@ function compactContentSize(){
 async function createWindow(){
   if(!serverOrigin)await startRendererServer();
 
-  const contentSize=compactContentSize();
+  const contentSize=initialContentSize();
   const window=new BrowserWindow({
     width:contentSize.width,
     height:contentSize.height,
     useContentSize:true,
-    resizable:false,
-    maximizable:false,
-    fullscreenable:false,
+    minWidth:320,
+    minHeight:560,
+    resizable:true,
+    maximizable:true,
+    fullscreenable:true,
+    movable:true,
+    frame:false,
     show:false,
     backgroundColor:'#ffffff',
     autoHideMenuBar:true,

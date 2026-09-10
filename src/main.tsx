@@ -8,6 +8,8 @@ import './styles/tokens.css';
 import './styles.css';
 import './styles/app-shell.css';
 
+if(/Electron\//i.test(navigator.userAgent))document.documentElement.classList.add('desktop-app');
+
 const Create=lazy(()=>import('./app/Create').then(module=>({default:module.Create})));
 const Editor=lazy(()=>import('./app/Editor').then(module=>({default:module.Editor})));
 const Preview=lazy(()=>import('./app/Preview').then(module=>({default:module.Preview})));
