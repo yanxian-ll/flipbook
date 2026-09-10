@@ -23,6 +23,7 @@ export type ShareHtmlInput={
   showCover:boolean;
   coverTexture:string;
   backColor:string;
+  backPage:string;
   leafPlan:ShareLeafPlan;
   viewerConfig:ShareViewerConfig;
   libraryScript:string;
@@ -95,11 +96,12 @@ export function buildShareViewerScript(input:Omit<ShareHtmlInput,'title'|'librar
   const labels=serializeInlineJson(input.labels);
   const coverTexture=serializeInlineJson(input.coverTexture);
   const backColor=serializeInlineJson(input.backColor);
+  const backPage=serializeInlineJson(input.backPage);
   const leafPlan=serializeInlineJson(input.leafPlan);
   const viewerConfig=serializeInlineJson(input.viewerConfig);
 
   return `
-const pages=${pages},labels=${labels},showCover=${String(input.showCover)},coverTexture=${coverTexture},backColor=${backColor},leafPlan=${leafPlan},viewerConfig=${viewerConfig};
+const pages=${pages},labels=${labels},showCover=${String(input.showCover)},coverTexture=${coverTexture},backColor=${backColor},backPage=${backPage},leafPlan=${leafPlan},viewerConfig=${viewerConfig};
 const root=document.getElementById("book"),count=document.getElementById("count"),prev=document.getElementById("prev"),next=document.getElementById("next"),stage=document.getElementById("stage"),loadError=document.getElementById("load-error");
 const needsFiller=showCover&&leafPlan.needsFiller,backIndex=showCover?leafPlan.backIndex:-1;
 
@@ -142,7 +144,7 @@ function makeBlank(staticMode){
 }
 
 function makeBack(staticMode){
-  const leaf=makeLeaf("","后封面","hard",false,staticMode);
+  const leaf=makeLeaf(backPage,"后封面","hard",false,staticMode);
   leaf.dataset.back="true";
   leaf.style.backgroundColor=backColor;
   decorateCover(leaf,true);
