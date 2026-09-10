@@ -10,7 +10,7 @@ import {IconButton,Modal,Button,Loading,ErrorMessage} from '../components/ui';
 
 export function Bookshelf({creating=false}:{creating?:boolean}){
   const [books,setBooks]=useState<Book[]>([]),[loading,setLoading]=useState(true),[error,setError]=useState(''),[grid,setGrid]=useState(true),[index,setIndex]=useState(0),[deleting,setDeleting]=useState(false),[rename,setRename]=useState(false),[title,setTitle]=useState(''),[menu,setMenu]=useState(false),[transferring,setTransferring]=useState(false),[wide,setWide]=useState(true);
-  const [backupProgress,setBackupProgress]=useState<number|null>(null);
+  const [backupProgress,setBackupProgress]=useState<number|null>(null),[restoreProgress,setRestoreProgress]=useState<number|null>(null);
   const navigate=useNavigate();const startX=useRef(0),restoreInput=useRef<HTMLInputElement>(null);const current=books[Math.min(index,books.length-1)];
   async function refresh(){try{setBooks(await repository.list());}catch(e){setError(friendlyError(e));}finally{setLoading(false);}}
   useEffect(()=>{void initializeDemo().then(refresh).catch(e=>{setError(friendlyError(e));setLoading(false);});},[]);
@@ -30,13 +30,27 @@ export function Bookshelf({creating=false}:{creating?:boolean}){
     }catch(e){setError(friendlyError(e));}
     finally{setTransferring(false);setBackupProgress(null);}
   }
-  async function restore(files:FileList|null){const file=files?.[0];if(!file||transferring)return;setTransferring(true);setError('');try{await importBookBackup(file);setIndex(0);await refresh();}catch(e){setError(friendlyError(e));}finally{setTransferring(false);if(restoreInput.current)restoreInput.current.value='';}}
-  const backingUp=backupProgress!==null;
+  async function restore(files:FileList|null){
+    const file=files?.[0];if(!file||transferring)return;
+    setTransferring(true);setRestoreProgress(0);setError('');
+    let lastProgress=-1;
+    try{
+      await importBookBackup(file,progress=>{
+        const rounded=Math.round(progress);
+        if(rounded===lastProgress)return;
+        lastProgress=rounded;
+        setRestoreProgress(rounded);
+      });
+      setIndex(0);await refresh();
+    }catch(e){setError(friendlyError(e));}
+    finally{setTransferring(false);setRestoreProgress(null);if(restoreInput.current)restoreInput.current.value='';}
+  }
+  const backingUp=backupProgress!==null,restoring=restoreProgress!==null;
   return <main className={`phone-shell shelf ${wide?'expanded':''} ${creating?'behind-wizard':''}`}>
     <header className="shelf-header">
       <div className="view-toggle"><IconButton label="书架网格" active={grid} onClick={()=>setGrid(true)}><Grid2X2 size={17}/></IconButton><IconButton label="单本轮播" active={!grid} onClick={()=>setGrid(false)}><BookIcon size={17}/></IconButton></div>
       <div className="shelf-header-actions">
-        <IconButton label="恢复作品备份" disabled={transferring} onClick={()=>restoreInput.current?.click()}><ArchiveRestore size={17}/></IconButton>
+        <span style={{position:'relative',display:'inline-flex'}}><IconButton label={restoring?`正在恢复 ${restoreProgress}%`:'恢复作品备份'} disabled={transferring} onClick={()=>restoreInput.current?.click()}><ArchiveRestore size={17}/></IconButton>{restoring&&<span role="status" aria-live="polite" style={{position:'absolute',right:-8,top:-8,zIndex:2,minWidth:30,padding:'2px 5px',borderRadius:999,background:'#9bd7a5',color:'#173b20',fontSize:8,fontWeight:700,lineHeight:'13px',textAlign:'center',boxShadow:'0 1px 4px #0002',pointerEvents:'none'}}>{restoreProgress}%</span>}</span>
         {!grid&&<IconButton label="删除当前 Flipbook" disabled={!current||transferring} onClick={()=>setDeleting(true)}><Trash2 size={17}/></IconButton>}
         <IconButton label="设置与存储" onClick={()=>navigate('/settings')}><Settings size={17}/></IconButton>
         <IconButton label={wide?'收起工作区':'展开工作区'} onClick={()=>setWide(!wide)}>{wide?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</IconButton>
