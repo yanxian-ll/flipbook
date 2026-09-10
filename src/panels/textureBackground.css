@@ -60,6 +60,12 @@
 }
 
 @media(min-width:850px){
+  /* Texture editors float above the canvas. Do not reserve the legacy compact-panel gutter
+     unless a real photo/template side library is intentionally open. */
+  .studio.expanded:has(> .editor-panel.texture-background-panel):not(.photo-library-open):not(.template-library-open) .editor-workspace{
+    margin-left:0!important;
+    margin-right:0!important;
+  }
   .studio.expanded > .editor-panel.texture-background-panel{
     top:auto!important;
     bottom:92px!important;
