@@ -2,13 +2,21 @@
   "name": "flipbook-studio",
   "private": true,
   "version": "0.1.0",
+  "description": "Flipbook Studio photo book editor",
+  "author": "yanxian-ll",
   "type": "module",
+  "main": "electron/main.cjs",
   "scripts": {
     "dev": "vite --host 127.0.0.1 --port 5173 --strictPort",
     "build": "tsc -b && vite build",
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
-    "test": "vitest run"
+    "test": "vitest run",
+    "desktop:dev": "npm run build && npx --yes electron@44.3.0 electron/main.cjs",
+    "desktop:pack": "npm run build && npx --yes electron-builder@26.16.1 --dir --publish never",
+    "desktop:win": "npm run build && npx --yes electron-builder@26.16.1 --win nsis --x64 --publish never",
+    "desktop:mac": "npm run build && npx --yes electron-builder@26.16.1 --mac dmg --x64 --arm64 --publish never",
+    "desktop:linux": "npm run build && npx --yes electron-builder@26.16.1 --linux AppImage --x64 --publish never"
   },
   "dependencies": {
     "react": "^19.1.0", "react-dom": "^19.1.0", "react-router-dom": "^7.6.0",
