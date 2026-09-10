@@ -20,7 +20,7 @@ export function Settings(){
   const [stats,setStats]=useState<LocalDataStats>({books:0,assets:0,snapshots:0});
   const [storage,setStorage]=useState<{usage?:number;quota?:number}>({});
   const [busy,setBusy]=useState(false),[error,setError]=useState(''),[message,setMessage]=useState(''),[cleanupOpen,setCleanupOpen]=useState(false);
-  const [backupProgress,setBackupProgress]=useState<number|null>(null);
+  const [backupProgress,setBackupProgress]=useState<number|null>(null),[restoreProgress,setRestoreProgress]=useState<number|null>(null);
 
   async function refresh(){
     try{
@@ -51,18 +51,25 @@ export function Settings(){
   }
 
   async function restore(file:File|undefined){
-    if(!file||busy)return;setBusy(true);setError('');setMessage('');
+    if(!file||busy)return;setBusy(true);setRestoreProgress(0);setError('');setMessage('');
+    let lastProgress=-1;
+    const updateProgress=(progress:number)=>{
+      const rounded=Math.round(progress);
+      if(rounded===lastProgress)return;
+      lastProgress=rounded;
+      setRestoreProgress(rounded);
+    };
     try{
       if(file.name.endsWith('.flipbook-library-backup')){
-        const books=await importLibraryBackup(file);
+        const books=await importLibraryBackup(file,updateProgress);
         setMessage(`已恢复 ${books.length} 本画册。`);
       }else{
-        const book=await importBookBackup(file);
+        const book=await importBookBackup(file,updateProgress);
         setMessage(`已恢复“${book.title}”。`);
       }
       await refresh();
     }catch(cause){setError(friendlyError(cause));}
-    finally{setBusy(false);if(restoreInput.current)restoreInput.current.value='';}
+    finally{setBusy(false);setRestoreProgress(null);if(restoreInput.current)restoreInput.current.value='';}
   }
 
   async function cleanup(){
@@ -73,7 +80,7 @@ export function Settings(){
   }
 
   const usage=storage.usage??0,quota=storage.quota??0,ratio=quota?Math.min(100,usage/quota*100):0;
-  const backingUp=backupProgress!==null;
+  const backingUp=backupProgress!==null,restoring=restoreProgress!==null;
   return <main className="phone-shell settings-shell">
     <header className="settings-page-header"><IconButton label="返回书架" onClick={()=>navigate('/')}><ChevronLeft size={20}/></IconButton><div><h1>设置与存储</h1><p>本地数据、备份与快捷键</p></div><span/></header>
     <div className="settings-page-body">
@@ -95,7 +102,10 @@ export function Settings(){
             {backingUp&&<span className="backup-progress-fill" style={{width:`${backupProgress}%`}} aria-hidden/>}
             <span className="backup-progress-content"><Download size={15}/>{backingUp?`备份中 ${backupProgress}%`:'备份全部作品'}</span>
           </Button>
-          <Button disabled={busy} onClick={()=>restoreInput.current?.click()}><ArchiveRestore size={15}/>恢复备份</Button>
+          <Button className={`backup-progress-button ${restoring?'is-backing-up':''}`} disabled={busy} onClick={()=>restoreInput.current?.click()} aria-label={restoring?`正在恢复 ${restoreProgress}%`:'恢复备份'}>
+            {restoring&&<span className="backup-progress-fill" style={{width:`${restoreProgress}%`}} aria-hidden/>}
+            <span className="backup-progress-content"><ArchiveRestore size={15}/>{restoring?`恢复中 ${restoreProgress}%`:'恢复备份'}</span>
+          </Button>
         </div>
         <input ref={restoreInput} hidden type="file" accept=".flipbook-backup,.flipbook-library-backup,application/zip" onChange={event=>void restore(event.target.files?.[0])}/>
       </section>
