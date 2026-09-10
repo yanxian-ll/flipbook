@@ -23,10 +23,10 @@ export function Settings(){
 
   async function refresh(){
     try{
-      const [nextStats,estimate]=await Promise.all([
-        repository.localDataStats(),
-        navigator.storage?.estimate?.()??Promise.resolve({}),
-      ]);
+      const estimatePromise=navigator.storage?.estimate
+        ?navigator.storage.estimate()
+        :Promise.resolve({} as StorageEstimate);
+      const [nextStats,estimate]=await Promise.all([repository.localDataStats(),estimatePromise]);
       setStats(nextStats);
       setStorage({usage:estimate.usage,quota:estimate.quota});
     }catch(cause){setError(friendlyError(cause));}
