@@ -1,0 +1,60 @@
+import {describe,expect,it} from 'vitest';
+import {H,W,backCoverFor,backCoverPage,coverTemplateFor,coverTemplatesFor,newBook,type Asset} from './model';
+
+const photo:Asset={
+  id:'cover-photo',name:'cover.jpg',mimeType:'image/jpeg',width:1800,height:2400,
+  orientation:'portrait',storageKey:'cover-photo',createdAt:1,
+};
+
+describe('cover presentation model',()=>{
+  it('keeps legacy custom back covers readable',()=>{
+    const book=newBook('Legacy','editorial',[photo]);
+    book.backCover={mode:'custom',background:'#ffffff',assetId:photo.id,crop:{x:.2,y:.7,zoom:1.4},text:'THE END',textColor:'#333333'};
+    const normalized=backCoverFor(book);
+    expect(normalized.backgroundMode).toBe('custom');
+    expect(normalized.templateId).toBe('cutout');
+    const page=backCoverPage(book);
+    expect(page.background).toBe('#ffffff');
+    expect(page.elements.find(element=>element.type==='image')).toMatchObject({
+      assetId:photo.id,
+      x:414,
+      y:360,
+      width:372,
+      height:498,
+      crop:{x:.2,y:.7,zoom:1.4},
+    });
+  });
+
+  it('lets a no-photo template hide the photo without deleting the selection',()=>{
+    const book=newBook('Plain','editorial',[photo]);
+    book.backCover={
+      mode:'solid',backgroundMode:'custom',background:'#f4efe4',templateId:'plain',
+      assetId:photo.id,crop:{x:.5,y:.5,zoom:1},text:'',textColor:'#222222',
+    };
+    expect(backCoverFor(book).assetId).toBe(photo.id);
+    expect(backCoverPage(book).elements.some(element=>element.type==='image')).toBe(false);
+    expect(coverTemplateFor(book,'plain').slot).toBeUndefined();
+  });
+
+  it('uses the same cover template geometry for the back cover without changing its style',()=>{
+    const book=newBook('Shared template','editorial',[photo]);
+    book.backCover={
+      mode:'custom',backgroundMode:'custom',background:'#75a4e1',templateId:'basic',
+      assetId:photo.id,crop:{x:.5,y:.5,zoom:1},text:'BACK',textColor:'#ffffff',
+    };
+    const page=backCoverPage(book);
+    expect(page.background).toBe('#75a4e1');
+    expect(page.elements.find(element=>element.type==='image')).toMatchObject({
+      x:80,y:100,width:1040,height:1300,
+    });
+    expect(page.elements.find(element=>element.type==='text')).toMatchObject({text:'BACK',color:'#ffffff'});
+  });
+
+  it('keeps cover templates geometry-only',()=>{
+    const book=newBook('Templates','scrapbook',[photo]);
+    const templates=coverTemplatesFor(book);
+    expect(templates.map(template=>template.id)).toEqual(expect.arrayContaining(['plain','basic','cutout']));
+    expect(coverTemplateFor(book,'basic').slot).toEqual({x:80/W,y:100/H,width:1040/W,height:1300/H});
+    expect(coverTemplateFor(book,'plain')).not.toHaveProperty('background');
+  });
+});
