@@ -1,4 +1,4 @@
-import type {Book,Element} from '../domain/model';
+import {backCoverPage,type Book,type Element} from '../domain/model';
 import {cropRect} from '../domain/crop';
 import {layouts} from '../domain/layouts';
 import type {ExportFormat} from './exportBook';
@@ -20,7 +20,7 @@ export interface ExportCheckResult{
 }
 
 function unique(values:number[]){return [...new Set(values)].sort((a,b)=>a-b);}
-function pageName(index:number){return index===0?'封面':`第 ${index} 页`;}
+function pageName(index:number){return index===-1?'后封面':index===0?'封面':`第 ${index} 页`;}
 function pageList(indices:number[]){
   const names=unique(indices).map(pageName);
   if(names.length<=4)return names.join('、');
@@ -56,7 +56,9 @@ export function inspectExport(
   missingStoredAssetIds:Iterable<string>=[]
 ):ExportCheckResult{
   const selected=unique(indices.filter(index=>index>=0&&index<book.pages.length));
+  const includeBackCover=format==='share'&&selected.includes(0);
   const selectedSet=new Set(selected);
+  if(includeBackCover)selectedSet.add(-1);
   const metadata=new Map(book.assets.map(asset=>[asset.id,asset]));
   const storedMissing=new Set(missingStoredAssetIds);
   const missingMetadataPages:number[]=[];
@@ -92,6 +94,15 @@ export function inspectExport(
       }
       if(storedMissing.has(image.assetId))missingFilePages.push(index);
       if(imageNeedsMorePixels(image,asset,scale))lowResolutionPages.push(index);
+    }
+  }
+
+  if(includeBackCover){
+    for(const image of backCoverPage(book).elements.filter(element=>element.type==='image'&&element.assetId)){
+      const asset=metadata.get(image.assetId!);
+      if(!asset){missingMetadataPages.push(-1);continue;}
+      if(storedMissing.has(image.assetId!))missingFilePages.push(-1);
+      if(imageNeedsMorePixels(image,asset,scale))lowResolutionPages.push(-1);
     }
   }
 
@@ -146,10 +157,13 @@ export async function findMissingStoredAssetIds(
   getAsset:(id:string)=>Promise<unknown>
 ){
   const selected=new Set(indices.filter(index=>index>=0&&index<book.pages.length));
-  const ids=[...new Set(book.pages.flatMap((page,index)=>selected.has(index)
-    ?page.elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!)
-    :[]
-  ))];
+  const ids=[...new Set([
+    ...book.pages.flatMap((page,index)=>selected.has(index)
+      ?page.elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!)
+      :[]
+    ),
+    ...(selected.has(0)?backCoverPage(book).elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!):[]),
+  ])];
   const missing:string[]=[];
   await Promise.all(ids.map(async id=>{
     try{if(!await getAsset(id))missing.push(id);}
