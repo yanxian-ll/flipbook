@@ -20,6 +20,7 @@ const names:Record<PanelId,string>={photos:'上传素材',layouts:'选择排版'
 const colors=['#ffffff','#eeeae3','#f5ec30','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#1a1a1a'];
 const supportedTextFonts=['Domine','Arial','Georgia','KaiTi','STKaiti','cursive','sans-serif'] as const;
 const textPaletteColors=['#252525','#f3f0e8','#88786f','#b47d7d','#7f9483','#788da5'] as const;
+const tapePaletteColors=['#d9c9a8','#d9b8b2','#b8c8b8','#b8c5d2','#c8b8a8','#c7c3bd'] as const;
 const assetThumbnailCache=new Map<string,Blob>();
 const assetThumbnailPending=new Map<string,Promise<Blob|undefined>>();
 const ASSET_THUMBNAIL_CACHE_LIMIT=160;
@@ -121,11 +122,13 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const coverTemplateId=coverSide==='front'?book.coverTemplate:coverSide==='back'?back.templateId:undefined;
   const coverBackground=coverSide==='front'?book.pages[0].background:coverSide==='back'?(back.backgroundMode==='match-front'?book.pages[0].background:back.background):page.background;
   const selected=coverSide==='back'?undefined:page.elements.find(element=>s.selected.includes(element.id));
+  const selectedTape=selected?.type==='shape'&&!selected.shadow&&selected.width/Math.max(1,selected.height)>=3?selected:undefined;
 
   const initialPhotoIds=()=>coverTarget
     ?coverAssetId?[coverAssetId]:[]
     :[...new Set(page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id))];
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[count,setCount]=useState(0),[localPhotoIds,setLocalPhotoIds]=useState<string[]>(initialPhotoIds),[dragAssetId,setDragAssetId]=useState<string|null>(null),[dragOverAssetId,setDragOverAssetId]=useState<string|null>(null),[assetFilter,setAssetFilter]=useState<'all'|'used'|'unused'>('all'),[assetSort,setAssetSort]=useState<'recent'|'oldest'|'name'>('recent'),[assetQuery,setAssetQuery]=useState(''),[assetDeleteOpen,setAssetDeleteOpen]=useState(false);
+  const [tapeColor,setTapeColor]=useState<string>(tapePaletteColors[0]),[tapeOpacity,setTapeOpacity]=useState(.65);
   const input=useRef<HTMLInputElement>(null),suppressAssetClick=useRef(false),cancelUpload=useRef(false);
   const photoIds=coverTarget?localPhotoIds:(controlledPhotoIds??localPhotoIds);
   const setPhotoIds=(ids:string[])=>{
@@ -139,6 +142,12 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     if(!coverTarget)return;
     setLocalPhotoIds(coverAssetId?[coverAssetId]:[]);
   },[coverTarget,coverSide,coverAssetId]);
+
+  useEffect(()=>{
+    if(!selectedTape)return;
+    setTapeColor(normalizedHexColor(selectedTape.color));
+    setTapeOpacity(Math.max(.1,Math.min(1,selectedTape.opacity)));
+  },[selectedTape?.id,selectedTape?.color,selectedTape?.opacity]);
 
   function applyCoverPhoto(assetId:string|undefined){
     if(!coverSide)return;
@@ -365,6 +374,9 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const templateTexts=page.elements.filter((element):element is Element=>element.type==='text'&&!!element.templateTextKey);
   const update=(patch:Partial<Element>)=>{if(selected)s.updateElement(selected.id,patch);};
   const updateColor=(color:string)=>{if(selected)s.updateElement(selected.id,{color:normalizedHexColor(color)});};
+  const updateTapeColor=(color:string)=>{const next=normalizedHexColor(color);setTapeColor(next);if(selectedTape)s.updateElement(selectedTape.id,{color:next});};
+  const updateTapeOpacity=(opacity:number)=>{const next=Math.max(.1,Math.min(1,opacity));setTapeOpacity(next);if(selectedTape)s.updateElement(selectedTape.id,{opacity:next});};
+  const addTape=()=>s.addElement({id:uid(),type:'shape',x:280,y:180,width:460,height:90,rotation:-7,opacity:tapeOpacity,color:tapeColor});
   const addText=(text:string,size:number)=>{const style=book.bookStyle??{fontFamily:'Domine',textColor:'#252525'};s.addElement(textElement(text,{fontSize:size,fontFamily:style.fontFamily??'Domine',color:style.textColor??'#252525'}));};
   const layer=(direction:number)=>{if(!selected)return;s.change(draft=>{const elements=draft.pages[s.pageIndex].elements;const index=elements.findIndex(element=>element.id===selected.id);const [element]=elements.splice(index,1);elements.splice(Math.max(0,Math.min(elements.length,index+direction)),0,element);});};
   const coverLabel=coverSide==='back'?'后封面':'前封面';
@@ -449,12 +461,22 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         <p className="muted">给回忆加一点小装饰</p>
         {selected?.type==='sticker'&&<><p className="field-label">当前贴纸</p><ColorPaletteField value={selected.color} onChange={updateColor}/></>}
         <div className="sticker-grid">{['★','♡','✿','↗','✦','♥','☀','✈','✽','☻','❀','➜','✉','♫','☁','✧'].map(sticker=><button key={sticker} onClick={()=>s.addElement({...textElement(sticker,{fontSize:180,width:240,height:260,fontFamily:'Arial',color:textPaletteColors[3]}),type:'sticker'})}>{sticker}</button>)}</div>
-        <Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:280,y:180,width:460,height:90,rotation:-7,opacity:.65,color:'#ddd0a4'})}>添加纸胶带</Button><Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:140,y:250,width:800,height:1050,rotation:3,opacity:1,color:'#fff',shadow:true})}>添加拍立得底纸</Button>
+        <section className="tape-creator" aria-label="纸胶带">
+          <div className="tape-creator-row">
+            <button type="button" className="tape-preview-button" aria-label="添加纸胶带" title="添加纸胶带" onClick={addTape}><span className="tape-preview" style={{backgroundColor:tapeColor,opacity:tapeOpacity}}/></button>
+            <div className="tape-color-controls">
+              <input type="color" aria-label="纸胶带调色盘" value={tapeColor} onChange={event=>updateTapeColor(event.target.value)}/>
+              <span className="tape-color-swatches" aria-label="纸胶带常用颜色">{tapePaletteColors.map(color=><button key={color} type="button" aria-label={`使用纸胶带颜色 ${color}`} title={color} className={`tape-color-swatch ${normalizedHexColor(color)===tapeColor?'chosen':''}`} style={{backgroundColor:color}} onClick={()=>updateTapeColor(color)}/>)}</span>
+            </div>
+          </div>
+          <label className="tape-opacity-field"><span>不透明度</span><input type="range" min={.1} max={1} step={.05} value={tapeOpacity} onChange={event=>updateTapeOpacity(+event.target.value)}/><span>{Math.round(tapeOpacity*100)}%</span></label>
+        </section>
+        <Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:140,y:250,width:800,height:1050,rotation:3,opacity:1,color:'#fff',shadow:true})}>添加拍立得底纸</Button>
       </>)}
       {panel==='background'&&<WorkspaceBackgroundPanel/>}
       {panel==='book-style'&&<BookStylePanel/>}
       {panel==='page-background'&&<><p className="settings-intro">只修改当前内页的纸张底色和纹理。</p><label className="field">当前页面背景<input type="color" value={page.background} onChange={event=>s.change(draft=>{draft.pages[s.pageIndex].background=event.target.value;draft.pages[s.pageIndex].templateBackground=undefined;})}/></label><div className="swatches">{colors.map(color=><button key={color} aria-label={`背景 ${color}`} style={{backgroundColor:color}} className={page.background===color?'chosen':''} onClick={()=>s.change(draft=>{draft.pages[s.pageIndex].background=color;draft.pages[s.pageIndex].templateBackground=undefined;})}/>)}</div><p className="field-label">纸张与纹理</p><div className="background-grid">{['','bg-dots.jpg','bg-grid.jpg','bg2.jpg','bg3.jpg','bg4.jpg','bg5.jpg'].map((name,index)=><button key={name} className={page.pattern===name?'chosen':''} onClick={()=>s.change(draft=>{draft.pages[s.pageIndex].pattern=name||undefined;})} style={name?{backgroundImage:`url(/reference/${name})`}:{}}>{index===0?'纯色':['','波点','格纹','纸张','织物','纹理','牛皮纸'][index]}</button>)}</div></>}
-      {panel==='cover'&&<CoverSettingsPanel onPanel={onPanel}/>}
+      {panel==='cover'&&<CoverSettingsPanel onPanel={onPanel}/>} 
       {panel==='adjust'&&(coverSide==='back'?<p className="muted">后封面照片的位置和大小由封面模板决定；照片内容请在素材库中选择。</p>:selected?fixed?<><p className="muted">图框由模板固定。可以调整照片在框内的位置和缩放。</p>{(['x','y','zoom'] as const).map((key,index)=><label key={key} className="field">{['水平位置','垂直位置','缩放'][index]}<input type="range" min={key==='zoom'?1:0} max={key==='zoom'?4:1} step={.01} value={(selected.crop??{x:.5,y:.5,zoom:1})[key]} onChange={event=>update({crop:{...(selected.crop??{x:.5,y:.5,zoom:1}),[key]:+event.target.value}})}/></label>)}<Button onClick={()=>update({crop:{x:.5,y:.5,zoom:1}})}>重置照片</Button></>:<><label className="field">旋转<input type="range" min={-180} max={180} value={selected.rotation} onChange={event=>update({rotation:+event.target.value})}/><span>{Math.round(selected.rotation)}°</span></label><label className="field">透明度<input type="range" min={.05} max={1} step={.05} value={selected.opacity} onChange={event=>update({opacity:+event.target.value})}/></label><label className="field">锁定<input type="checkbox" checked={!!selected.locked} onChange={event=>update({locked:event.target.checked})}/></label><div className="segments"><Button onClick={()=>layer(-1)}><ArrowDown size={16}/>下移</Button><Button onClick={()=>layer(1)}><ArrowUp size={16}/>上移</Button></div>{selected.type==='image'&&<><label className="field">适配<select value={selected.fit??'cover'} onChange={event=>update({fit:event.target.value as 'cover'|'contain'})}><option value="cover">填充</option><option value="contain">完整显示</option></select></label><label className="field">阴影<input type="checkbox" checked={!!selected.shadow} onChange={event=>update({shadow:event.target.checked})}/></label></>}<div className="segments"><Button onClick={s.duplicateSelected}><Copy size={16}/>复制</Button><Button className="danger" onClick={s.deleteSelected}><Trash2 size={16}/>删除</Button></div></>:<p className="empty-panel">先在页面上选择一个元素</p>)}
     </div>
 
