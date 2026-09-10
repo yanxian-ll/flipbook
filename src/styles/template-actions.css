@@ -1,0 +1,26 @@
+/* Keep the three template actions on one row. The modify action is a sibling
+   of the existing action group, so the group is flattened into this local grid. */
+.panel-body:has(> .template-library-actions){
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  column-gap:8px;
+  align-content:start;
+}
+.panel-body:has(> .template-library-actions)>:not(.template-library-actions):not(.template-library-actions + .btn.full){
+  grid-column:1 / -1;
+}
+.template-library-actions{
+  display:contents;
+}
+.template-library-actions>.btn,
+.template-library-actions + .btn.full{
+  width:100%;
+  min-width:0;
+  margin-top:12px;
+  white-space:nowrap;
+}
+.template-library-actions + .btn.full,
+.template-library-actions + .btn.full:hover:not(:disabled){
+  background:var(--ui-accent);
+  color:var(--ui-surface);
+}
