@@ -286,6 +286,30 @@
   }
 }
 
+/* Keep the five bottom editor tools centered under the actual editing region.
+   Desktop side panels reserve horizontal space; the footer stays full-width while its
+   flex content follows the same visual center as the canvas. */
+@media(min-width:850px){
+  .studio.expanded .editor-tools{
+    padding-left:8px;
+    padding-right:8px;
+    transition:padding-left .25s ease,padding-right .25s ease;
+  }
+  .studio.expanded:has(> .editor-panel:not(.panel-left):not(.panel-right)):not(.page-background-open) .editor-tools{
+    padding-left:298px;
+  }
+  .studio.expanded.photo-library-open .editor-tools{
+    padding-left:308px;
+  }
+  .studio.expanded.template-library-open .editor-tools{
+    padding-right:308px;
+  }
+  .studio.expanded.page-background-open:not(.photo-library-open):not(.template-library-open) .editor-tools{
+    padding-left:8px;
+    padding-right:8px;
+  }
+}
+
 @media(min-width:1500px){
   .studio:has(.editor-cover-actions) .editor-panel:has(.asset-library-manager) header h2::after,
   .studio:not(:has(.editor-cover-actions)) .editor-panel:has(.asset-library-manager) header h2::after,
