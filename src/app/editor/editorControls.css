@@ -86,7 +86,7 @@
   box-shadow:0 2px 6px #00000010;
 }
 
-/* Keep the four most recently used text/sticker colors beside the native picker. */
+/* Keep the fixed six-color palette beside the native picker. */
 .studio .editor-panel .color-memory-field{
   justify-content:flex-start;
 }
@@ -117,6 +117,61 @@
 .studio .editor-panel .recent-color-swatch.chosen{
   outline:2px solid #222;
   outline-offset:1px;
+}
+
+/* Library footers stay pinned without a solid panel that hides photos/templates. */
+.studio .editor-panel:has(.asset-library-manager) .photo-library-actions{
+  background:transparent!important;
+  padding-top:10px;
+  padding-bottom:2px;
+  z-index:5;
+}
+.studio .editor-panel:has(.asset-library-manager) .photo-library-actions .btn{
+  background:rgba(255,255,255,.68);
+  border:1px solid rgba(208,208,203,.72);
+  box-shadow:0 2px 8px #0000000d;
+}
+.studio .editor-panel:has(.asset-library-manager) .photo-library-actions .btn.primary{
+  background:rgba(25,25,25,.82);
+  color:#fff;
+}
+.studio .editor-panel:has(.asset-library-manager) .photo-library-actions .btn.danger{
+  background:rgba(255,244,242,.68);
+}
+
+/* Until template deletion gets its own action, use the two existing footer buttons as
+   the requested fixed Create/Delete row. The delete slot is intentionally inert. */
+.studio .editor-panel:has(.all-layout-grid) .panel-body>.btn.full:not(:nth-last-of-type(-n+2)){
+  display:none;
+}
+.studio .editor-panel:has(.all-layout-grid) .panel-body>.btn.full:nth-last-of-type(2),
+.studio .editor-panel:has(.all-layout-grid) .panel-body>.btn.full:last-of-type{
+  position:sticky;
+  bottom:0;
+  z-index:5;
+  width:calc(50% - 4px);
+  margin-top:10px;
+  padding:11px 12px;
+  background:rgba(255,255,255,.68);
+  border:1px solid rgba(208,208,203,.72);
+  box-shadow:0 2px 8px #0000000d;
+  font-size:0;
+  vertical-align:bottom;
+}
+.studio .editor-panel:has(.all-layout-grid) .panel-body>.btn.full:nth-last-of-type(2){
+  margin-right:8px;
+  pointer-events:none;
+  opacity:.52;
+}
+.studio .editor-panel:has(.all-layout-grid) .panel-body>.btn.full:nth-last-of-type(2)::after{
+  content:'删除模板';
+  font-size:11px;
+  font-weight:600;
+}
+.studio .editor-panel:has(.all-layout-grid) .panel-body>.btn.full:last-of-type::after{
+  content:'创建模板';
+  font-size:11px;
+  font-weight:600;
 }
 
 /* Page texture is an auxiliary editor rather than a replacement for the photo/template libraries. */
