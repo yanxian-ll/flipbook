@@ -12,6 +12,12 @@ export function elementProps(e:Element){return {id:e.id,x:e.x,y:e.y,width:e.widt
 export function textProps(e:Element){const style=[e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';return {...elementProps(e),text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:style,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
 export function frameClip(e:Element){return (ctx:Konva.Context)=>{ctx.beginPath();if(e.frameShape==='ellipse')ctx.ellipse(e.width/2,e.height/2,e.width/2,e.height/2,0,0,Math.PI*2);else ctx.rect(0,0,e.width,e.height);ctx.closePath();};}
 export function photoProps(e:Element,image:HTMLImageElement){const common={...elementProps(e),image,strokeWidth:0,strokeEnabled:false};if(e.fit==='contain'){const ratio=Math.min(e.width/image.naturalWidth,e.height/image.naturalHeight);return {...common,width:image.naturalWidth*ratio,height:image.naturalHeight*ratio};}return {...common,crop:imageCrop(e,image)};}
+export function pageTextureProps(image:HTMLImageElement,uploaded:boolean){
+  const sourceWidth=Math.max(1,image.naturalWidth||image.width||1);
+  const targetWidth=uploaded?420:240;
+  const patternScale=targetWidth/sourceWidth;
+  return {width:W,height:H,fillPatternImage:image,fillPatternRepeat:'repeat' as const,fillPatternScaleX:patternScale,fillPatternScaleY:patternScale,opacity:.55};
+}
 const images=new Map<string,Promise<HTMLImageElement>>();
 const imageBytes=new Map<string,number>();
 const decodeQueue=createWorkQueue(3);
@@ -34,10 +40,11 @@ export async function renderPage(page:Page,options:{scale?:number;quality?:'thum
   const holder=document.createElement('div');const stage=new Konva.Stage({container:holder,width:W,height:H});const layer=new Konva.Layer();stage.add(layer);
   try{
     layer.add(new Konva.Rect({width:W,height:H,fill:visualPageBackground(page)}));
-    const pattern=page.patternAssetId
-      ?await loadAssetImage(page.patternAssetId,options.quality??'preview')
+    const uploadedTexture=!!page.patternAssetId;
+    const pattern=uploadedTexture
+      ?await loadAssetImage(page.patternAssetId!,options.quality??'preview')
       :page.pattern?await loadStaticImage(`/reference/${page.pattern}`):undefined;
-    if(pattern)layer.add(new Konva.Image({image:pattern,width:W,height:H,opacity:.55}));
+    if(pattern)layer.add(new Konva.Rect(pageTextureProps(pattern,uploadedTexture)));
     const ordered=page.templateOverlay?[...page.elements.filter(e=>e.type==='image'),...page.elements.filter(e=>e.type!=='image')]:page.elements;
     let overlayAdded=false;
     const addOverlay=async()=>{if(page.templateOverlay&&!overlayAdded){layer.add(new Konva.Image({image:await loadStaticImage(page.templateOverlay),width:W,height:H,listening:false}));overlayAdded=true;}};
