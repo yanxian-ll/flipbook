@@ -12,6 +12,11 @@ on:
       - 'package-lock.json'
       - '.github/workflows/desktop-release.yml'
   workflow_dispatch:
+    inputs:
+      version:
+        description: 'Release tag, for example v0.1.1'
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -54,6 +59,10 @@ jobs:
       - name: Install web dependencies
         run: npm ci
 
+      - name: Set release package version
+        if: github.event_name != 'pull_request'
+        run: npm version "${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}" --no-git-tag-version --ignore-scripts --allow-same-version
+
       - name: Typecheck
         run: npm run typecheck
 
@@ -78,7 +87,7 @@ jobs:
 
   release:
     name: Publish GitHub Release
-    if: startsWith(github.ref, 'refs/tags/')
+    if: github.event_name == 'workflow_dispatch' || startsWith(github.ref, 'refs/tags/')
     needs: build
     runs-on: ubuntu-latest
     permissions:
@@ -94,7 +103,9 @@ jobs:
       - name: Publish release assets
         uses: softprops/action-gh-release@v2
         with:
-          name: Flipbook Studio ${{ github.ref_name }}
+          tag_name: ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
+          target_commitish: ${{ github.sha }}
+          name: Flipbook Studio ${{ github.event_name == 'workflow_dispatch' && inputs.version || github.ref_name }}
           generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
