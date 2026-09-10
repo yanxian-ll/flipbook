@@ -7,7 +7,9 @@ import {useEditor} from '../store/editor';
 const colors=['#f5ec30','#eeeae3','#e48af5','#d9eb51','#75a4e1','#ff9658','#f6c9cc','#ffffff','#1a1a1a'];
 
 export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')=>void}){
-  const s=useEditor(),book=s.book!,cover=book.pages[0];
+  const book=useEditor(state=>state.book)!;
+  const change=useEditor(state=>state.change);
+  const cover=book.pages[0];
   const contextSide=useCoverContext(state=>state.side);
   const setSide=useCoverContext(state=>state.setSide);
   const side=contextSide??'front';
@@ -20,7 +22,7 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')
   const assetName=assetId?(book.assets.find(asset=>asset.id===assetId)?.name??'素材已缺失'):'未选择照片';
 
   function frontText(value:string,key:'text'|'color'){
-    s.change(draft=>{
+    change(draft=>{
       let element=draft.pages[0].elements.find(item=>item.type==='text');
       if(!element){
         element=textElement('TIME TO FLIPBOOK',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center'});
@@ -30,7 +32,7 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')
     });
   }
   function updateBack(patch:Partial<ReturnType<typeof backCoverFor>>){
-    s.change(draft=>{
+    change(draft=>{
       const current=backCoverFor(draft);
       const next={...current,...patch};
       draft.backCover={
@@ -65,9 +67,9 @@ export function CoverSettingsPanel({onPanel}:{onPanel:(panel:'photos'|'layouts')
       <div className="settings-section-heading"><b>前封面样式</b><small>颜色与标题优先于模板</small></div>
       <p className="settings-intro">模板只控制照片窗口的位置和大小；这里设置的封皮颜色、标题和照片效果不会因为更换模板而被覆盖。</p>
       <p className="field-label">封皮颜色</p>
-      <div className="swatches">{colors.map(color=><button key={color} aria-label={`封皮 ${color}`} className={cover.background===color?'chosen':''} style={{backgroundColor:color}} onClick={()=>s.change(draft=>{draft.pages[0].background=color;})}/>)}</div>
-      <label className="field">自定义封皮颜色<input type="color" value={cover.background} onChange={event=>s.change(draft=>{draft.pages[0].background=event.target.value;})}/></label>
-      {frontPhoto&&<label className="field">照片模糊度<input type="range" min={0} max={20} step={.5} value={frontPhoto.blur??0} onChange={event=>s.change(draft=>{const image=draft.pages[0].elements.find(element=>element.type==='image');if(image)image.blur=+event.target.value;})}/><span>{frontPhoto.blur??0}</span></label>}
+      <div className="swatches">{colors.map(color=><button key={color} aria-label={`封皮 ${color}`} className={cover.background===color?'chosen':''} style={{backgroundColor:color}} onClick={()=>change(draft=>{draft.pages[0].background=color;})}/>)}</div>
+      <label className="field">自定义封皮颜色<input type="color" value={cover.background} onChange={event=>change(draft=>{draft.pages[0].background=event.target.value;})}/></label>
+      {frontPhoto&&<label className="field">照片模糊度<input type="range" min={0} max={20} step={.5} value={frontPhoto.blur??0} onChange={event=>change(draft=>{const image=draft.pages[0].elements.find(element=>element.type==='image');if(image)image.blur=+event.target.value;})}/><span>{frontPhoto.blur??0} px</span></label>}
       <label className="field stack">封面标题<input value={frontTitle?.text??''} onChange={event=>frontText(event.target.value,'text')}/></label>
       <label className="field">标题颜色<input type="color" value={frontTitle?.color??'#4a3f1a'} onChange={event=>frontText(event.target.value,'color')}/></label>
     </>:<>
