@@ -349,7 +349,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     if(coverTarget||page.type==='cover')return;
     setError('');
     setCustomMode('edit-page');
-    setCustomSlots(page.elements.filter(element=>element.type==='image').map(element=>({x:element.x/W,y:element.y/H,width:element.width/W,height:element.height/H,shape:element.frameShape})));
+    setCustomSlots((page.layoutSlots??page.elements.filter(element=>element.type==='image').map(element=>({x:element.x/W,y:element.y/H,width:element.width/W,height:element.height/H,shape:element.frameShape}))).map(slot=>({...slot})));
     setCustomOpen(true);
   }
 
@@ -378,6 +378,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
           return replacement?[replacement]:[];
         });
         if(imageIndex<nextImages.length)currentPage.elements.push(...nextImages.slice(imageIndex));
+        currentPage.layoutSlots=customSlots.map(slot=>({...slot}));
       });
       setError('');
       setCustomOpen(false);
@@ -477,7 +478,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         <p className="muted">同一套封面模板可以分别用于前封面和后封面；两面的颜色、文字和照片选择彼此独立。</p>
       </>:<>
         <div className="photo-counts template-count-tabs" role="tablist" aria-label="按照片数量查看模板">{Array.from({length:9},(_,index)=>index+1).map(count=><button key={count} type="button" role="tab" aria-selected={layoutCount===count} className={layoutCount===count?'active':''} disabled={!layoutCounts.has(count)} onClick={()=>setLayoutCount(count)}>{count} 图</button>)}</div>
-        <div className="layout-grid all-layout-grid">{variants.map(({layout,preview})=><button key={layout.id} aria-label={`${layout.name}，${layout.slots.length} 图模板`} title={layout.name} className={page.layoutId===layout.id?'chosen':''} disabled={!layoutSourceIds.length} onClick={()=>s.layout(layout.id,layoutSourceIds)}><span className="layout-mini"><PageThumbnail page={preview} scale={.12}/></span><span className="layout-card-meta"><small>{layout.name}</small><em>{layout.slots.length} 图</em></span></button>)}</div>
+        <div className="layout-grid all-layout-grid">{variants.map(({layout,preview})=><button key={layout.id} aria-label={`${layout.name}，${layout.slots.length} 图模板`} title={layout.name} className={!page.layoutSlots&&page.layoutId===layout.id?'chosen':''} disabled={!layoutSourceIds.length} onClick={()=>s.layout(layout.id,layoutSourceIds)}><span className="layout-mini"><PageThumbnail page={preview} scale={.12}/></span><span className="layout-card-meta"><small>{layout.name}</small><em>{layout.slots.length} 图</em></span></button>)}</div>
         {!variants.length&&<p className="muted">当前分类暂时没有模板，可以切换其他照片数量。</p>}
         <div className="photo-selection-actions photo-library-actions template-library-actions">
           <Button className="danger" disabled><Trash2 size={15}/>删除模板</Button>
