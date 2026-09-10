@@ -10,7 +10,19 @@ export function VirtualAssetLibrary({batches,label,renderAsset}:{batches:AssetBa
   },[]);
   const columns=viewport.width<230?2:3,tile=(viewport.width-8*(columns-1))/columns;
   const {rows,height}=useMemo(()=>{let y=0;const rows:{top:number;height:number;batch?:AssetBatch;batchIndex?:number;assets?:Asset[]}[]=[];batches.forEach((batch,index)=>{rows.push({top:y,height:36,batch,batchIndex:index});y+=36;for(let i=0;i<batch.assets.length;i+=columns){rows.push({top:y,height:tile,assets:batch.assets.slice(i,i+columns)});y+=tile+8;}y+=12;});return {rows,height:y};},[batches,columns,tile]);
-  const start=viewport.top-200,end=viewport.top+viewport.height+200;
-  const visible=rows.filter(row=>row.top+row.height>=start&&row.top<=end);
-  return <div ref={host} className="virtual-asset-library" style={{height,position:'relative'}} aria-label={`素材库，共 ${batches.reduce((sum,b)=>sum+b.assets.length,0)} 张未选照片`}>{visible.map(row=>row.batch?<div key={row.batch.id} className="asset-batch-header" style={{position:'absolute',top:row.top,left:0,right:0,height:row.height}}><span>{label(row.batch,row.batchIndex!)}</span><small>{row.batch.assets.length} 张</small></div>:<div key={row.assets![0].id} className="asset-grid virtual-asset-row" style={{position:'absolute',top:row.top,left:0,right:0,height:tile,gridTemplateColumns:`repeat(${columns},1fr)`,margin:0}}>{row.assets!.map(asset=>renderAsset(asset))}</div>)}</div>;
+  const start=viewport.top-240,end=viewport.top+viewport.height+240;
+  let low=0,high=rows.length;
+  while(low<high){
+    const mid=(low+high)>>1,row=rows[mid];
+    if(row.top+row.height<start)low=mid+1;else high=mid;
+  }
+  const first=low;
+  low=first;high=rows.length;
+  while(low<high){
+    const mid=(low+high)>>1;
+    if(rows[mid].top<=end)low=mid+1;else high=mid;
+  }
+  const visible=rows.slice(first,low);
+  const total=useMemo(()=>batches.reduce((sum,b)=>sum+b.assets.length,0),[batches]);
+  return <div ref={host} className="virtual-asset-library" style={{height,position:'relative'}} aria-label={`素材库，共 ${total} 张照片`}>{visible.map(row=>row.batch?<div key={row.batch.id} className="asset-batch-header" style={{position:'absolute',top:row.top,left:0,right:0,height:row.height}}><span>{label(row.batch,row.batchIndex!)}</span><small>{row.batch.assets.length} 张</small></div>:<div key={row.assets![0].id} className="asset-grid virtual-asset-row" style={{position:'absolute',top:row.top,left:0,right:0,height:tile,gridTemplateColumns:`repeat(${columns},1fr)`,margin:0}}>{row.assets!.map(asset=>renderAsset(asset))}</div>)}</div>;
 }
