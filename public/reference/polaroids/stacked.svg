@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1250">
+  <defs>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="14" dy="20" stdDeviation="18" flood-color="#000" flood-opacity=".18"/></filter>
+    <mask id="frontMask"><rect x="220" y="210" width="700" height="920" rx="28" fill="white"/><rect x="285" y="315" width="560" height="560" rx="8" fill="black"/></mask>
+  </defs>
+  <g transform="rotate(-8 360 520)" filter="url(#shadow)">
+    <rect x="80" y="92" width="610" height="850" rx="26" fill="#faf8f1"/>
+    <rect x="135" y="170" width="500" height="500" rx="8" fill="#e7e7e4" stroke="#d0cec7" stroke-width="7"/>
+    <rect x="80" y="92" width="610" height="850" rx="26" fill="none" stroke="#e5e0d7" stroke-width="5"/>
+  </g>
+  <g filter="url(#shadow)">
+    <rect x="220" y="210" width="700" height="920" rx="28" fill="#fbfaf6" mask="url(#frontMask)"/>
+    <rect x="285" y="315" width="560" height="560" rx="8" fill="none" stroke="#d7d5cf" stroke-width="7"/>
+  </g>
+  <g transform="rotate(-7 360 210)"><rect x="210" y="145" width="300" height="102" rx="8" fill="#d9a39b"/><g fill="#fff5ef" opacity=".9"><path d="M255 183c-18-22-47 7 0 45 47-38 18-67 0-45z"/><path d="M330 183c-18-22-47 7 0 45 47-38 18-67 0-45z"/><path d="M405 183c-18-22-47 7 0 45 47-38 18-67 0-45z"/></g></g>
+  <g transform="translate(830 230) rotate(10)"><path d="M0 0c42-24 78 0 78 40v190c0 70-100 70-100 0V55c0-46 62-46 62 0v154c0 25-36 25-36 0V78" fill="none" stroke="#b28a3d" stroke-width="18" stroke-linecap="round"/><path d="M0 0c42-24 78 0 78 40v190c0 70-100 70-100 0V55c0-46 62-46 62 0v154c0 25-36 25-36 0V78" fill="none" stroke="#f5d77d" stroke-width="6" stroke-linecap="round"/></g>
+</svg>
