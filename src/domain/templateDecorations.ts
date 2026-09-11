@@ -54,5 +54,5 @@ export function effectiveTemplateOverlay(page:Page|undefined){
 
 export function attachDecorationsToSlots<T extends SlotLike>(slots:T[],decorations:TemplateDecoration[]):T[]{
   if(!slots.length)return slots;
-  return slots.map((slot,index)=>index===0?{...slot,decorations:clone(decorations)}:slot);
+  return slots.map((slot,index)=>index===0?({...slot,decorations:clone(decorations)} as T):slot);
 }
