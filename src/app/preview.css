@@ -4,22 +4,36 @@
   transition:max-width .25s,height .25s;
 }
 .preview-shell .flip-stage{
+  position:relative;
   flex:1;
   display:flex;
   align-items:center;
   justify-content:center;
   min-height:0;
-  padding:26px 18px 0;
+  padding:44px 18px 18px;
   overflow:hidden;
+  perspective:1500px;
 }
 .preview-shell .flip-book{
   position:relative;
   z-index:5;
-  transition:transform .28s cubic-bezier(.2,.72,.2,1);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex:0 0 auto;
+  width:min(820px,calc(100% - 24px));
+  height:min(580px,calc(100% - 70px));
+  min-width:0;
+  min-height:0;
+  transition:width .28s cubic-bezier(.2,.72,.2,1),height .28s cubic-bezier(.2,.72,.2,1),transform .28s cubic-bezier(.2,.72,.2,1);
   filter:none;
 }
+.preview-shell .flip-book .preview-pageflip-root{
+  width:100%;
+  height:100%;
+}
 .preview-shell .flip-book .stf__parent{
-  filter:drop-shadow(0 15px 18px #00000028) drop-shadow(0 28px 30px #00000016);
+  filter:drop-shadow(0 13px 16px #00000024) drop-shadow(0 24px 26px #00000013);
 }
 .preview-shell .flip-page{
   position:relative;
@@ -46,7 +60,7 @@
 .preview-shell .preview-cover-page.--simple,
 .preview-shell .preview-back-cover.--simple{
   border-radius:1px 3px 3px 1px;
-  box-shadow:inset -2px 0 3px #0002,inset 0 1px 2px #fff9,3px 4px 5px #0003,0 22px 34px #0003;
+  box-shadow:inset -2px 0 3px #0002,inset 0 1px 2px #fff9,3px 4px 5px #0003,0 18px 28px #00000024;
 }
 .preview-shell .preview-back-cover.--simple{
   border-radius:3px 1px 1px 3px;
@@ -94,24 +108,24 @@
   transform:scaleX(-1);
 }
 
-/* Preview-only display switch. The default PageFlip scene remains untouched;
-   the depth pages are passive thumbnails rendered behind it. */
 .preview-view-toggle{
   position:absolute;
-  top:9px;
-  right:18px;
+  top:10px;
+  left:50%;
   z-index:20;
   display:flex;
   gap:2px;
   padding:3px;
-  border:1px solid #0000000f;
+  transform:translateX(-50%);
+  border:1px solid #00000010;
   border-radius:10px;
-  background:#ffffffd9;
-  box-shadow:0 3px 12px #00000010;
-  backdrop-filter:blur(10px);
+  background:#ffffffdc;
+  box-shadow:0 3px 10px #0000000e;
+  backdrop-filter:blur(8px);
 }
 .preview-view-toggle button{
-  padding:6px 9px;
+  min-width:48px;
+  padding:6px 10px;
   border-radius:7px;
   color:#777;
   font-size:10px;
@@ -127,32 +141,39 @@
   color:#fff;
   box-shadow:0 2px 5px #0002;
 }
+
+/* Depth mode is only a passive preview decoration. PageFlip remains the single
+   interaction/rendering engine; at most eight lightweight neighbor leaves are
+   mounted here and only nearby pages receive rendered image URLs. */
 .preview-depth-stack{
   position:absolute;
-  inset:26px 18px 0;
-  z-index:1;
+  inset:44px 18px 18px;
+  z-index:2;
   pointer-events:none;
   perspective:1500px;
   transform-style:preserve-3d;
+  contain:layout paint style;
 }
 .preview-depth-leaf{
   position:absolute;
   top:50%;
-  width:min(48%,420px);
+  width:min(38%,360px);
   aspect-ratio:1200/1696;
   overflow:hidden;
-  border-radius:3px 7px 7px 3px;
-  background:#fff;
-  box-shadow:0 9px 18px #00000022,0 2px 4px #0000001f,inset 0 0 0 1px #00000012;
+  border-radius:4px 8px 8px 4px;
+  opacity:var(--stack-opacity);
+  box-shadow:0 7px 13px #0000001d,0 2px 3px #00000014,inset 0 0 0 1px #ffffff66;
   transform-style:preserve-3d;
   backface-visibility:hidden;
+  will-change:transform;
+  contain:layout paint style;
   transform:translateY(-50%) translateY(var(--stack-y)) translateX(var(--stack-offset)) translateZ(var(--stack-z)) rotateY(var(--stack-tilt)) scale(var(--stack-scale));
-  transition:transform .32s cubic-bezier(.2,.72,.2,1),opacity .24s ease;
+  transition:transform .26s cubic-bezier(.2,.72,.2,1),opacity .2s ease;
 }
 .preview-depth-leaf.left{
   right:50%;
   transform-origin:right center;
-  border-radius:7px 3px 3px 7px;
+  border-radius:8px 4px 4px 8px;
 }
 .preview-depth-leaf.right{
   left:50%;
@@ -169,16 +190,16 @@
   position:absolute;
   inset:0;
   pointer-events:none;
-  box-shadow:inset 0 0 0 1px #ffffff50;
+  box-shadow:inset 0 0 0 1px #ffffff55;
 }
 .preview-depth-leaf.left::after{
-  background:linear-gradient(90deg,#00000008,transparent 16%,transparent 88%,#00000020);
+  background:linear-gradient(90deg,#00000007,transparent 15%,transparent 88%,#00000025);
 }
 .preview-depth-leaf.right::after{
-  background:linear-gradient(90deg,#00000024,transparent 12%,transparent 92%,#00000008);
+  background:linear-gradient(90deg,#0000002b,transparent 13%,transparent 92%,#00000008);
 }
-.preview-shell .flip-stage.stacked-view .flip-book .stf__parent{
-  filter:drop-shadow(0 17px 20px #00000030) drop-shadow(0 30px 34px #0000001b);
+.preview-shell .flip-stage.depth-view .flip-book .stf__parent{
+  filter:drop-shadow(0 15px 18px #0000002b) drop-shadow(0 27px 30px #00000017);
 }
 
 .preview-shell .preview-navigation{
@@ -186,7 +207,7 @@
   justify-content:center;
   gap:20px;
   align-items:center;
-  margin-top:18px;
+  margin-top:9px;
   font-size:11px;
   color:#888;
 }
@@ -199,7 +220,7 @@
   text-align:center;
   color:#969696;
   font-size:10px;
-  margin:16px 0 28px;
+  margin:10px 0 20px;
 }
 @media(min-width:500px){
   .preview-shell{
@@ -213,31 +234,52 @@
     height:94dvh;
   }
   .preview-shell.expanded .flip-stage{
-    padding:28px 24px 0;
+    padding:50px 42px 22px;
+  }
+  .preview-shell.expanded .flip-book{
+    width:min(820px,calc(100% - 180px));
+    height:min(580px,calc(100% - 100px));
+  }
+  .preview-shell.expanded .flip-stage.depth-view .flip-book{
+    width:min(720px,calc(100% - 290px));
+    height:min(509px,calc(100% - 130px));
   }
   .preview-shell.expanded .preview-depth-stack{
-    inset:28px 24px 0;
+    inset:50px 42px 22px;
   }
   .preview-shell.expanded .flip-stage.is-cover .flip-book{
-    transform:translateX(-25%);
+    transform:translateX(-18%);
   }
   .preview-shell.expanded .flip-stage.is-back-cover .flip-book{
-    transform:translateX(25%);
+    transform:translateX(18%);
+  }
+  .preview-shell.expanded .flip-stage.depth-view.is-cover .flip-book{
+    transform:translateX(-13%);
+  }
+  .preview-shell.expanded .flip-stage.depth-view.is-back-cover .flip-book{
+    transform:translateX(13%);
   }
 }
 @media(max-width:640px){
   .preview-shell .flip-stage{
-    padding:14px 6px 0;
+    padding:40px 6px 10px;
+  }
+  .preview-shell .flip-book{
+    width:calc(100% - 12px);
+    height:min(530px,calc(100% - 48px));
   }
   .preview-shell .preview-depth-stack{
-    inset:14px 6px 0;
+    inset:40px 6px 10px;
+  }
+  .preview-depth-leaf{
+    width:min(43%,250px);
   }
   .preview-view-toggle{
-    top:6px;
-    right:8px;
+    top:7px;
   }
   .preview-view-toggle button{
-    padding:5px 7px;
+    min-width:44px;
+    padding:5px 8px;
     font-size:9px;
   }
   .preview-shell .preview-hint{
@@ -252,10 +294,18 @@
   border-radius:0;
 }
 .preview-shell:fullscreen .flip-stage{
-  padding-top:34px;
+  padding:54px 42px 28px;
+}
+.preview-shell:fullscreen .flip-book{
+  width:min(900px,calc(100% - 220px));
+  height:min(636px,calc(100% - 130px));
+}
+.preview-shell:fullscreen .flip-stage.depth-view .flip-book{
+  width:min(780px,calc(100% - 340px));
+  height:min(551px,calc(100% - 160px));
 }
 .preview-shell:fullscreen .preview-depth-stack{
-  top:34px;
+  inset:54px 42px 28px;
 }
 @media(prefers-reduced-motion:reduce){
   .preview-shell,.preview-shell .flip-book,.preview-depth-leaf{
