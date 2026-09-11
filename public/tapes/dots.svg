@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 720 180" preserveAspectRatio="none">
+  <defs>
+    <clipPath id="tear"><path d="M9 20 L34 11 L104 15 L179 9 L254 14 L329 10 L405 15 L480 9 L555 14 L631 8 L708 17 L714 36 L706 57 L715 78 L708 99 L716 120 L706 143 L711 160 L681 169 L605 165 L530 172 L454 166 L378 171 L303 165 L228 171 L152 166 L76 171 L11 159 L17 139 L8 120 L15 99 L7 80 L14 59 L6 39 Z"/></clipPath>
+    <pattern id="dots" width="66" height="52" patternUnits="userSpaceOnUse">
+      <circle cx="16" cy="14" r="7" fill="#fff" fill-opacity=".62"/>
+      <circle cx="49" cy="39" r="7" fill="#fff" fill-opacity=".62"/>
+    </pattern>
+    <filter id="paper" x="-10%" y="-30%" width="120%" height="160%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.02 0.14" numOctaves="3" seed="31" result="noise"/>
+      <feColorMatrix in="noise" type="matrix" values=".45 0 0 0 .3  0 .45 0 0 .3  0 0 .45 0 .3  0 0 0 .26 0"/>
+    </filter>
+  </defs>
+  <g clip-path="url(#tear)">
+    <rect width="720" height="180" fill="#a9cdea"/>
+    <rect width="720" height="180" fill="url(#dots)"/>
+    <rect width="720" height="180" fill="#6e7b83" opacity=".18" filter="url(#paper)"/>
+    <path d="M74 17 C101 45 117 61 150 80 C177 96 194 121 219 167" fill="none" stroke="#fff" stroke-opacity=".38" stroke-width="7"/>
+    <path d="M69 20 C96 48 114 65 146 84 C174 101 190 126 214 170" fill="none" stroke="#5f7180" stroke-opacity=".16" stroke-width="10"/>
+    <path d="M473 12 C455 42 463 65 488 84 C511 103 526 127 541 166" fill="none" stroke="#fff" stroke-opacity=".28" stroke-width="6"/>
+  </g>
+</svg>
