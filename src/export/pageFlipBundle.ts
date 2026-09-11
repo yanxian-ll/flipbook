@@ -36,6 +36,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   nav.appendChild(button);
 
   let rotated=false;
+  let rotateScale=1;
   let fitFrame=0;
   let topTimer=0;
 
@@ -57,12 +58,13 @@ const MOBILE_ROTATE_CONTROL=String.raw`
       rotateFrame.style.width=width+'px';
       rotateFrame.style.height=height+'px';
       if(!rotated){
+        rotateScale=1;
         rotateFrame.style.transform='';
         return;
       }
       const available=availableStageSize();
-      const scale=Math.max(.1,Math.min(1.15,available.width/height,available.height/width)*.97);
-      rotateFrame.style.transform='rotate(90deg) scale('+scale+')';
+      rotateScale=Math.max(.1,Math.min(1.15,available.width/height,available.height/width)*.97);
+      rotateFrame.style.transform='rotate(90deg) scale('+rotateScale+')';
     });
   }
 
@@ -79,6 +81,49 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     bookHost.style.transform='';
     bookHost.style.transformOrigin='50% 50%';
     stage.classList.remove('detail-zoom','pinching');
+  }
+
+  function offsetInsideFrame(element){
+    let x=0,y=0,node=element;
+    while(node&&node!==rotateFrame){
+      x+=Number(node.offsetLeft)||0;
+      y+=Number(node.offsetTop)||0;
+      node=node.offsetParent;
+    }
+    if(node!==rotateFrame)return {x:0,y:0};
+    return {x,y};
+  }
+
+  function rotatedPointFor(element,clientX,clientY){
+    const rect=rotateFrame.getBoundingClientRect();
+    const centerX=rect.left+rect.width/2;
+    const centerY=rect.top+rect.height/2;
+    const width=Math.max(1,rotateFrame.offsetWidth);
+    const height=Math.max(1,rotateFrame.offsetHeight);
+    const scale=Math.max(.0001,rotateScale);
+    const localX=(clientY-centerY)/scale+width/2;
+    const localY=height/2-(clientX-centerX)/scale;
+    const offset=offsetInsideFrame(element);
+    return {x:localX-offset.x,y:localY-offset.y};
+  }
+
+  const PageFlipCtor=window.St&&window.St.PageFlip;
+  if(PageFlipCtor&&PageFlipCtor.prototype&&!PageFlipCtor.prototype.__shareRotatePointerPatched){
+    const nativeLoad=PageFlipCtor.prototype.loadFromHTML;
+    PageFlipCtor.prototype.loadFromHTML=function(items){
+      const result=nativeLoad.call(this,items);
+      const ui=this.getUI&&this.getUI();
+      if(ui&&typeof ui.getMousePos==='function'&&!ui.__shareRotatePointerPatched){
+        const nativeGetMousePos=ui.getMousePos.bind(ui);
+        const distElement=ui.getDistElement&&ui.getDistElement();
+        ui.getMousePos=(clientX,clientY)=>rotated&&distElement
+          ?rotatedPointFor(distElement,clientX,clientY)
+          :nativeGetMousePos(clientX,clientY);
+        ui.__shareRotatePointerPatched=true;
+      }
+      return result;
+    };
+    PageFlipCtor.prototype.__shareRotatePointerPatched=true;
   }
 
   button.addEventListener('click',()=>{
