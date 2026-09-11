@@ -20,8 +20,11 @@ export function useWorkspaceExpansion(defaultWide=true){
       setWide(value=>!value);
       return;
     }
-    void bridge.toggleExpanded().then(expanded=>setWide(expanded)).catch(()=>{});
-  },[bridge]);
+    const next=!wide;
+    void bridge.setExpanded(next).then(bounds=>{
+      if(bounds)setWide(next);
+    }).catch(()=>{});
+  },[bridge,wide]);
 
   return {wide,toggleWide};
 }
