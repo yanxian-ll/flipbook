@@ -158,8 +158,7 @@ function expandedFromBounds(bounds){
 }
 
 function currentExpanded(window){
-  const bounds=window.isMaximized()?window.getNormalBounds():window.getBounds();
-  return expandedFromBounds(bounds);
+  return expandedFromBounds(window.getBounds());
 }
 
 function notifyExpanded(window,expanded=currentExpanded(window)){
@@ -168,7 +167,7 @@ function notifyExpanded(window,expanded=currentExpanded(window)){
 }
 
 function layoutBounds(window,expanded,baseBounds){
-  const current=baseBounds??(window.isMaximized()?window.getNormalBounds():window.getBounds());
+  const current=baseBounds??window.getBounds();
   const display=screen.getDisplayMatching(current);
   const area=display.workArea;
   const availableWidth=Math.max(320,area.width-32);
@@ -185,7 +184,6 @@ function layoutBounds(window,expanded,baseBounds){
 function applyExpanded(window,expanded,baseBounds){
   const next=Boolean(expanded);
   const bounds=layoutBounds(window,next,baseBounds);
-  if(window.isMaximized())window.unmaximize();
   window.setBounds(bounds,true);
   notifyExpanded(window,next);
   return bounds;
@@ -202,7 +200,7 @@ async function createWindow(){
     minWidth:320,
     minHeight:480,
     resizable:true,
-    maximizable:true,
+    maximizable:false,
     fullscreenable:true,
     movable:true,
     frame:false,
@@ -232,21 +230,13 @@ async function createWindow(){
 
   let lastReportedExpanded=currentExpanded(window);
   const reportExpanded=()=>{
-    if(window.isDestroyed()||window.isMaximized())return;
+    if(window.isDestroyed())return;
     const expanded=currentExpanded(window);
     if(expanded===lastReportedExpanded)return;
     lastReportedExpanded=expanded;
     notifyExpanded(window,expanded);
   };
   window.on('resize',reportExpanded);
-  window.on('maximize',()=>{
-    if(window.isDestroyed())return;
-    const normalBounds=window.getNormalBounds();
-    const next=!expandedFromBounds(normalBounds);
-    lastReportedExpanded=next;
-    window.unmaximize();
-    applyExpanded(window,next,normalBounds);
-  });
   window.webContents.on('did-finish-load',()=>{
     lastReportedExpanded=currentExpanded(window);
     notifyExpanded(window,lastReportedExpanded);
