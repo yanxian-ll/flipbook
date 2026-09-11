@@ -8,7 +8,7 @@ import {buildShareHtmlDocument} from './shareHtml';
 import {loadEmbeddedPageFlipBundle} from './pageFlipBundle';
 
 export type ExportFormat='collage'|'mp4'|'pdf'|'share';
-export type ExportOptions=CompositionOptions;
+export type ExportOptions=CompositionOptions&{compressionQuality?:number};
 export interface ExportArtifact{blob:Blob;extension:'jpg'|'zip'|'pdf'|'mp4'|'html';suffix:string}
 
 function clamp(value:number,min:number,max:number){return Math.max(min,Math.min(max,value));}
@@ -16,12 +16,26 @@ function wait(ms:number){return new Promise<void>(resolve=>window.setTimeout(res
 function nextFrame(){return new Promise<void>(resolve=>requestAnimationFrame(()=>resolve()));}
 function canvasBlob(canvas:HTMLCanvasElement,type:string,quality=.95){return new Promise<Blob>((resolve,reject)=>canvas.toBlob(blob=>blob?resolve(blob):reject(new Error('导出图片失败。')),type,quality));}
 async function blobToDataUrl(blob:Blob){return await new Promise<string>((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(reader.error??new Error('读取导出文件失败。'));reader.readAsDataURL(blob);});}
-async function renderJpegs(book:Book,indices:number[],scale:number,onProgress:(n:number)=>void,progressEnd=.78){
+async function transcodeBlob(blob:Blob,type:'image/jpeg'|'image/webp',quality:number){
+  const image=await createImageBitmap(blob);
+  try{
+    const canvas=document.createElement('canvas');
+    canvas.width=image.width;
+    canvas.height=image.height;
+    const ctx=canvas.getContext('2d');
+    if(!ctx)throw new Error('无法创建压缩画布。');
+    ctx.drawImage(image,0,0);
+    return await canvasBlob(canvas,type,quality);
+  }finally{image.close();}
+}
+function sourceQuality(scale:number){return scale<=1?'preview' as const:'original' as const;}
+async function renderSharePages(book:Book,indices:number[],scale:number,compressionQuality:number,onProgress:(n:number)=>void,progressEnd=.78){
   const blobs:Blob[]=[];
   for(let i=0;i<indices.length;i++){
     const page=presentationPage(book,indices[i]);
     if(!page)continue;
-    blobs.push(await renderPage(page,{scale,quality:'original',mimeType:'image/jpeg'}));
+    const source=await renderPage(page,{scale,quality:sourceQuality(scale),mimeType:'image/jpeg'});
+    blobs.push(await transcodeBlob(source,'image/webp',compressionQuality));
     onProgress((i+1)/indices.length*progressEnd);
   }
   return blobs;
@@ -32,15 +46,15 @@ async function zipJpegs(blobs:Blob[],indices:number[],prefix='page'){
   blobs.forEach((blob,i)=>zip.file(`${prefix}-${String(indices[i]+1).padStart(3,'0')}.jpg`,blob));
   return await zip.generateAsync({type:'blob'});
 }
-async function renderCompositions(book:Book,indices:number[],scale:number,onProgress:(n:number)=>void,options:ExportOptions){
+async function renderCompositions(book:Book,indices:number[],scale:number,onProgress:(n:number)=>void,options:ExportOptions,compressionQuality:number){
   const count=compositionGeometry(options).count,output:Blob[]=[];
   for(let offset=0;offset<indices.length;offset+=count){
     const images:ImageBitmap[]=[];
     try{
-      for(const index of indices.slice(offset,offset+count))images.push(await createImageBitmap(await renderPage(presentationPage(book,index),{scale:Math.min(scale,2),quality:'original',mimeType:'image/jpeg'})));
+      for(const index of indices.slice(offset,offset+count))images.push(await createImageBitmap(await renderPage(presentationPage(book,index),{scale:Math.min(scale,2),quality:sourceQuality(scale),mimeType:'image/jpeg'})));
       const canvas=document.createElement('canvas');
       drawComposition(canvas,images,options,Math.round(H*scale));
-      output.push(await canvasBlob(canvas,'image/jpeg'));
+      output.push(await canvasBlob(canvas,'image/jpeg',compressionQuality));
     }finally{images.forEach(image=>image.close());}
     onProgress(Math.min(1,(offset+count)/indices.length));
   }
@@ -59,12 +73,12 @@ function drawVideoPage(ctx:CanvasRenderingContext2D,image:ImageBitmap,width:numb
   ctx.drawImage(image,0,0,drawWidth,drawHeight);
   ctx.restore();
 }
-async function exportMp4(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions){
+async function exportMp4(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions,compressionQuality:number){
   const mimeType=mp4MimeType();
   if(!mimeType)throw new Error('当前浏览器暂不支持直接编码 MP4，请使用最新版 Safari、Chrome 或 Edge。');
   if(typeof HTMLCanvasElement.prototype.captureStream!=='function')throw new Error('当前浏览器暂不支持视频导出。');
-  const scale=clamp(.65+quality*.15,.8,1.1);
-  const blobs=await renderCompositions(book,indices,scale,n=>onProgress(n*.42),options);
+  const scale=clamp(quality,.35,1.1);
+  const blobs=await renderCompositions(book,indices,scale,n=>onProgress(n*.42),options,Math.max(.8,compressionQuality));
   const images=await Promise.all(blobs.map(blob=>createImageBitmap(blob)));
   if(!images.length)throw new Error('没有可导出的页面。');
   const canvas=document.createElement('canvas');
@@ -75,7 +89,8 @@ async function exportMp4(book:Book,indices:number[],quality:number,onProgress:(n
   if(!ctx){images.forEach(image=>image.close());throw new Error('当前浏览器无法创建视频画布。');}
   const stream=canvas.captureStream(30);
   const chunks:Blob[]=[];
-  const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond:8_000_000});
+  const videoBitsPerSecond=Math.round(800_000+Math.pow(compressionQuality,2)*8_000_000);
+  const recorder=new MediaRecorder(stream,{mimeType,videoBitsPerSecond});
   const completed=new Promise<Blob>((resolve,reject)=>{
     recorder.ondataavailable=event=>{if(event.data.size)chunks.push(event.data);};
     recorder.onerror=()=>reject(new Error('MP4 编码失败。'));
@@ -133,10 +148,10 @@ async function loadCoverTextureDataUrl(){
   }
 }
 
-async function exportSharePage(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions){
+async function exportSharePage(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions,compressionQuality:number){
   void options;
-  const scale=clamp(quality,1,1.6);
-  const blobs=await renderJpegs(book,indices,scale,n=>onProgress(n*.68),1);
+  const scale=clamp(quality,.35,3);
+  const blobs=await renderSharePages(book,indices,scale,compressionQuality,n=>onProgress(n*.68),1);
   const pages:string[]=[];
   for(let i=0;i<blobs.length;i++){
     pages.push(await blobToDataUrl(blobs[i]));
@@ -146,11 +161,12 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
   const labels=indices.map(index=>index===0?'封面':'第 '+index+' 页');
   const showCover=indices[0]===0;
   const back=backCoverFor(book);
-  const [pageFlipSource,coverTexture,backBlob]=await Promise.all([
+  const [pageFlipSource,coverTexture,backSource]=await Promise.all([
     loadEmbeddedPageFlipBundle(),
     loadCoverTextureDataUrl(),
-    showCover?renderPage(backCoverPage(book),{scale,quality:'original',mimeType:'image/jpeg'}):Promise.resolve(null),
+    showCover?renderPage(backCoverPage(book),{scale,quality:sourceQuality(scale),mimeType:'image/jpeg'}):Promise.resolve(null),
   ]);
+  const backBlob=backSource?await transcodeBlob(backSource,'image/webp',compressionQuality):null;
   const backPage=backBlob?await blobToDataUrl(backBlob):'';
   onProgress(.92);
 
@@ -176,21 +192,23 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
 export async function exportBook(book:Book,format:ExportFormat,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions={}):Promise<ExportArtifact>{
   const valid=[...new Set(indices)].filter(index=>index>=0&&index<book.pages.length).sort((a,b)=>a-b);
   if(!valid.length)throw new Error('请至少选择一页。');
+  const resolutionScale=clamp(quality,.35,3);
+  const compressionQuality=clamp(options.compressionQuality??.78,.35,.98);
   options={...defaultComposition,...options,pagesPerCollage:options.pagesPerCollage??(format==='collage'?4:1)};
   if(format==='share')options={...options,bookStyle:true};
   onProgress(0);
   if(format==='pdf'){
-    const blobs=await renderCompositions(book,valid,quality,n=>onProgress(n*.82),options);
+    const blobs=await renderCompositions(book,valid,resolutionScale,n=>onProgress(n*.82),options,compressionQuality);
     const {PDFDocument}=await import('pdf-lib');const pdf=await PDFDocument.create();
-    for(let i=0;i<blobs.length;i++){const image=await pdf.embedJpg(await blobs[i].arrayBuffer());const page=pdf.addPage([image.width/quality*.6,image.height/quality*.6]);page.drawImage(image,{x:0,y:0,width:page.getWidth(),height:page.getHeight()});onProgress(.82+(i+1)/blobs.length*.16);}
-    onProgress(1);return {blob:new Blob([new Uint8Array(await pdf.save())],{type:'application/pdf'}),extension:'pdf',suffix:'-book'};
+    for(let i=0;i<blobs.length;i++){const image=await pdf.embedJpg(await blobs[i].arrayBuffer());const page=pdf.addPage([image.width/resolutionScale*.6,image.height/resolutionScale*.6]);page.drawImage(image,{x:0,y:0,width:page.getWidth(),height:page.getHeight()});onProgress(.82+(i+1)/blobs.length*.16);}
+    onProgress(1);return {blob:new Blob([new Uint8Array(await pdf.save({useObjectStreams:true}))],{type:'application/pdf'}),extension:'pdf',suffix:'-book'};
   }
   if(format==='collage'){
-    const blobs=await renderCompositions(book,valid,quality,n=>onProgress(n*.94),options);
+    const blobs=await renderCompositions(book,valid,resolutionScale,n=>onProgress(n*.94),options,compressionQuality);
     if(blobs.length===1){onProgress(1);return {blob:blobs[0],extension:'jpg',suffix:'-composition'};}
     const zip=await zipJpegs(blobs,blobs.map((_,i)=>i),'composition');onProgress(1);return {blob:zip,extension:'zip',suffix:'-compositions'};
   }
-  if(format==='mp4')return {blob:await exportMp4(book,valid,quality,onProgress,options),extension:'mp4',suffix:'-live'};
-  return {blob:await exportSharePage(book,valid,quality,onProgress,options),extension:'html',suffix:'-share'};
+  if(format==='mp4')return {blob:await exportMp4(book,valid,resolutionScale,onProgress,options,compressionQuality),extension:'mp4',suffix:'-live'};
+  return {blob:await exportSharePage(book,valid,resolutionScale,onProgress,options,compressionQuality),extension:'html',suffix:'-share'};
 }
 export function downloadBlob(blob:Blob,name:string){const url=URL.createObjectURL(blob);const link=document.createElement('a');link.href=url;link.download=name;document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),60_000);}
