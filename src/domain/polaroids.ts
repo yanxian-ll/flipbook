@@ -43,10 +43,10 @@ export const polaroidTemplates:PolaroidTemplate[]=[
   },
   {
     id:'stacked',
-    name:'叠放相框',
-    description:'双层相纸与回形针',
+    name:'回形针爱心',
+    description:'单张相纸、金色回形针与背后爱心',
     overlay:'/reference/polaroids/stacked.svg',
-    photo:{x:.285,y:.252,width:.56,height:.448},
+    photo:{x:.16,y:.144,width:.68,height:.544},
     defaultSize:{width:560,height:700},
     rotation:2,
   },
