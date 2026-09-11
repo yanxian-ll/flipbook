@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState,type RefObject} from 'react';
 import {ChevronsLeft,ChevronsRight,Plus,Trash2} from 'lucide-react';
-import type {Book} from '../../domain/model';
+import {backCoverPage,type Book} from '../../domain/model';
 import {IconButton} from '../../components/ui';
 import {PageThumbnail} from '../../components/PageThumbnail';
 import type {EditorFlipBookHandle} from '../../components/EditorFlipBook';
@@ -27,13 +27,15 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
   const suppressClick=useRef(false);
   const selectedPageSet=new Set(selectedPages);
   const thumbnailSpreads=Array.from({length:Math.ceil(Math.max(0,book.pages.length-1)/2)},(_,index)=>1+index*2);
+  const backPage=backCoverPage(book);
+  const backActive=coverSide==='back';
 
   useEffect(()=>{
     const node=strip.current;if(!node)return;
     const selected=node.querySelector<HTMLElement>('.preview-page-active');if(!selected)return;
     const left=selected.getBoundingClientRect().left-node.getBoundingClientRect().left+node.scrollLeft-(node.clientWidth-selected.offsetWidth)/2;
     node.scrollTo({left:Math.max(0,left),behavior:Math.abs(left-node.scrollLeft)>node.clientWidth?'auto':'smooth'});
-  },[pageIndex,mode,book.pages.length]);
+  },[pageIndex,mode,book.pages.length,coverSide]);
 
   useEffect(()=>{
     const node=strip.current;if(!node){setOverflow(false);return;}
@@ -44,13 +46,13 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
     const track=node.querySelector<HTMLElement>('.page-strip-track');
     if(track)observer.observe(track);
     return()=>observer.disconnect();
-  },[pageIndex,mode,book.pages.length]);
+  },[pageIndex,mode,book.pages.length,coverSide]);
 
-  if(pageIndex===0)return null;
+  if(pageIndex===0&&!backActive)return null;
 
   const selectPreviewPage=(index:number,multi=false)=>{
     const state=useEditor.getState();
-    if(multi){
+    if(multi&&index<book.pages.length){
       const activeIndex=state.pageIndex;
       state.selectPreviewPage(index,true);
       if(useEditor.getState().pageIndex!==activeIndex)useEditor.setState({pageIndex:activeIndex});
@@ -58,6 +60,10 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
     }
     if(mode==='page'){
       onNavigatePage(index);
+      return;
+    }
+    if(index>=book.pages.length){
+      flipBook.current?.flipTo(index);
       return;
     }
     flipBook.current?.flipTo(index);
@@ -68,6 +74,7 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
       onNavigatePage(index);
       return;
     }
+    if(index>=book.pages.length){flipBook.current?.turnTo(index);return;}
     flipBook.current?.turnTo(index);
     useEditor.getState().selectPreviewPage(index,false);
   };
@@ -95,7 +102,7 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
       {thumbnailSpreads.map(start=>{
         const left=book.pages[start],right=book.pages[start+1];
         const leftSelected=selectedPageSet.has(left.id),rightSelected=!!right&&selectedPageSet.has(right.id);
-        const leftActive=pageIndex===start,rightActive=!!right&&pageIndex===start+1;
+        const leftActive=pageIndex===start&&!backActive,rightActive=!!right&&pageIndex===start+1&&!backActive;
         return <button
           key={left.id}
           draggable
@@ -120,14 +127,14 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
     </div></div>
     <button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={17}/></button>
     {deleteButton}
-    <IconButton label="跳到最后一页" disabled={pageIndex===book.pages.length-1} onClick={()=>jumpTo(book.pages.length-1)}><ChevronsRight size={18}/></IconButton>
+    <IconButton label="跳到最后一页" disabled={pageIndex===book.pages.length-1&&!backActive} onClick={()=>jumpTo(book.pages.length-1)}><ChevronsRight size={18}/></IconButton>
   </div>;
 
   return <div className={railClass} aria-label="单页预览">
-    <IconButton label="跳到第一页" disabled={pageIndex<=1} onClick={()=>jumpTo(Math.min(1,book.pages.length-1))}><ChevronsLeft size={18}/></IconButton>
+    <IconButton label="跳到第一页" disabled={pageIndex<=1&&!backActive} onClick={()=>jumpTo(Math.min(1,book.pages.length-1))}><ChevronsLeft size={18}/></IconButton>
     <div ref={strip} className="page-strip-scroll"><div className="page-strip-track">
       {book.pages.map((page,index)=>{
-        const selected=selectedPageSet.has(page.id),active=pageIndex===index;
+        const selected=selectedPageSet.has(page.id),active=!backActive&&pageIndex===index;
         return <button
           key={page.id}
           className={`single-page-thumb ${active?'selected':''} ${selected?'preview-page-selected':''} ${active?'preview-page-active':''}`}
@@ -136,9 +143,16 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
           onClick={event=>selectPreviewPage(index,index>0&&(event.ctrlKey||event.metaKey))}
         ><PageThumbnail page={page}/></button>;
       })}
+      <button
+        key={backPage.id}
+        className={`single-page-thumb back-cover-thumb ${backActive?'selected preview-page-active':''}`}
+        aria-label="后封面"
+        aria-current={backActive?'page':undefined}
+        onClick={()=>selectPreviewPage(book.pages.length,false)}
+      ><PageThumbnail page={backPage}/></button>
     </div></div>
     <button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={17}/></button>
     {deleteButton}
-    <IconButton label="跳到最后一页" disabled={pageIndex===book.pages.length-1} onClick={()=>jumpTo(book.pages.length-1)}><ChevronsRight size={18}/></IconButton>
+    <IconButton label="跳到后封面" disabled={backActive} onClick={()=>jumpTo(book.pages.length)}><ChevronsRight size={18}/></IconButton>
   </div>;
 }
