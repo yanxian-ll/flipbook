@@ -90,10 +90,16 @@ html.desktop-app .desktop-inline-close{
 }
 
 /* In compact desktop editing, a bottom sheet should reveal the canvas rather
-   than cover it. The lift follows viewport height and is capped so the book
-   stays below the top toolbar. */
+   than cover it. The view-mode switch follows the exact same lift so it stays
+   anchored to the book instead of floating over the newly opened panel. */
 html.desktop-app .studio:not(.expanded) .spread-area.panel-open{
   transform:translateY(clamp(-150px,-18vh,-110px));
+}
+html.desktop-app .studio:not(.expanded) .view-mode-switch{
+  transition:transform .25s;
+}
+html.desktop-app .studio:not(.expanded) .view-mode-switch:has(~ .spread-area.panel-open){
+  transform:translate(-50%,clamp(-150px,-18vh,-110px));
 }
 
 /* Electron frameless-window dragging. Child controls opt out below so native
