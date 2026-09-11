@@ -47,29 +47,43 @@ function coverFrameStyle(template:CoverTemplate):CSSProperties|undefined{
     borderRadius:slot.shape==='ellipse'?'50%':undefined,
   };
 }
+function coverCaptionStyle(text:Element|undefined):CSSProperties{
+  return {
+    color:text?.color??'#4a3f1a',
+    fontFamily:text?.fontFamily??'Domine',
+    fontSize:`${((text?.fontSize??26)/W)*100}cqw`,
+    fontWeight:text?.fontWeight??400,
+    fontStyle:text?.fontStyle??'normal',
+    lineHeight:text?.lineHeight??1.2,
+    letterSpacing:`${((text?.letterSpacing??0)/W)*100}cqw`,
+    textAlign:text?.align??'center',
+    whiteSpace:'pre-wrap',
+  };
+}
 
 function CoverContents({book,cropOverride,quality='thumbnail'}:{book:Book;cropOverride?:Element['crop'];quality?:'thumbnail'|'preview'}){
   const src=useCoverImage(book,quality);
   const cover=book.pages[0];
   const image=cover.elements.find(element=>element.type==='image');
+  const text=cover.elements.find(element=>element.type==='text');
   const template=coverTemplateFor(book,book.coverTemplate);
   const shownImage=image&&cropOverride?{...image,crop:cropOverride}:image;
   return <>
     <span className="cover-grain"/>
     <span className="cover-spine"/>
     {template.slot&&src&&<span className="cover-window" style={coverFrameStyle(template)}><img className="cover-window-image" src={src} alt="画册封面照片" style={coverCropStyle(shownImage)}/></span>}
-    <span className="cover-caption" style={{color:cover.elements.find(element=>element.type==='text')?.color}}>{cover.elements.find(element=>element.type==='text')?.text??'TIME TO FLIPBOOK'}</span>
+    <span className="cover-caption" style={coverCaptionStyle(text)}>{text?.text??'TIME TO FLIPBOOK'}</span>
   </>;
 }
 
 export function BookCoverVisual({book,className='',cropOverride}:{book:Book;className?:string;cropOverride?:Element['crop']}){
   const cover=book.pages[0],template=coverTemplateFor(book,book.coverTemplate);
-  return <div className={`book-cover ${coverTemplateClass(template)} ${className}`.trim()} style={{backgroundColor:cover.background}}><CoverContents book={book} cropOverride={cropOverride} quality="preview"/></div>;
+  return <div className={`book-cover ${coverTemplateClass(template)} ${className}`.trim()} style={{backgroundColor:cover.background,containerType:'inline-size'}}><CoverContents book={book} cropOverride={cropOverride} quality="preview"/></div>;
 }
 
 export function BookCover({book,onClick}:{book:Book;onClick?:()=>void}){
   const cover=book.pages[0],template=coverTemplateFor(book,book.coverTemplate);
-  return <button className={`book-cover ${coverTemplateClass(template)}`} style={{backgroundColor:cover.background}} onClick={onClick} aria-label={`打开 ${book.title}`}><CoverContents book={book}/></button>;
+  return <button className={`book-cover ${coverTemplateClass(template)}`} style={{backgroundColor:cover.background,containerType:'inline-size'}} onClick={onClick} aria-label={`打开 ${book.title}`}><CoverContents book={book}/></button>;
 }
 
 export function BookBackCoverVisual({book,className=''}:{book:Book;className?:string}){
