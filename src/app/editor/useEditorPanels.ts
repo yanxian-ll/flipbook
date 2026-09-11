@@ -108,7 +108,14 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
   }
   function openTool(next:PanelId){
     syncCoverPhotos(next);
+    const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
     if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(true);return;}
+    if(sideLibraries&&next==='layouts'&&currentPage?.type==='cover'){
+      setPanel(null);
+      setPhotoLibraryOpen(true);
+      setTemplateLibraryOpen(true);
+      return;
+    }
     if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(true);return;}
     const floatingTexture=next==='page-background'||next==='background';
     if(next!=='photos'&&next!=='layouts'&&!floatingTexture){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
