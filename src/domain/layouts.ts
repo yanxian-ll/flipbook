@@ -1,7 +1,8 @@
 import {type Asset,type Page,type Book,type ThemeId,blankPage,imageElement,textElement,W,H} from './model';
+import {attachDecorationsToSlots,builtinTemplateDecorations,hasVectorTemplateDecorations,type TemplateDecoration} from './templateDecorations';
 import catalog from './templates/reference-layouts.json';
 import overlayTexts from './templates/overlay-texts.json';
-export interface Slot {x:number;y:number;width:number;height:number;shape?:'ellipse'}
+export interface Slot {x:number;y:number;width:number;height:number;shape?:'ellipse';decorations?:TemplateDecoration[]}
 export interface LayoutText {x:number;y:number;width:number;height:number;key:string;text:string;fontFamily:string;fontSize:number;fontWeight:number;fontStyle?:'normal'|'italic';color:string;align:string;lineHeight:number;letterSpacing:number}
 export interface Layout {id:string;name:string;minImages:number;maxImages:number;slots:Slot[];family?:string;background?:string;overlay?:string;texts?:LayoutText[]}
 const auditedOverlayTexts=overlayTexts as Record<string,LayoutText[]>;
@@ -30,14 +31,18 @@ export function isSinglePhotoTemplateCaption(value:string){
   return (singlePhotoTemplateCaptions as readonly string[]).includes(value);
 }
 const hasAuditedOverlay=(id:string)=>Object.prototype.hasOwnProperty.call(auditedOverlayTexts,id);
-const cleanedOverlay=(layout:Layout)=>hasAuditedOverlay(layout.id)&&layout.overlay
-  ?`/reference/templates-clean/${layout.id}.webp`
-  :layout.overlay;
+const cleanedOverlay=(layout:Layout)=>hasVectorTemplateDecorations(layout.id)
+  ?undefined
+  :hasAuditedOverlay(layout.id)&&layout.overlay
+    ?`/reference/templates-clean/${layout.id}.webp`
+    :layout.overlay;
 export const layouts=(catalog as Layout[]).map(layout=>{
   const extra=auditedOverlayTexts[layout.id]??[];
   const existing=new Set((layout.texts??[]).map(text=>text.key));
+  const decorations=builtinTemplateDecorations(layout.id);
   return {
     ...layout,
+    slots:decorations.length?attachDecorationsToSlots(layout.slots,decorations):layout.slots,
     overlay:cleanedOverlay(layout),
     texts:[...(layout.texts??[]),...extra.filter(text=>!existing.has(text.key))]
   };
@@ -60,7 +65,9 @@ export function migrateBookTemplateTexts(value:Book){
     if(!layout)continue;
     const needsSchema=(source.templateTextSchema??0)<TEMPLATE_TEXT_SCHEMA;
     const needsOverlay=!!layout.overlay&&source.templateOverlay!==layout.overlay;
-    if(!needsSchema&&!needsOverlay)continue;
+    const decorations=builtinTemplateDecorations(source.layoutId);
+    const needsDecorations=decorations.length>0&&(!source.templateDecorations||source.templateDecorations.length===0||!!source.templateOverlay);
+    if(!needsSchema&&!needsOverlay&&!needsDecorations)continue;
     const page=writable().pages[index];
     if(needsSchema){
       if(source.layoutId==='tpl2_p1_left'){
@@ -77,6 +84,10 @@ export function migrateBookTemplateTexts(value:Book){
       page.templateTextSchema=TEMPLATE_TEXT_SCHEMA;
     }
     if(needsOverlay)page.templateOverlay=layout.overlay;
+    if(needsDecorations){
+      page.templateDecorations=decorations;
+      page.templateOverlay=undefined;
+    }
   }
   return {book,changed};
 }
@@ -122,7 +133,7 @@ export function applyLayout(page:Page,layout:Layout,assetIds?:string[]):Page {
     if(layout.id==='tpl2_p3_right'&&text.key==='caption'&&ids[0])return layoutTextElement({...text,text:singlePhotoTemplateCaption(ids[0],page.id)});
     return layoutTextElement(text);
   });
-  return {...page,layoutId:layout.id,layoutSlots:undefined,templateOverlay:layout.overlay,templateBackground:layoutVisualBackground(layout),templateTextSchema:TEMPLATE_TEXT_SCHEMA,pattern:undefined,patternAssetId:undefined,elements:[...images,...texts]};
+  return {...page,layoutId:layout.id,layoutSlots:undefined,templateOverlay:layout.overlay,templateDecorations:layout.slots[0]?.decorations?.map(item=>({...item})),templateBackground:layoutVisualBackground(layout),templateTextSchema:TEMPLATE_TEXT_SCHEMA,pattern:undefined,patternAssetId:undefined,elements:[...images,...texts]};
 }
 export function autoLayout(book:Book,assets:Asset[]):Book {
   const pages:Page[]=[book.pages[0]];
