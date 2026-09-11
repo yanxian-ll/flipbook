@@ -3,6 +3,7 @@ import {H,W,backCoverFor,bookStyleFor,coverTemplateFor,type Book,type CoverTempl
 import {dragCrop} from '../domain/crop';
 import {repository} from '../db/repository';
 import {useEditor} from '../store/editor';
+import {useCoverContext} from '../store/coverContext';
 
 function useAssetImage(assetId:string|undefined,quality:'thumbnail'|'preview'='thumbnail'){
   const [src,setSrc]=useState('');
@@ -47,8 +48,23 @@ function coverFrameStyle(template:CoverTemplate):CSSProperties|undefined{
     borderRadius:slot.shape==='ellipse'?'50%':undefined,
   };
 }
+function coverTextGeometry(text:Element|undefined):CSSProperties{
+  const x=text?.x??180,y=text?.y??1550,width=text?.width??840,height=text?.height??40;
+  return {
+    position:'absolute',
+    left:`${x/W*100}%`,
+    top:`${y/H*100}%`,
+    bottom:'auto',
+    width:`${width/W*100}%`,
+    minHeight:`${Math.max(height,(text?.fontSize??26)*(text?.lineHeight??1.2))/H*100}%`,
+    transform:`rotate(${text?.rotation??0}deg)`,
+    transformOrigin:'top left',
+    opacity:text?.opacity??1,
+  };
+}
 function coverCaptionStyle(text:Element|undefined):CSSProperties{
   return {
+    ...coverTextGeometry(text),
     color:text?.color??'#4a3f1a',
     fontFamily:text?.fontFamily??'Domine',
     fontSize:`${((text?.fontSize??26)/W)*100}cqw`,
@@ -58,6 +74,20 @@ function coverCaptionStyle(text:Element|undefined):CSSProperties{
     letterSpacing:`${((text?.letterSpacing??0)/W)*100}cqw`,
     textAlign:text?.align??'center',
     whiteSpace:'pre-wrap',
+    overflow:'visible',
+  };
+}
+function coverTextHitStyle(text:Element,selected:boolean):CSSProperties{
+  return {
+    ...coverTextGeometry(text),
+    zIndex:30,
+    minHeight:`${Math.max(text.height??0,(text.fontSize??26)*1.6)/H*100}%`,
+    padding:0,
+    border:0,
+    borderRadius:2,
+    background:'transparent',
+    cursor:'text',
+    boxShadow:selected?'0 0 0 1.5px #3185ff':'none',
   };
 }
 
@@ -119,6 +149,8 @@ export function BookCoverEditor({
   const template=coverTemplateFor(book,book.coverTemplate);
   const update=useEditor(state=>state.updateElement);
   const select=useEditor(state=>state.select);
+  const selectedIds=useEditor(state=>state.selected);
+  const textSelected=!!text&&selectedIds.includes(text.id);
   const [previewCrop,setPreviewCrop]=useState<Element['crop']>();
   const drag=useRef<{pointerId:number;x:number;y:number;crop:{x:number;y:number;zoom:number};moved:boolean}|null>(null);
   const asset=book.assets.find(asset=>asset.id===image?.assetId);
@@ -182,8 +214,14 @@ export function BookCoverEditor({
     {text&&<button
       type="button"
       className="cover-editor-text-hit"
+      style={coverTextHitStyle(text,textSelected)}
       aria-label="编辑封面文字"
-      onClick={e=>{e.stopPropagation();select(text.id);onTextEdit();}}
+      onClick={e=>{
+        e.stopPropagation();
+        useCoverContext.getState().setSide('front');
+        select(text.id);
+        onTextEdit();
+      }}
     />}
   </div>;
 }
