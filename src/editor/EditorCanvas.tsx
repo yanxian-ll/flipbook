@@ -4,10 +4,11 @@ import Konva from 'konva';
 import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
 import {effectiveTemplateOverlay,pageTemplateDecorations} from '../domain/templateDecorations';
+import {isPaperTapeElement} from '../domain/tapeStyles';
 import {useEditor} from '../store/editor';
 import {dragCrop,centeredCrop,type Crop} from '../domain/crop';
 import {frameIsFixed} from '../domain/layouts';
-import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetImage,loadStaticImage,frameClip,loadPageFonts,templateDecorationProps} from './renderer';
+import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetImage,loadStaticImage,loadPaperTapeImage,paperTapeImageProps,frameClip,loadPageFonts,templateDecorationProps} from './renderer';
 import {PolaroidCanvasElement} from './PolaroidCanvasElement';
 
 type ElementUpdate={id:string;patch:Partial<Element>};
@@ -105,7 +106,8 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
     const ids=keepGroup?selected:[element.id];
     const positions=ids.flatMap(id=>{
       const peer=page.elements.find(item=>item.id===id);
-      if(!peer||peer.locked||frameIsFixed(page,peer)||(peer.type!=='text'&&peer.type!=='sticker'))return [];
+      const movablePeer=peer&&(peer.type==='text'||peer.type==='sticker'||isPaperTapeElement(peer));
+      if(!peer||peer.locked||frameIsFixed(page,peer)||!movablePeer)return [];
       const peerNode=stage.current?.findOne(`#${id}`);
       return peerNode?[{id,x:peerNode.x(),y:peerNode.y()}]:[];
     });
@@ -294,13 +296,15 @@ function InlineTextEditor({element,scale,selectAll,onChange,onClose}:{element:El
 
 function Pattern({pattern,assetId}:{pattern?:string;assetId?:string}){const [image,setImage]=useState<HTMLImageElement>();useEffect(()=>{let alive=true;setImage(undefined);const task=assetId?loadAssetImage(assetId):pattern?loadStaticImage(`/reference/${pattern}`):null;if(task)void task.then(img=>{if(alive)setImage(img);}).catch(()=>{});return()=>{alive=false;};},[pattern,assetId]);return image?<CanvasImage {...pageTextureProps(image)} />:null;}
 function CanvasElement({element,fixed,selected,editing,onClick,onImageSelect,onDoubleClick,onCommit,onDragStart,onDragMove,onUpdate}:{element:Element;fixed:boolean;selected:boolean;editing:boolean;onClick:(multi:boolean)=>void;onImageSelect:()=>void;onDoubleClick:()=>void;onCommit:(node:Konva.Node)=>void;onDragStart:(node:Konva.Node)=>void;onDragMove:(node:Konva.Node)=>void;onUpdate:(patch:Partial<Element>)=>void}){
-  const [image,setImage]=useState<HTMLImageElement>();const [failed,setFailed]=useState(false);
+  const [image,setImage]=useState<HTMLImageElement>();const [failed,setFailed]=useState(false);const [tapeImage,setTapeImage]=useState<HTMLImageElement>();
   useEffect(()=>{let live=true;setImage(undefined);setFailed(false);if(element.assetId)void loadAssetImage(element.assetId).then(img=>{if(live)setImage(img);}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[element.assetId]);
-  const movable=element.type==='text'||element.type==='sticker';
+  useEffect(()=>{let live=true;setTapeImage(undefined);if(isPaperTapeElement(element))void loadPaperTapeImage(element.tapeStyle,element.color).then(img=>{if(live)setTapeImage(img);}).catch(()=>{});return()=>{live=false;};},[element.type,element.tapeStyle,element.color,element.shadow,element.width,element.height]);
+  const movable=element.type==='text'||element.type==='sticker'||isPaperTapeElement(element);
   const events={draggable:!element.locked,onClick:(e:Konva.KonvaEventObject<MouseEvent>)=>{onClick(e.evt.ctrlKey||e.evt.metaKey||e.evt.shiftKey);onImageSelect();},onTap:()=>{onClick(false);onImageSelect();},onDblClick:onDoubleClick,onDblTap:onDoubleClick,onMouseEnter:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable&&!element.locked)setStageCursor(e.target,'move');},onMouseLeave:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable)setStageCursor(e.target,'default');},onDragStart:(e:Konva.KonvaEventObject<DragEvent>)=>{onDragStart(e.target);if(movable)setStageCursor(e.target,'grabbing');},onDragMove:(e:Konva.KonvaEventObject<DragEvent>)=>onDragMove(e.target),onDragEnd:(e:Konva.KonvaEventObject<DragEvent>)=>{onCommit(e.target);if(movable)setStageCursor(e.target,'move');},onTransformEnd:(e:Konva.KonvaEventObject<Event>)=>onCommit(e.target)};
   if(element.type==='image'&&element.polaroidStyle)return <PolaroidCanvasElement element={element} image={image} failed={failed} selected={selected} onSelect={onClick} onDoubleClick={onDoubleClick} onCommit={onCommit} onDragStart={onDragStart} onDragMove={onDragMove} onUpdate={onUpdate}/>;
   if(element.type==='image'&&fixed)return <FixedPhoto element={element} image={image} selected={selected} onSelect={()=>onClick(false)} onActivate={onImageSelect} onDoubleClick={onDoubleClick} onUpdate={onUpdate}/>;
   if(element.type==='image')return image?<CanvasImage {...photoProps(element,image)} {...events}/>:<Rect {...elementProps(element)} fill={failed?'#f9b8b8':'#ddd'} {...events}/>;
+  if(isPaperTapeElement(element))return tapeImage?<CanvasImage {...paperTapeImageProps(element,tapeImage)} {...events}/>:<Rect {...elementProps(element)} cornerRadius={2} {...events}/>;
   if(element.type==='text'||element.type==='sticker')return <Text {...textProps(element)} {...events} visible={!editing}/>;
   return <Rect {...elementProps(element)} cornerRadius={element.cornerRadius??0} {...events}/>;
 }
