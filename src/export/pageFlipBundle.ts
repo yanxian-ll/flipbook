@@ -6,6 +6,8 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   const topBar=document.querySelector('.top');
   if(!nav||!stage||!bookHost||document.getElementById('rotate-view'))return;
 
+  document.querySelectorAll('.hint,.zoom-hint').forEach(node=>node.remove());
+
   const style=document.createElement('style');
   style.textContent=[
     'body{grid-template-rows:minmax(0,1fr) auto!important}',
