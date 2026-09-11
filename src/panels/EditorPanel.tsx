@@ -8,6 +8,7 @@ import {useCoverContext} from '../store/coverContext';
 import {useEditor} from '../store/editor';
 import {Button,IconButton} from '../components/ui';
 import {EditorPanel as EditorPanelCore} from './EditorPanelCore';
+import './coverPanelCompact.css';
 export type {PanelId} from './EditorPanelCore';
 
 const baseStickers=['★','♡','✿','↗','✦','♥','☀','✈','✽','☻','❀','➜','✉','♫','☁','✧'] as const;
@@ -73,7 +74,6 @@ function BackCoverTextPanel({onClose,placement,paired}:CoverPanelProps){
     };
   });
   return <PanelShell title="文字" onClose={onClose} placement={placement} paired={paired}>
-    <p className="muted">正在编辑后封面文字。贴纸等自由元素可以直接在后封面画布上选择和移动。</p>
     <label className="field stack">后封面文字<textarea aria-label="文字内容" rows={3} value={back.text} placeholder="例如：日期、地点或一句话" onChange={event=>update({text:event.target.value})}/></label>
     <label className="field">文字颜色<input type="color" value={back.textColor} onChange={event=>update({textColor:event.target.value})}/></label>
   </PanelShell>;
@@ -109,7 +109,6 @@ function BackCoverStickerPanel({onClose,placement,paired}:CoverPanelProps){
   }
 
   return <PanelShell title="贴纸" onClose={onClose} placement={placement} paired={paired}>
-    <p className="muted">贴纸会直接放到后封面。按住 Ctrl（macOS 为 ⌘）可以多选，再一起拖动或复制。</p>
     {selected&&<label className="field">当前贴纸颜色<input type="color" value={selected.color??'#b47d7d'} onChange={event=>updateSelected({color:event.target.value})}/></label>}
     <div className="sticker-grid">{baseStickers.map(sticker=><button key={sticker} type="button" onClick={()=>addSticker(sticker)}>{sticker}</button>)}</div>
     <p className="field-label">Cake / Birthday</p>
