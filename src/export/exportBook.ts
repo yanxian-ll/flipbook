@@ -187,21 +187,64 @@ async function loadWorkspaceBackgroundCss(book:Book){
   return `html,body{background-color:${color}}`;
 }
 
-function tuneShareViewerHtml(html:string,workspaceCss:string){
+export function tuneShareViewerHtml(html:string,workspaceCss:string){
   const autoplayDelay='const autoplayDelay=Math.max(3600,(Number(viewerConfig.flippingTime)||620)+2400);';
-  const fastAutoplay='const autoplayDelay=200,autoplayFlipDuration=180;';
+  const slowerAutoplay='const autoplayDelay=400,autoplayFlipDuration=360;';
+  const domBindings='const root=document.getElementById("book"),count=document.getElementById("count"),prev=document.getElementById("prev"),next=document.getElementById("next"),autoplay=document.getElementById("autoplay"),stage=document.getElementById("stage"),bookHost=document.getElementById("book-host"),loadError=document.getElementById("load-error");';
+  const domBindingsWithCovers='const root=document.getElementById("book"),count=document.getElementById("count"),prev=document.getElementById("prev"),next=document.getElementById("next"),autoplay=document.getElementById("autoplay"),frontCover=document.getElementById("front-cover"),backCoverButton=document.getElementById("back-cover"),stage=document.getElementById("stage"),bookHost=document.getElementById("book-host"),loadError=document.getElementById("load-error");';
+  const needsFiller='const needsFiller=showCover&&leafPlan.needsFiller,backIndex=showCover?leafPlan.backIndex:-1;';
+  const coverVisibility=needsFiller+'\nfrontCover.hidden=!showCover;backCoverButton.hidden=!showCover;';
+  const navigationVars='let advance=()=>false,retreat=()=>false,canAdvance=()=>false;';
+  const navigationVarsWithCovers='let advance=()=>false,retreat=()=>false,canAdvance=()=>false,jumpFront=()=>false,jumpBack=()=>false;';
+  const autoplayBinding='autoplay.onclick=()=>autoPlaying?stopAutoplay():startAutoplay();';
+  const coverBindings=autoplayBinding+'\nfrontCover.onclick=()=>{stopAutoplay();jumpFront();};\nbackCoverButton.onclick=()=>{stopAutoplay();jumpBack();};';
+  const singleStatic='  canAdvance=()=>false;\n  refreshAutoplayAvailability();';
+  const singleStaticWithCovers='  canAdvance=()=>false;\n  frontCover.disabled=true;\n  backCoverButton.disabled=true;\n  refreshAutoplayAvailability();';
+  const staticState='    prev.disabled=staticIndex<=0;\n    next.disabled=showCover?staticIndex>=backIndex:(staticIndex+2>=pages.length);\n    refreshAutoplayAvailability();';
+  const staticStateWithCovers='    prev.disabled=staticIndex<=0;\n    next.disabled=showCover?staticIndex>=backIndex:(staticIndex+2>=pages.length);\n    frontCover.disabled=!showCover||staticIndex===0;\n    backCoverButton.disabled=!showCover||staticIndex===backIndex;\n    refreshAutoplayAvailability();';
+  const staticActions='  advance=staticNext;\n  retreat=staticPrev;\n  canAdvance=()=>!next.disabled;';
+  const staticActionsWithCovers=[
+    '  advance=staticNext;',
+    '  retreat=staticPrev;',
+    '  canAdvance=()=>!next.disabled;',
+    '  jumpFront=()=>{if(!showCover)return false;staticIndex=0;renderStatic();return true;};',
+    '  jumpBack=()=>{if(!showCover)return false;staticIndex=backIndex;renderStatic();return true;};',
+  ].join('\n');
+  const flipState='    prev.disabled=index<=0;\n    next.disabled=showCover?index>=backIndex:(index+2>=pages.length);\n    root.classList.toggle("is-cover",landscape&&coverOnly);';
+  const flipStateWithCovers='    prev.disabled=index<=0;\n    next.disabled=showCover?index>=backIndex:(index+2>=pages.length);\n    frontCover.disabled=!showCover||index===0;\n    backCoverButton.disabled=!showCover||index===backIndex;\n    root.classList.toggle("is-cover",landscape&&coverOnly);';
+  const flipActions='  advance=goNext;\n  retreat=goPrev;\n  canAdvance=()=>!next.disabled;';
+  const flipActionsWithCovers=[
+    '  advance=goNext;',
+    '  retreat=goPrev;',
+    '  canAdvance=()=>!next.disabled;',
+    '  jumpFront=()=>{if(!showCover||!pageFlip.turnToPage)return false;resetZoom();pageFlip.turnToPage(0);update(0);return true;};',
+    '  jumpBack=()=>{if(!showCover||!pageFlip.turnToPage)return false;resetZoom();pageFlip.turnToPage(backIndex);update(backIndex);return true;};',
+  ].join('\n');
   const flipCall='    pageFlip.flipNext(viewerConfig.corner);';
-  const fastFlip=[
+  const slowerFlip=[
     '    const autoplaySettings=autoPlaying&&pageFlip.getSettings?pageFlip.getSettings():null;',
     '    const normalFlippingTime=autoplaySettings?autoplaySettings.flippingTime:0;',
     '    if(autoplaySettings)autoplaySettings.flippingTime=autoplayFlipDuration;',
     '    pageFlip.flipNext(viewerConfig.corner);',
-    '    if(autoplaySettings)setTimeout(()=>{if(autoplaySettings.flippingTime===autoplayFlipDuration)autoplaySettings.flippingTime=normalFlippingTime;},190);',
+    '    if(autoplaySettings)setTimeout(()=>{if(autoplaySettings.flippingTime===autoplayFlipDuration)autoplaySettings.flippingTime=normalFlippingTime;},370);',
   ].join('\n');
+  const nav='<div class="nav"><button id="prev" class="page-button" aria-label="上一页">‹</button><span id="count" class="count"></span><button id="next" class="page-button" aria-label="下一页">›</button><button id="autoplay" class="auto-toggle" type="button" aria-pressed="false" aria-label="开始自动播放">▶ 自动播放</button></div>';
+  const navWithCovers='<div class="nav"><button id="front-cover" class="page-button cover-jump" type="button" aria-label="跳到前封面" title="前封面">|‹</button><button id="prev" class="page-button" aria-label="上一页">‹</button><span id="count" class="count"></span><button id="next" class="page-button" aria-label="下一页">›</button><button id="back-cover" class="page-button cover-jump" type="button" aria-label="跳到后封面" title="后封面">›|</button><button id="autoplay" class="auto-toggle" type="button" aria-pressed="false" aria-label="开始自动播放">▶ 自动播放</button></div>';
+  const viewerControlsCss='.nav .cover-jump{font-size:15px;font-weight:800;letter-spacing:-2px}.nav .cover-jump[hidden]{display:none}@media(max-width:640px){.nav{gap:6px}.nav button{height:40px}.nav .page-button{width:40px}.nav .count{min-width:60px}.nav .auto-toggle{min-width:76px;padding:0 8px}}';
   return html
-    .replace(autoplayDelay,fastAutoplay)
-    .replace(flipCall,fastFlip)
-    .replace('</head>',`<style>${workspaceCss}</style></head>`);
+    .replace(autoplayDelay,slowerAutoplay)
+    .replace(domBindings,domBindingsWithCovers)
+    .replace(needsFiller,coverVisibility)
+    .replace(navigationVars,navigationVarsWithCovers)
+    .replace(autoplayBinding,coverBindings)
+    .replace(singleStatic,singleStaticWithCovers)
+    .replace(staticState,staticStateWithCovers)
+    .replace(staticActions,staticActionsWithCovers)
+    .replace(flipState,flipStateWithCovers)
+    .replace(flipActions,flipActionsWithCovers)
+    .replace(flipCall,slowerFlip)
+    .replace(nav,navWithCovers)
+    .replace('</head>',`<style>${workspaceCss}${viewerControlsCss}</style></head>`);
 }
 
 async function exportSharePage(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions,compressionQuality:number){
