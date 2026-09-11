@@ -6,6 +6,7 @@ const MOBILE_READER_CONTROL=String.raw`
   const topBar=document.querySelector('.top');
   if(!nav||!stage||!bookHost||document.getElementById('rotate-view'))return;
 
+  const offlineHtml='<!doctype html>\n'+document.documentElement.outerHTML;
   document.querySelectorAll('.hint,.zoom-hint').forEach(node=>node.remove());
 
   const style=document.createElement('style');
@@ -21,6 +22,8 @@ const MOBILE_READER_CONTROL=String.raw`
     '.stage.detail-pinching .share-book-zoom-frame,.stage.detail-panning .share-book-pan-frame{transition:none}',
     '.share-rotate-control{font-size:20px!important;font-weight:700;line-height:1}',
     '.share-rotate-control[aria-pressed="true"]{background:#222!important;color:#fff!important}',
+    '.share-save-control{font-size:17px!important;font-weight:800;line-height:1}',
+    '@media(max-width:640px){.nav{gap:5px!important}.share-save-control,.share-rotate-control{width:38px!important}}',
     '@media (pointer:fine) and (min-width:900px){.share-rotate-control{display:none!important}}'
   ].join('');
   document.head.appendChild(style);
@@ -39,6 +42,15 @@ const MOBILE_READER_CONTROL=String.raw`
   panFrame.className='share-book-pan-frame';
   zoomFrame.parentNode.insertBefore(panFrame,zoomFrame);
   panFrame.appendChild(zoomFrame);
+
+  const saveButton=document.createElement('button');
+  saveButton.id='save-offline';
+  saveButton.className='page-button share-save-control';
+  saveButton.type='button';
+  saveButton.textContent='⇩';
+  saveButton.setAttribute('aria-label','保存到手机');
+  saveButton.title='保存到手机';
+  nav.appendChild(saveButton);
 
   const rotateButton=document.createElement('button');
   rotateButton.id='rotate-view';
@@ -79,6 +91,39 @@ const MOBILE_READER_CONTROL=String.raw`
   let mouseView=null;
   let longPressTimer=0;
   let suppressClickUntil=0;
+
+  function safeFileName(){
+    const raw=(document.title||'flipbook').trim()||'flipbook';
+    const cleaned=raw.replace(/[\\/:*?"<>|]+/g,'-').replace(/\s+/g,' ').trim();
+    return (cleaned||'flipbook')+'.html';
+  }
+
+  function downloadOfflineFile(file){
+    const url=URL.createObjectURL(file);
+    const link=document.createElement('a');
+    link.href=url;
+    link.download=file.name;
+    link.rel='noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+
+  async function saveOffline(){
+    const file=new File([offlineHtml],safeFileName(),{type:'text/html;charset=utf-8'});
+    try{
+      if(navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:document.title||'Flipbook'});
+        return;
+      }
+    }catch(error){
+      if(error&&error.name==='AbortError')return;
+    }
+    downloadOfflineFile(file);
+  }
+
+  saveButton.addEventListener('click',()=>{void saveOffline();});
 
   function availableStageSize(){
     const computed=getComputedStyle(stage);
