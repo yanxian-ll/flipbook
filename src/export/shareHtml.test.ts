@@ -1,4 +1,5 @@
 import {describe,expect,it} from 'vitest';
+import {tuneShareViewerHtml} from './exportBook';
 import {buildShareHtmlDocument,buildShareViewerScript,serializeInlineJson,type ShareHtmlInput} from './shareHtml';
 
 const input:ShareHtmlInput={
@@ -66,6 +67,19 @@ describe('shared HTML viewer',()=>{
     expect(script).toContain('event.ctrlKey');
     expect(script).toContain('autoplay.onclick');
     expect(script).toContain('scheduleAutoplay');
+  });
+
+  it('adds front/back cover jumps and slows exported autoplay to 400ms',()=>{
+    const html=tuneShareViewerHtml(buildShareHtmlDocument(input),'html,body{background:#123456}');
+    expect(html).toContain('id="front-cover"');
+    expect(html).toContain('id="back-cover"');
+    expect(html).toContain('aria-label="跳到前封面"');
+    expect(html).toContain('aria-label="跳到后封面"');
+    expect(html).toContain('const autoplayDelay=400,autoplayFlipDuration=360;');
+    expect(html).toContain('jumpFront=()=>');
+    expect(html).toContain('jumpBack=()=>');
+    expect(html).toContain('pageFlip.turnToPage(backIndex)');
+    expect(html).toContain('background:#123456');
   });
 
   it('serializes inline JSON safely for script tags',()=>{
