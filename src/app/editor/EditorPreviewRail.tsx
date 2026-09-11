@@ -1,6 +1,7 @@
 import {useEffect,useRef,useState,type RefObject} from 'react';
 import {ChevronsLeft,ChevronsRight,Plus,Trash2} from 'lucide-react';
 import {backCoverPage,type Book} from '../../domain/model';
+import {presentationPage} from '../../domain/coverPresentation';
 import {IconButton} from '../../components/ui';
 import {PageThumbnail} from '../../components/PageThumbnail';
 import type {EditorFlipBookHandle} from '../../components/EditorFlipBook';
@@ -112,6 +113,7 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
       <button className="cover-spread-thumb" aria-label="封面" onClick={()=>selectPreviewPage(0,false)}><PageThumbnail page={book.pages[0]}/></button>
       {thumbnailSpreads.map(start=>{
         const left=book.pages[start],right=book.pages[start+1];
+        const leftRender=presentationPage(book,start),rightRender=right?presentationPage(book,start+1):undefined;
         const leftSelected=selectedPageSet.has(left.id),rightSelected=!!right&&selectedPageSet.has(right.id);
         const leftActive=pageIndex===start&&!backActive,rightActive=!!right&&pageIndex===start+1&&!backActive;
         return <button
@@ -131,8 +133,8 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
           onDrop={event=>{event.preventDefault();dropSpread(start);}}
           onDragEnd={()=>{setDragSpread(null);setDragOverSpread(null);window.setTimeout(()=>{suppressClick.current=false;},0);}}
         >
-          <div className={`spread-thumb-page ${leftSelected?'preview-page-selected':''} ${leftActive?'preview-page-active':''}`}><PageThumbnail page={left}/></div>
-          <div className={`spread-thumb-page ${right?'':'blank'} ${rightSelected?'preview-page-selected':''} ${rightActive?'preview-page-active':''}`}>{right&&<PageThumbnail page={right}/>}</div>
+          <div className={`spread-thumb-page ${leftSelected?'preview-page-selected':''} ${leftActive?'preview-page-active':''}`}><PageThumbnail page={leftRender}/></div>
+          <div className={`spread-thumb-page ${right?'':'blank'} ${rightSelected?'preview-page-selected':''} ${rightActive?'preview-page-active':''}`}>{rightRender&&<PageThumbnail page={rightRender}/>}</div>
         </button>;
       })}
     </div></div>
@@ -146,13 +148,14 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
     <div ref={strip} className="page-strip-scroll"><div className="page-strip-track">
       {book.pages.map((page,index)=>{
         const selected=selectedPageSet.has(page.id),active=!backActive&&pageIndex===index;
+        const rendered=index===0?page:presentationPage(book,index);
         return <button
           key={page.id}
           className={`single-page-thumb ${active?'selected':''} ${selected?'preview-page-selected':''} ${active?'preview-page-active':''}`}
           aria-label={index===0?'封面':`第 ${index} 页${index>0?'；按 Ctrl 或 Command 可多选':''}`}
           aria-current={active?'page':undefined}
           onClick={event=>selectPreviewPage(index,index>0&&(event.ctrlKey||event.metaKey))}
-        ><PageThumbnail page={page}/></button>;
+        ><PageThumbnail page={rendered}/></button>;
       })}
       <button
         key={backPage.id}
