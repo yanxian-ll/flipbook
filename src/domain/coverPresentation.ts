@@ -1,4 +1,5 @@
 import {H,W,coverTemplateFor,type Book,type Page} from './model';
+import {pageWithSpreadOverflow} from './spreadElements';
 
 /**
  * Return a render-only front-cover page whose image geometry follows the
@@ -37,5 +38,5 @@ export function frontCoverRenderPage(book:Book):Page{
 }
 
 export function presentationPage(book:Book,index:number){
-  return index===0?frontCoverRenderPage(book):book.pages[index];
+  return index===0?frontCoverRenderPage(book):pageWithSpreadOverflow(book,index,book.pages[index]);
 }
