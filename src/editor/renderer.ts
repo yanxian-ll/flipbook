@@ -1,6 +1,7 @@
 import Konva from 'konva';
 import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
+import {effectiveTemplateOverlay,pageTemplateDecorations,type TemplateDecoration} from '../domain/templateDecorations';
 import {repository} from '../db/repository';
 import {decodeImage} from '../domain/assets';
 import {createWorkQueue} from '../domain/workQueue';
@@ -50,6 +51,7 @@ export function textLayout(e:Element){
 export function textProps(e:Element){const layout=textLayout(e);return {...elementProps(e),...layout,text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:layout.fontStyle,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
 export function frameClip(e:Element){return (ctx:Konva.Context)=>{ctx.beginPath();if(e.frameShape==='ellipse')ctx.ellipse(e.width/2,e.height/2,e.width/2,e.height/2,0,0,Math.PI*2);else ctx.rect(0,0,e.width,e.height);ctx.closePath();};}
 export function photoProps(e:Element,image:HTMLImageElement){const common={...elementProps(e),image,strokeWidth:0,strokeEnabled:false};if(e.fit==='contain'){const ratio=Math.min(e.width/image.naturalWidth,e.height/image.naturalHeight);return {...common,width:image.naturalWidth*ratio,height:image.naturalHeight*ratio};}return {...common,crop:imageCrop(e,image)};}
+export function templateDecorationProps(decoration:TemplateDecoration){return {x:decoration.x*W,y:decoration.y*H,width:decoration.width*W,height:decoration.height*H,stroke:decoration.stroke||'#111',strokeWidth:Math.max(.5,decoration.strokeWidth||1),fillEnabled:false,listening:false};}
 export function pageTextureProps(image:HTMLImageElement){
   const sourceWidth=Math.max(1,image.naturalWidth||image.width||1);
   const sourceHeight=Math.max(1,image.naturalHeight||image.height||1);
@@ -98,11 +100,14 @@ export async function renderPage(page:Page,options:{scale?:number;quality?:'thum
       ?await loadAssetImage(page.patternAssetId!,options.quality??'preview')
       :page.pattern?await loadStaticImage(`/reference/${page.pattern}`):undefined;
     if(pattern)layer.add(new Konva.Image(pageTextureProps(pattern)));
-    const ordered=page.templateOverlay?[...page.elements.filter(e=>e.type==='image'),...page.elements.filter(e=>e.type!=='image')]:page.elements;
+    const overlay=effectiveTemplateOverlay(page);
+    const decorations=pageTemplateDecorations(page);
+    const hasTemplateLayer=!!overlay||decorations.length>0;
+    const ordered=hasTemplateLayer?[...page.elements.filter(e=>e.type==='image'),...page.elements.filter(e=>e.type!=='image')]:page.elements;
     let overlayAdded=false;
-    const addOverlay=async()=>{if(page.templateOverlay&&!overlayAdded){layer.add(new Konva.Image({image:await loadStaticImage(page.templateOverlay),width:W,height:H,listening:false}));overlayAdded=true;}};
+    const addOverlay=async()=>{if(overlayAdded)return;if(overlay)layer.add(new Konva.Image({image:await loadStaticImage(overlay),width:W,height:H,listening:false}));for(const decoration of decorations)layer.add(new Konva.Rect(templateDecorationProps(decoration)));overlayAdded=true;};
     for(const e of ordered){if(e.type!=='image')await addOverlay();if(e.type==='image'&&e.assetId){const img=await loadAssetImage(e.assetId,options.quality??'preview');const group=new Konva.Group({x:e.x,y:e.y,rotation:e.rotation,clipFunc:frameClip(e)});const photo=new Konva.Image(photoProps({...e,x:0,y:0,rotation:0},img));if((e.blur??0)>0){photo.cache({pixelRatio:1});photo.filters([Konva.Filters.Blur]);photo.blurRadius(e.blur??0);}group.add(photo);layer.add(group);}else if(e.type==='text'||e.type==='sticker'){layer.add(new Konva.Text(textProps(e)));}else{layer.add(new Konva.Rect({...elementProps(e),cornerRadius:e.cornerRadius??0}));}}
     await addOverlay();
-    layer.draw();const canvas=stage.toCanvas({pixelRatio:options.scale??1});return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('页面渲染失败')),options.mimeType??'image/png',.95));
+    layer.draw();const canvas=stage.toCanvas({pixelRatio:options.scale??1});return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('页面加载失败')),options.mimeType??'image/png',.95));
   }finally{stage.destroy();holder.remove();}
 }
