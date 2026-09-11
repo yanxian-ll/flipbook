@@ -1,7 +1,7 @@
 import {Children,Component,forwardRef,memo,useEffect,useImperativeHandle,useMemo,useRef,useState,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import {visualPageBackground,type Book} from '../domain/model';
-import {BookBackCoverVisual,BookCoverEditor,BookCoverVisual} from './BookCover';
+import {BookBackCoverEditor,BookBackCoverVisual,BookCoverEditor,BookCoverVisual} from './BookCover';
 import {PageThumbnail} from './PageThumbnail';
 import {EditorCanvas} from '../editor/EditorCanvas';
 import {Plus} from 'lucide-react';
@@ -56,7 +56,9 @@ function FlipLeafInner(
   {book,index,kind,active,priority,width,onSelect,onTextEdit,onCrop,onImageSelect,onBlankPage,onOpenCover,onInteractionChange,scale}:LeafProps,
   ref:ForwardedRef<HTMLDivElement>
 ){
-  if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-label="后封面"><BookBackCoverVisual book={book} className="editor-back-cover-visual"/></div>;
+  if(kind==='back')return <div ref={ref} className="editor-flip-page editor-flip-back" data-density="hard" aria-label="后封面">{active
+    ?<LiveEditorSurface onInteractionChange={onInteractionChange}><BookBackCoverEditor book={book} width={width} onTextEdit={onTextEdit} onImageSelect={onImageSelect}/></LiveEditorSurface>
+    :<BookBackCoverVisual book={book} className="editor-back-cover-visual"/>}</div>;
   if(kind==='blank')return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
   if(kind==='add')return <div ref={ref} className="editor-flip-page editor-flip-add" aria-hidden/>;
 
@@ -192,13 +194,14 @@ function EditorFlipBookInner(
   }),[lastReal]);
 
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
-  useEffect(()=>setDisplayedIndex(activeIndex),[activeIndex,resetKey]);
+  useEffect(()=>setDisplayedIndex(activeIndex),[activeIndex]);
   useEffect(()=>{
     setCoverSide(displayedIndex===0?'front':displayedIndex>=backIndex?'back':null);
   },[displayedIndex,backIndex,setCoverSide]);
   useEffect(()=>()=>useCoverContext.getState().setSide(null),[]);
   const openCover=()=>flip.current?.pageFlip?.().flipNext?.();
   const leafProps={book,width:safeWidth,...stableActions,onOpenCover:openCover,onInteractionChange:setEditingSurfaceHovered,scale:imageScale};
+  const remountStart=displayedIndex>=backIndex?backIndex:Math.max(0,Math.min(lastReal,activeIndex));
 
   const fallback=<StaticBookFallback
     book={book}
@@ -239,7 +242,7 @@ function EditorFlipBookInner(
         swipeDistance={flipbookMotion.swipeDistance}
         showPageCorners={nativeFlipEnabled}
         disableFlipByClick
-        startPage={Math.max(0,Math.min(lastReal,activeIndex))}
+        startPage={remountStart}
         className="editor-flip-book"
         style={{}}
         onChangeState={(e:any)=>onFlipState?.(String(e.data??''))}
@@ -254,7 +257,7 @@ function EditorFlipBookInner(
           ...book.pages.map((_,index)=><FlipLeaf key={book.pages[index].id} {...leafProps} index={index} kind="page" active={activeIndex===index} priority={Math.abs(index-activeIndex)<=3}/>),
           <FlipLeaf key="__add__" {...leafProps} index={plusIndex} kind="add" active={false} priority={false}/>,
           needsFiller?<FlipLeaf key="__blank__" {...leafProps} index={plusIndex+1} kind="blank" active={false} priority={false}/>:null,
-          <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={false} priority={false}/>
+          <FlipLeaf key="__back__" {...leafProps} index={backIndex} kind="back" active={displayedIndex>=backIndex} priority={false}/>
         ])}
       </HTMLFlipBook>
       {showCenteredAdd&&<div className="editor-flip-add" style={{position:'absolute',inset:0,zIndex:16,background:'transparent',pointerEvents:'none'}}>
