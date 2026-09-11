@@ -1,6 +1,6 @@
 import {describe,expect,it} from 'vitest';
 import {frontCoverRenderPage} from './coverPresentation';
-import {H,W,backCoverFor,backCoverPage,coverTemplateFor,coverTemplatesFor,newBook,type Asset} from './model';
+import {H,W,backCoverFor,backCoverPage,coverTemplateFor,coverTemplatesFor,newBook,textElement,type Asset} from './model';
 
 const photo:Asset={
   id:'cover-photo',name:'cover.jpg',mimeType:'image/jpeg',width:1800,height:2400,
@@ -50,6 +50,14 @@ describe('cover presentation model',()=>{
       x:80,y:100,width:1040,height:1300,
     });
     expect(page.elements.find(element=>element.type==='text')).toMatchObject({text:'BACK',color:'#ffffff'});
+  });
+
+  it('renders free stickers stored on the back cover into exports and previews',()=>{
+    const book=newBook('Back sticker','scrapbook',[photo]);
+    const sticker={...textElement('🎂',{x:240,y:420,width:220,height:260,fontSize:170}),type:'sticker' as const};
+    book.backCover={...book.backCover!,elements:[sticker]};
+    const page=backCoverPage(book);
+    expect(page.elements.find(element=>element.id===sticker.id)).toMatchObject({type:'sticker',text:'🎂',x:240,y:420});
   });
 
   it('keeps cover templates geometry-only',()=>{
