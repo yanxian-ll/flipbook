@@ -109,30 +109,63 @@ export function useEditorPanels({book,pageIndex,wide,viewWidth}:{book:Book|null;
   function openTool(next:PanelId){
     syncCoverPhotos(next);
     const state=useEditor.getState(),currentPage=state.book?.pages[state.pageIndex];
-    if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(true);return;}
+    if(sideLibraries&&next==='photos'){
+      setPanel(null);
+      setPhotoLibraryOpen(true);
+      return;
+    }
     if(sideLibraries&&next==='layouts'&&currentPage?.type==='cover'){
       setPanel(null);
       setPhotoLibraryOpen(true);
       setTemplateLibraryOpen(true);
       return;
     }
-    if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(true);return;}
+    if(sideLibraries&&next==='layouts'){
+      setTemplateLibraryOpen(true);
+      return;
+    }
     const floatingTexture=next==='page-background'||next==='background';
-    if(next!=='photos'&&next!=='layouts'&&!floatingTexture){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
+    if(sideLibraries&&!floatingTexture){
+      setPhotoLibraryOpen(false);
+      setPanel(next);
+      return;
+    }
+    if(!sideLibraries&&next!=='photos'&&next!=='layouts'&&!floatingTexture){
+      setPhotoLibraryOpen(false);
+      setTemplateLibraryOpen(false);
+    }
     setPanel(next);
   }
   function toggleTool(next:PanelId){
     syncCoverPhotos(next);
-    if(sideLibraries&&next==='photos'){setPanel(null);setPhotoLibraryOpen(open=>!open);return;}
-    if(sideLibraries&&next==='layouts'){setPanel(null);setTemplateLibraryOpen(open=>!open);return;}
+    if(sideLibraries&&next==='photos'){
+      setPanel(null);
+      setPhotoLibraryOpen(open=>!open);
+      return;
+    }
+    if(sideLibraries&&next==='layouts'){
+      setTemplateLibraryOpen(open=>!open);
+      return;
+    }
     const floatingTexture=next==='page-background'||next==='background';
-    if(next!=='photos'&&next!=='layouts'&&!floatingTexture){setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
+    if(sideLibraries&&!floatingTexture){
+      setPhotoLibraryOpen(false);
+      setPanel(current=>current===next?null:next);
+      return;
+    }
+    if(!sideLibraries&&next!=='photos'&&next!=='layouts'&&!floatingTexture){
+      setPhotoLibraryOpen(false);
+      setTemplateLibraryOpen(false);
+    }
     setPanel(current=>current===next?null:next);
   }
   function closeAllPanels(){setPanel(null);setPhotoLibraryOpen(false);setTemplateLibraryOpen(false);}
   const photoSideOpen=sideLibraries&&(photoLibraryOpen||panel==='photos');
   const templateSideOpen=sideLibraries&&(templateLibraryOpen||panel==='layouts');
-  const bothSideOpen=photoSideOpen&&templateSideOpen;
+  const floatingPanel=panel==='page-background'||panel==='background';
   const compactPanel=sideLibraries?(panel&&panel!=='photos'&&panel!=='layouts'?panel:null):(panel??(photoLibraryOpen?'photos':templateLibraryOpen?'layouts':null));
-  return {panel,setPanel,photoDraft,setPhotoDraft,photoLibraryOpen,setPhotoLibraryOpen,templateLibraryOpen,setTemplateLibraryOpen,sideLibraries,photoSideOpen,templateSideOpen,bothSideOpen,compactPanel,openTool,toggleTool,closeAllPanels};
+  const leftToolSideOpen=sideLibraries&&!!compactPanel&&!floatingPanel;
+  const leftSideOpen=photoSideOpen||leftToolSideOpen;
+  const bothSideOpen=leftSideOpen&&templateSideOpen;
+  return {panel,setPanel,photoDraft,setPhotoDraft,photoLibraryOpen,setPhotoLibraryOpen,templateLibraryOpen,setTemplateLibraryOpen,sideLibraries,photoSideOpen,templateSideOpen,leftSideOpen,bothSideOpen,compactPanel,openTool,toggleTool,closeAllPanels};
 }
