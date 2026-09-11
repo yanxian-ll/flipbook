@@ -2,9 +2,11 @@ import {useEffect,useState,type CSSProperties} from 'react';
 import {H,W,backCoverFor,backCoverPage,bookStyleFor,coverTemplateFor,type Book,type CoverTemplate,type Element} from '../domain/model';
 import {frontCoverRenderPage} from '../domain/coverPresentation';
 import {batchUpdateBackCoverElements,updateBackCoverElement} from '../domain/backCoverElements';
+import {isPaperTapeElement} from '../domain/tapeStyles';
 import {repository} from '../db/repository';
 import {useEditor} from '../store/editor';
 import {EditorCanvas} from '../editor/EditorCanvas';
+import {loadPaperTapeImage} from '../editor/renderer';
 
 function useAssetImage(assetId:string|undefined,quality:'thumbnail'|'preview'='thumbnail'){
   const [src,setSrc]=useState('');
@@ -23,6 +25,29 @@ function useAssetImage(assetId:string|undefined,quality:'thumbnail'|'preview'='t
 }
 function useCoverImage(book:Book,quality:'thumbnail'|'preview'='thumbnail'){
   return useAssetImage(book.pages[0].elements.find(element=>element.type==='image')?.assetId,quality);
+}
+function usePaperTapePreview(element:Element){
+  const [src,setSrc]=useState('');
+  useEffect(()=>{
+    let url='',disposed=false;
+    setSrc('');
+    void loadPaperTapeImage(element.tapeStyle,element.color).then(image=>{
+      if(disposed)return;
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.max(1,image.naturalWidth||image.width||1);
+      canvas.height=Math.max(1,image.naturalHeight||image.height||1);
+      const context=canvas.getContext('2d');
+      if(!context)return;
+      context.drawImage(image,0,0,canvas.width,canvas.height);
+      canvas.toBlob(blob=>{
+        if(disposed||!blob)return;
+        url=URL.createObjectURL(blob);
+        setSrc(url);
+      },'image/png');
+    }).catch(()=>{});
+    return()=>{disposed=true;if(url)URL.revokeObjectURL(url);};
+  },[element.tapeStyle,element.color]);
+  return src;
 }
 
 function coverCropStyle(image?:Element){
@@ -79,8 +104,30 @@ function coverTextStyle(element:Element):CSSProperties{
     zIndex:element.type==='sticker'?7:6,
   };
 }
+function CoverPaperTape({element}:{element:Element}){
+  const src=usePaperTapePreview(element);
+  if(!src)return null;
+  return <img
+    src={src}
+    alt=""
+    aria-hidden
+    draggable={false}
+    style={{
+      ...coverElementGeometry(element),
+      height:`${element.height/H*100}%`,
+      minHeight:0,
+      objectFit:'fill',
+      pointerEvents:'none',
+      zIndex:5,
+    }}
+  />;
+}
 function CoverFreeElements({elements}:{elements:Element[]}){
-  return <>{elements.filter(element=>element.type==='text'||element.type==='sticker').map(element=><span key={element.id} className={element.type==='sticker'?'cover-sticker':'cover-caption'} style={coverTextStyle(element)}>{element.text??''}</span>)}</>;
+  return <>{elements.map(element=>{
+    if(element.type==='text'||element.type==='sticker')return <span key={element.id} className={element.type==='sticker'?'cover-sticker':'cover-caption'} style={coverTextStyle(element)}>{element.text??''}</span>;
+    if(isPaperTapeElement(element))return <CoverPaperTape key={element.id} element={element}/>;
+    return null;
+  })}</>;
 }
 
 function CoverContents({book,cropOverride,quality='thumbnail'}:{book:Book;cropOverride?:Element['crop'];quality?:'thumbnail'|'preview'}){
