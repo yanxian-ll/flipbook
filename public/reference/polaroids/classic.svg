@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1250">
+  <defs>
+    <filter id="shadow" x="-20%" y="-20%" width="140%" height="150%"><feDropShadow dx="16" dy="22" stdDeviation="20" flood-color="#000" flood-opacity=".2"/></filter>
+    <filter id="grain" x="0" y="0" width="100%" height="100%"><feTurbulence type="fractalNoise" baseFrequency=".9" numOctaves="2" seed="3" result="n"/><feColorMatrix in="n" type="saturate" values="0" result="g"/><feComponentTransfer in="g"><feFuncA type="table" tableValues="0 .06"/></feComponentTransfer></filter>
+    <mask id="frameMask"><rect width="1000" height="1250" rx="24" fill="white"/><rect x="90" y="90" width="820" height="820" rx="8" fill="black"/></mask>
+  </defs>
+  <g filter="url(#shadow)">
+    <rect x="18" y="18" width="964" height="1214" rx="28" fill="#fbfbf9" mask="url(#frameMask)"/>
+    <rect x="90" y="90" width="820" height="820" rx="8" fill="none" stroke="#d8d8d3" stroke-width="8" opacity=".65"/>
+    <rect x="18" y="18" width="964" height="1214" rx="28" fill="#fff" opacity=".6" filter="url(#grain)" mask="url(#frameMask)"/>
+  </g>
+</svg>
