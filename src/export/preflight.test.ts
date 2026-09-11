@@ -11,10 +11,13 @@ function asset(id:string,width=2400,height=2400):Asset{
 
 describe('export preflight',()=>{
   it('keeps quality estimates aligned with real export scale caps',()=>{
-    expect(exportRenderScale('share',3)).toBe(1.6);
+    expect(exportRenderScale('share',3)).toBe(3);
+    expect(exportRenderScale('share',.5)).toBe(.5);
     expect(exportRenderScale('collage',3)).toBe(2);
+    expect(exportRenderScale('collage',.35)).toBe(.35);
     expect(exportRenderScale('pdf',2)).toBe(2);
     expect(exportRenderScale('mp4',3)).toBeCloseTo(1.1);
+    expect(exportRenderScale('mp4',.5)).toBe(.5);
   });
 
   it('reports blank pages and missing image references without blocking the export model',()=>{
@@ -36,6 +39,7 @@ describe('export preflight',()=>{
     page.elements.push(imageElement(photo.id,{x:0,y:0,width:1000,height:1000,crop:{x:.5,y:.5,zoom:1}}));
     book.pages.push(page);
     expect(inspectExport(book,[1],'collage',1).issues.some(issue=>issue.id==='low-resolution')).toBe(true);
+    expect(inspectExport(book,[1],'collage',.35).issues.some(issue=>issue.id==='low-resolution')).toBe(false);
     expect(inspectExport({...book,assets:[asset('photo',3000,3000)]},[1],'collage',1).issues.some(issue=>issue.id==='low-resolution')).toBe(false);
   });
 
