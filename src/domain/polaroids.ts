@@ -1,6 +1,8 @@
 import {H,W,uid,type Element} from './model';
 
 export type PolaroidStyleId=NonNullable<Element['polaroidStyle']>;
+type PolaroidAssetFields={polaroidAssetId?:string};
+export type PolaroidElement=Element&PolaroidAssetFields&{polaroidStyle:PolaroidStyleId};
 export type PolaroidTemplate={
   id:PolaroidStyleId;
   name:string;
@@ -64,10 +66,35 @@ export function polaroidPhotoFrame(element:Element){
   };
 }
 
+export function storedPolaroidAssetId(element:Element){
+  return (element as Element&PolaroidAssetFields).polaroidAssetId;
+}
+
+/**
+ * Existing books created by the first polaroid implementation stored their photo in assetId.
+ * Keep that as a read fallback until the canvas migrates the element to polaroidAssetId.
+ */
+export function polaroidAssetIdFor(element:Element){
+  return storedPolaroidAssetId(element)??(element.polaroidStyle?element.assetId:undefined);
+}
+
+/**
+ * Polaroid photos deliberately do not use Element.assetId. Template/layout code uses assetId
+ * as its source of truth for page photo count, so keeping this field separate prevents a
+ * polaroid photo from changing the page's N-photo template selection.
+ */
+export function polaroidAssetPatch(assetId:string|undefined,resetCrop=true):Partial<Element>{
+  return ({
+    assetId:undefined,
+    polaroidAssetId:assetId,
+    ...(resetCrop?{crop:{x:.5,y:.5,zoom:1}}:{}),
+  } as unknown) as Partial<Element>;
+}
+
 export function createPolaroidElement(style:PolaroidStyleId):Element{
   const template=polaroidTemplateFor(style);
   const {width,height}=template.defaultSize;
-  return {
+  return ({
     id:uid(),
     type:'image',
     x:(W-width)/2,
@@ -80,5 +107,6 @@ export function createPolaroidElement(style:PolaroidStyleId):Element{
     crop:{x:.5,y:.5,zoom:1},
     freeImage:true,
     polaroidStyle:style,
-  };
+    polaroidAssetId:undefined,
+  } as unknown) as PolaroidElement;
 }
