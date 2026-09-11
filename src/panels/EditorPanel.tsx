@@ -1,4 +1,4 @@
-import {useEffect,useState,type ComponentProps} from 'react';
+import {useEffect,useLayoutEffect,useState,type ComponentProps} from 'react';
 import {createPortal} from 'react-dom';
 import {X} from 'lucide-react';
 import {backCoverFor,textElement} from '../domain/model';
@@ -60,7 +60,7 @@ export function EditorPanel(props:EditorPanelProps){
     return()=>cancelAnimationFrame(frame);
   },[props.panel]);
 
-  useEffect(()=>{
+  useLayoutEffect(()=>{
     if(props.panel!=='text'||page?.type!=='cover')return;
     if(useCoverContext.getState().side!=='front')useCoverContext.getState().setSide('front');
     const state=useEditor.getState();
