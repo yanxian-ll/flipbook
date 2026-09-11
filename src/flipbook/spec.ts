@@ -14,6 +14,22 @@ export const sharedViewerSize={
   maxHeight:678,
 };
 
+export function shareViewerSizeForScale(scale:number){
+  const safeScale=Number.isFinite(scale)?Math.max(.35,Math.min(3,scale)):1;
+  // Keep roughly two exported image pixels per CSS pixel for compact presets.
+  // Once the source is dense enough, retain the existing full viewer size.
+  const displayScale=Math.min(1,safeScale*1.25);
+  const scaled=(value:number)=>Math.max(1,Math.round(value*displayScale));
+  return {
+    width:scaled(sharedViewerSize.width),
+    height:scaled(sharedViewerSize.height),
+    minWidth:scaled(sharedViewerSize.minWidth),
+    maxWidth:scaled(sharedViewerSize.maxWidth),
+    minHeight:scaled(sharedViewerSize.minHeight),
+    maxHeight:scaled(sharedViewerSize.maxHeight),
+  };
+}
+
 export function readerLeafPlan(pageCount:number){
   const realPageCount=Math.max(0,Math.floor(pageCount));
   const contentCount=Math.max(0,realPageCount-1);
