@@ -54,15 +54,22 @@ html,body{margin:0;min-height:100%;font-family:Arial,"Microsoft YaHei",sans-seri
 body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:100dvh;overflow:hidden}
 .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;font-weight:700;background:#ffffffd9;backdrop-filter:blur(14px);z-index:5}
 .stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:0;padding:26px 18px;overflow:hidden}
-.book-host{width:min(var(--share-spread-width,960px),78vw);height:min(64dvh,var(--share-page-height,678px));display:flex;align-items:center;justify-content:center}
+.book-host{position:relative;width:min(var(--share-spread-width,960px),78vw);height:min(64dvh,var(--share-page-height,678px));display:flex;align-items:center;justify-content:center;transform-origin:50% 50%;transition:transform .18s ease;will-change:transform}
+.stage.detail-zoom .book-host{z-index:7}
+.stage.pinching .book-host{transition:none}
 .share-page{position:relative;width:100%;height:100%;overflow:hidden;background:#fff}
 .share-page>img{display:block;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none}
 .share-page.stf__item{position:absolute}
-.nav{display:flex;align-items:center;justify-content:center;gap:18px;padding:14px 20px 22px;z-index:5}
-.nav button{width:44px;height:44px;border:0;border-radius:50%;background:#fff;font-size:22px;box-shadow:0 4px 14px #0001;cursor:pointer;color:#222}
+.nav{display:flex;align-items:center;justify-content:center;gap:18px;padding:14px 20px 22px;z-index:10}
+.nav button{height:44px;border:0;border-radius:22px;background:#fff;font-size:22px;box-shadow:0 4px 14px #0001;cursor:pointer;color:#222}
+.nav .page-button{width:44px;padding:0}
 .nav button:disabled{opacity:.3;cursor:default}
+.nav .auto-toggle{width:auto;min-width:104px;padding:0 14px;font-size:12px;font-weight:600;white-space:nowrap}
+.nav .auto-toggle[aria-pressed=true]{background:#222;color:#fff}
 .count{min-width:150px;text-align:center;color:#666;font-size:12px}
 .hint{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:10px;color:#777;white-space:nowrap;pointer-events:none}
+.zoom-hint{position:absolute;left:50%;top:12px;transform:translateX(-50%);z-index:9;padding:7px 11px;border-radius:999px;background:#ffffffdb;box-shadow:0 3px 12px #0001;color:#777;font-size:10px;text-align:center;pointer-events:none;white-space:nowrap;opacity:0;transition:opacity .15s ease}
+.stage.detail-zoom .zoom-hint{opacity:1}
 .single-static{width:min(var(--share-page-width,480px),68vw)!important;height:auto!important;filter:drop-shadow(0 18px 22px #0003)}
 .single-static .share-page{display:block!important;position:relative!important;aspect-ratio:1200/1696}
 #book{transition:transform .28s cubic-bezier(.2,.72,.2,1)}
@@ -85,9 +92,11 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:100dvh;o
   .top{padding:13px 16px}
   .stage{padding:14px 6px}
   .book-host{width:min(var(--share-spread-width,960px),84vw);height:min(62dvh,var(--share-page-height,678px))}
-  .nav{padding-bottom:max(16px,env(safe-area-inset-bottom))}
-  .count{min-width:112px}
+  .nav{gap:9px;padding:12px 10px max(16px,env(safe-area-inset-bottom))}
+  .count{min-width:88px}
+  .nav .auto-toggle{min-width:88px;padding:0 10px;font-size:11px}
   .hint{display:none}
+  .zoom-hint{top:7px}
 }
 `.trim();
 
@@ -102,12 +111,133 @@ export function buildShareViewerScript(input:Omit<ShareHtmlInput,'title'|'librar
 
   return `
 const pages=${pages},labels=${labels},showCover=${String(input.showCover)},coverTexture=${coverTexture},backColor=${backColor},backPage=${backPage},leafPlan=${leafPlan},viewerConfig=${viewerConfig};
-const root=document.getElementById("book"),count=document.getElementById("count"),prev=document.getElementById("prev"),next=document.getElementById("next"),stage=document.getElementById("stage"),loadError=document.getElementById("load-error");
+const root=document.getElementById("book"),count=document.getElementById("count"),prev=document.getElementById("prev"),next=document.getElementById("next"),autoplay=document.getElementById("autoplay"),stage=document.getElementById("stage"),bookHost=document.getElementById("book-host"),loadError=document.getElementById("load-error");
 const needsFiller=showCover&&leafPlan.needsFiller,backIndex=showCover?leafPlan.backIndex:-1;
 const viewerPageWidth=Math.max(1,Number(viewerConfig.maxWidth)||Number(viewerConfig.width)||480),viewerPageHeight=Math.max(1,Number(viewerConfig.maxHeight)||Number(viewerConfig.height)||678);
+const autoplayDelay=Math.max(3600,(Number(viewerConfig.flippingTime)||620)+2400);
 document.documentElement.style.setProperty("--share-page-width",viewerPageWidth+"px");
 document.documentElement.style.setProperty("--share-page-height",viewerPageHeight+"px");
 document.documentElement.style.setProperty("--share-spread-width",viewerPageWidth*2+"px");
+
+let zoomScale=1,pinchStartDistance=0,pinchStartScale=1;
+let advance=()=>false,retreat=()=>false,canAdvance=()=>false;
+let autoTimer=0,autoPlaying=false;
+
+function setAutoplayUi(){
+  autoplay.setAttribute("aria-pressed",String(autoPlaying));
+  autoplay.textContent=autoPlaying?"Ⅱ 暂停":"▶ 自动播放";
+  autoplay.setAttribute("aria-label",autoPlaying?"暂停自动播放":"开始自动播放");
+  autoplay.title=autoPlaying?"暂停自动播放":"自动播放";
+}
+
+function stopAutoplay(){
+  autoPlaying=false;
+  clearTimeout(autoTimer);
+  autoTimer=0;
+  setAutoplayUi();
+}
+
+function refreshAutoplayAvailability(){
+  autoplay.disabled=!canAdvance();
+  if(autoplay.disabled&&autoPlaying)stopAutoplay();
+}
+
+function scheduleAutoplay(){
+  clearTimeout(autoTimer);
+  if(!autoPlaying)return;
+  autoTimer=setTimeout(()=>{
+    if(!autoPlaying)return;
+    if(!advance()){
+      stopAutoplay();
+      refreshAutoplayAvailability();
+      return;
+    }
+    scheduleAutoplay();
+  },autoplayDelay);
+}
+
+function startAutoplay(){
+  if(!canAdvance())return;
+  resetZoom();
+  autoPlaying=true;
+  setAutoplayUi();
+  scheduleAutoplay();
+}
+
+autoplay.onclick=()=>autoPlaying?stopAutoplay():startAutoplay();
+setAutoplayUi();
+
+function clampZoom(value){return Math.max(1,Math.min(4,value));}
+function zoomOrigin(clientX,clientY){
+  const rect=bookHost.getBoundingClientRect();
+  if(!rect.width||!rect.height)return;
+  const x=Math.max(0,Math.min(100,(clientX-rect.left)/rect.width*100));
+  const y=Math.max(0,Math.min(100,(clientY-rect.top)/rect.height*100));
+  bookHost.style.transformOrigin=x+"% "+y+"%";
+}
+function applyZoom(value,clientX,clientY){
+  const nextScale=clampZoom(value);
+  if(nextScale<=1.001){resetZoom();return;}
+  if(Number.isFinite(clientX)&&Number.isFinite(clientY))zoomOrigin(clientX,clientY);
+  zoomScale=nextScale;
+  bookHost.style.transform="scale("+zoomScale+")";
+  stage.classList.add("detail-zoom");
+  stopAutoplay();
+}
+function resetZoom(){
+  zoomScale=1;
+  pinchStartDistance=0;
+  pinchStartScale=1;
+  bookHost.style.transform="";
+  bookHost.style.transformOrigin="50% 50%";
+  stage.classList.remove("detail-zoom","pinching");
+}
+function touchDistance(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
+function touchCenter(a,b){return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};}
+
+stage.addEventListener("wheel",event=>{
+  if(!event.ctrlKey)return;
+  event.preventDefault();
+  event.stopImmediatePropagation();
+  const factor=Math.exp(-event.deltaY*.0025);
+  applyZoom(zoomScale*factor,event.clientX,event.clientY);
+},{passive:false,capture:true});
+
+stage.addEventListener("touchstart",event=>{
+  if(event.touches.length!==2)return;
+  event.preventDefault();
+  event.stopPropagation();
+  const a=event.touches[0],b=event.touches[1];
+  pinchStartDistance=Math.max(1,touchDistance(a,b));
+  pinchStartScale=zoomScale;
+  const center=touchCenter(a,b);
+  zoomOrigin(center.x,center.y);
+  stage.classList.add("pinching");
+  stopAutoplay();
+},{passive:false,capture:true});
+
+stage.addEventListener("touchmove",event=>{
+  if(event.touches.length!==2||!pinchStartDistance)return;
+  event.preventDefault();
+  event.stopPropagation();
+  const a=event.touches[0],b=event.touches[1];
+  const center=touchCenter(a,b);
+  applyZoom(pinchStartScale*touchDistance(a,b)/pinchStartDistance,center.x,center.y);
+  stage.classList.add("pinching");
+},{passive:false,capture:true});
+
+function finishPinch(event){
+  if(event.touches&&event.touches.length>=2)return;
+  pinchStartDistance=0;
+  pinchStartScale=zoomScale;
+  stage.classList.remove("pinching");
+}
+stage.addEventListener("touchend",finishPinch,{passive:true,capture:true});
+stage.addEventListener("touchcancel",finishPinch,{passive:true,capture:true});
+stage.addEventListener("pointerleave",event=>{if(event.pointerType==="mouse")resetZoom();});
+stage.addEventListener("click",event=>{if(zoomScale>1&&!bookHost.contains(event.target))resetZoom();},true);
+root.addEventListener("pointerdown",()=>{if(autoPlaying)stopAutoplay();},true);
+document.addEventListener("visibilitychange",()=>{if(document.hidden)stopAutoplay();});
 
 function decorateCover(leaf,back){
   const grain=document.createElement("span");
@@ -171,11 +301,14 @@ if(pages.length<=1&&!showCover){
   count.textContent=labels[0]||"1 / 1";
   prev.disabled=true;
   next.disabled=true;
+  canAdvance=()=>false;
+  refreshAutoplayAvailability();
 }else if(!window.St||!window.St.PageFlip){
   loadError.hidden=false;
   let staticIndex=0;
 
   function renderStatic(){
+    resetZoom();
     const coverOnly=showCover&&staticIndex===0,backOnly=showCover&&staticIndex===backIndex;
     root.classList.remove("single-static","is-cover","is-back-cover");
     root.style.display="flex";
@@ -197,33 +330,40 @@ if(pages.length<=1&&!showCover){
 
     prev.disabled=staticIndex<=0;
     next.disabled=showCover?staticIndex>=backIndex:(staticIndex+2>=pages.length);
+    refreshAutoplayAvailability();
   }
 
   function staticNext(){
-    if(next.disabled)return;
+    if(next.disabled)return false;
     if(showCover){
       if(staticIndex===0)staticIndex=1;
       else if(staticIndex+2>=backIndex)staticIndex=backIndex;
       else staticIndex+=2;
     }else staticIndex=Math.min(pages.length-1,staticIndex+2);
     renderStatic();
+    return true;
   }
 
   function staticPrev(){
-    if(prev.disabled)return;
+    if(prev.disabled)return false;
     if(showCover){
       if(staticIndex===backIndex)staticIndex=pages.length<=1?0:Math.max(1,backIndex-2);
       else if(staticIndex<=1)staticIndex=0;
       else staticIndex=Math.max(1,staticIndex-2);
     }else staticIndex=Math.max(0,staticIndex-2);
     renderStatic();
+    return true;
   }
 
-  prev.onclick=staticPrev;
-  next.onclick=staticNext;
+  advance=staticNext;
+  retreat=staticPrev;
+  canAdvance=()=>!next.disabled;
+  prev.onclick=()=>{stopAutoplay();retreat();};
+  next.onclick=()=>{stopAutoplay();advance();};
   addEventListener("keydown",event=>{
-    if(event.key==="ArrowRight")staticNext();
-    if(event.key==="ArrowLeft")staticPrev();
+    if(event.key==="Escape"){resetZoom();stopAutoplay();}
+    if(event.key==="ArrowRight"){stopAutoplay();advance();}
+    if(event.key==="ArrowLeft"){stopAutoplay();retreat();}
   });
   renderStatic();
 }else{
@@ -257,6 +397,7 @@ if(pages.length<=1&&!showCover){
   }
 
   function update(value){
+    resetZoom();
     const index=currentIndex(value);
     const coverOnly=showCover&&index===0;
     const backOnly=showCover&&index===backIndex;
@@ -267,6 +408,7 @@ if(pages.length<=1&&!showCover){
     next.disabled=showCover?index>=backIndex:(index+2>=pages.length);
     root.classList.toggle("is-cover",landscape&&coverOnly);
     root.classList.toggle("is-back-cover",landscape&&backOnly);
+    refreshAutoplayAvailability();
   }
 
   function flipPrevSafely(){
@@ -280,27 +422,37 @@ if(pages.length<=1&&!showCover){
   }
 
   function goNext(){
-    if(!next.disabled)pageFlip.flipNext(viewerConfig.corner);
+    if(next.disabled)return false;
+    resetZoom();
+    pageFlip.flipNext(viewerConfig.corner);
+    return true;
   }
 
   function goPrev(){
-    if(!prev.disabled)flipPrevSafely();
+    if(prev.disabled)return false;
+    resetZoom();
+    flipPrevSafely();
+    return true;
   }
 
+  advance=goNext;
+  retreat=goPrev;
+  canAdvance=()=>!next.disabled;
   pageFlip.on("flip",event=>update(event.data));
   pageFlip.on("init",event=>update(event.data&&event.data.page));
   pageFlip.on("update",event=>update(event.data&&event.data.page));
   pageFlip.on("changeOrientation",()=>update());
-  prev.onclick=goPrev;
-  next.onclick=goNext;
+  prev.onclick=()=>{stopAutoplay();retreat();};
+  next.onclick=()=>{stopAutoplay();advance();};
   addEventListener("keydown",event=>{
-    if(event.key==="ArrowRight")goNext();
-    if(event.key==="ArrowLeft")goPrev();
+    if(event.key==="Escape"){resetZoom();stopAutoplay();}
+    if(event.key==="ArrowRight"){stopAutoplay();advance();}
+    if(event.key==="ArrowLeft"){stopAutoplay();retreat();}
   });
 
   let wheelSum=0,wheelLocked=false,wheelTimer=0;
   stage.addEventListener("wheel",event=>{
-    if(Math.abs(event.deltaY)<2)return;
+    if(event.ctrlKey||Math.abs(event.deltaY)<2)return;
     event.preventDefault();
     if(wheelLocked)return;
     wheelSum+=event.deltaY;
@@ -308,7 +460,8 @@ if(pages.length<=1&&!showCover){
     const forward=wheelSum>0;
     wheelSum=0;
     wheelLocked=true;
-    forward?goNext():goPrev();
+    stopAutoplay();
+    forward?advance():retreat();
     clearTimeout(wheelTimer);
     wheelTimer=setTimeout(()=>wheelLocked=false,360);
   },{passive:false});
@@ -333,11 +486,12 @@ export function buildShareHtmlDocument(input:ShareHtmlInput){
     '<body class="book-rendering">',
     `<div class="top"><span>${title}</span><span>FLIPBOOK</span></div>`,
     '<main class="stage" id="stage">',
-    '<div class="book-host"><div id="book"></div></div>',
+    '<div class="book-host" id="book-host"><div id="book"></div></div>',
     '<div id="load-error" class="load-error" hidden>翻页组件加载失败，已切换静态阅读模式。</div>',
-    '<span class="hint">拖动书角或滚轮翻页</span>',
+    '<span class="zoom-hint">已放大 · 翻页、离开查看区域或按 Esc 恢复</span>',
+    '<span class="hint">拖动书角或滚轮翻页 · 双指或 Ctrl + 滚轮放大</span>',
     '</main>',
-    '<div class="nav"><button id="prev" aria-label="上一页">‹</button><span id="count" class="count"></span><button id="next" aria-label="下一页">›</button></div>',
+    '<div class="nav"><button id="prev" class="page-button" aria-label="上一页">‹</button><span id="count" class="count"></span><button id="next" class="page-button" aria-label="下一页">›</button><button id="autoplay" class="auto-toggle" type="button" aria-pressed="false" aria-label="开始自动播放">▶ 自动播放</button></div>',
     input.libraryScript,
     `<script>${viewerScript}</script>`,
     '</body>',
