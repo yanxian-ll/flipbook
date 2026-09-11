@@ -1,6 +1,7 @@
 import {Children,Component,forwardRef,memo,useEffect,useImperativeHandle,useMemo,useRef,useState,type ForwardedRef,type ReactNode} from 'react';
 import HTMLFlipBook from 'react-pageflip';
 import {visualPageBackground,type Book} from '../domain/model';
+import {pageWithSpreadOverflow,spreadNeighborIndex} from '../domain/spreadElements';
 import {BookBackCoverEditor,BookBackCoverVisual,BookCoverEditor,BookCoverVisual} from './BookCover';
 import {PageThumbnail} from './PageThumbnail';
 import {EditorCanvas} from '../editor/EditorCanvas';
@@ -62,8 +63,9 @@ function FlipLeafInner(
   if(kind==='blank')return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
   if(kind==='add')return <div ref={ref} className="editor-flip-page editor-flip-add" aria-hidden/>;
 
-  const page=book.pages[index];
-  if(!page)return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
+  const storedPage=book.pages[index];
+  if(!storedPage)return <div ref={ref} className="editor-flip-page editor-flip-blank" aria-hidden/>;
+  const page=index===0?storedPage:pageWithSpreadOverflow(book,index,storedPage);
 
   return <div ref={ref} className={`editor-flip-page ${index===0?'editor-flip-cover':''}`} data-book-side={index===0?'cover':index%2===1?'left':'right'} data-density={index===0?'hard':'soft'}>
     {index===0
@@ -79,7 +81,7 @@ function FlipLeafInner(
           <button
             className="editor-flip-select-page"
             aria-label={`编辑第 ${index} 页`}
-            onClick={e=>{e.stopPropagation();onSelect(index);if(!page.elements.some(element=>element.type==='image'))onBlankPage();}}
+            onClick={e=>{e.stopPropagation();onSelect(index);if(!storedPage.elements.some(element=>element.type==='image'))onBlankPage();}}
           />
         </>
     }
@@ -91,6 +93,10 @@ const FlipLeaf=memo(ForwardedFlipLeaf,(prev,next)=>{
   if(prev.index!==next.index||prev.kind!==next.kind||prev.active!==next.active||prev.priority!==next.priority||prev.width!==next.width||prev.scale!==next.scale)return false;
   if(prev.kind==='page'){
     if(prev.book.pages[prev.index]!==next.book.pages[next.index])return false;
+    const prevNeighbor=spreadNeighborIndex(prev.index,prev.book.pages.length);
+    const nextNeighbor=spreadNeighborIndex(next.index,next.book.pages.length);
+    if(prevNeighbor!==nextNeighbor)return false;
+    if(prevNeighbor>=0&&prev.book.pages[prevNeighbor]!==next.book.pages[nextNeighbor])return false;
     if(prev.index===0&&prev.book.coverTemplate!==next.book.coverTemplate)return false;
     return true;
   }
@@ -139,13 +145,14 @@ function StaticBookFallback({book,pageWidth,activeIndex,onSelect,onAddPage,onTex
   const leftIndex=activeIndex%2===1?activeIndex:activeIndex-1;
   const rightIndex=leftIndex+1;
   const renderPage=(index:number,side:'left'|'right')=>{
-    const page=book.pages[index];
-    if(!page)return <div className={`editor-fallback-page ${side} blank`} style={{width:pageWidth,height:pageHeight}}/>;
+    const storedPage=book.pages[index];
+    if(!storedPage)return <div className={`editor-fallback-page ${side} blank`} style={{width:pageWidth,height:pageHeight}}/>;
+    const page=pageWithSpreadOverflow(book,index,storedPage);
     const active=index===activeIndex;
     return <div className={`editor-fallback-page ${side}`} style={{width:pageWidth,height:pageHeight}}>
       {active
         ?<EditorCanvas page={page} width={pageWidth} onTextEdit={onTextEdit} onCrop={onCrop} onImageSelect={onImageSelect} onBackgroundClick={onBlankPage}/>
-        :<><PageThumbnail page={page} scale={.4} immediate/><button className="editor-flip-select-page" aria-label={`编辑第 ${index} 页`} onClick={()=>{onSelect(index);if(!page.elements.some(element=>element.type==='image'))onBlankPage();}}/></>}
+        :<><PageThumbnail page={page} scale={.4} immediate/><button className="editor-flip-select-page" aria-label={`编辑第 ${index} 页`} onClick={()=>{onSelect(index);if(!storedPage.elements.some(element=>element.type==='image'))onBlankPage();}}/></>}
     </div>;
   };
   return <div className="editor-pageflip-shell static-book-fallback" style={{width:pageWidth*2,height:pageHeight}}>
