@@ -1,6 +1,7 @@
 import {useEffect,useRef,type PointerEvent as ReactPointerEvent,type RefObject,type WheelEvent as ReactWheelEvent} from 'react';
 import type {EditorFlipBookHandle} from '../../components/EditorFlipBook';
 import {flipbookMotion} from '../../flipbook/spec';
+import {useCoverContext} from '../../store/coverContext';
 import {PAGE_WHEEL_LOCK_MS,PAGE_WHEEL_RESET_MS,PAGE_WHEEL_THRESHOLD,PAN_CANCEL_DURATION,PAN_COMMIT_DURATION,PAN_COMMIT_PROGRESS,PAN_COMMIT_VELOCITY,SINGLE_PAGE_FLIP_START_PROGRESS,SINGLE_PAGE_PEEK,SINGLE_PAGE_PREFLIP_PAN_DURATION} from './constants';
 
 type PanGesture={pointerId:number;direction:'next'|'prev';startX:number;lastX:number;lastAt:number;velocity:number;progress:number;started:boolean};
@@ -86,8 +87,29 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
     },flipStartDelay);
   }
   function navigateSinglePage(targetIndex:number){
-    if(zoomMode!=='page'||targetIndex<0||targetIndex>=pageCount||targetIndex===pageIndex)return;
+    if(zoomMode!=='page'||targetIndex<0||targetIndex>pageCount)return;
+    const backActive=useCoverContext.getState().side==='back';
+    const targetIsBack=targetIndex===pageCount;
+    if((backActive&&targetIsBack)||(!backActive&&targetIndex===pageIndex))return;
     if(singleMotionActive.current)return;
+
+    if(targetIsBack||backActive){
+      const controller=flipBook.current;
+      if(!controller){if(!targetIsBack)onSelectPage(targetIndex);return;}
+      pendingSingleTarget.current=null;
+      singleMotionActive.current=true;
+      controller.flipTo(targetIndex);
+      if(singleCommitTimer.current!==null)window.clearTimeout(singleCommitTimer.current);
+      singleCommitTimer.current=window.setTimeout(()=>{
+        singleCommitTimer.current=null;
+        if(!targetIsBack){
+          onSelectPage(targetIndex);
+          requestAnimationFrame(()=>setTrackShift(singleShiftFor(targetIndex),'none'));
+        }
+        releaseSingleMotion();
+      },flipbookMotion.flippingTime+180);
+      return;
+    }
 
     const distance=Math.abs(targetIndex-pageIndex);
     if(distance>1){
@@ -128,48 +150,68 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
     if(zoomMode==='spread'){
       if(direction==='next')flipBook.current?.flipNext();else flipBook.current?.flipPrev();
     }else{
-      const step=direction==='next'?1:-1,targetIndex=pageIndex+step;
-      const validTarget=targetIndex>=0&&targetIndex<pageCount;
+      const backActive=useCoverContext.getState().side==='back';
+      const step=direction==='next'?1:-1;
+      const targetIndex=backActive
+        ?direction==='prev'?Math.max(0,pageCount-1):pageCount
+        :pageIndex===pageCount-1&&direction==='next'?pageCount:pageIndex+step;
+      const validTarget=targetIndex>=0&&targetIndex<=pageCount&&!(backActive&&direction==='next');
       if(validTarget){
-        const crossSpread=!sameContentSpread(pageIndex,targetIndex);
-        const targetShift=singleShiftFor(targetIndex);
-        const needsPrePan=crossSpread&&focusTrack.current!==null&&Math.abs(targetShift-focusedShift)>1;
+        const crossBack=targetIndex===pageCount||backActive;
+        const crossSpread=crossBack||!sameContentSpread(pageIndex,targetIndex);
+        const targetShift=targetIndex===pageCount?focusedShift:singleShiftFor(targetIndex);
+        const needsPrePan=!crossBack&&crossSpread&&focusTrack.current!==null&&Math.abs(targetShift-focusedShift)>1;
         const flipStartDelay=needsPrePan?Math.round(SINGLE_PAGE_PREFLIP_PAN_DURATION*SINGLE_PAGE_FLIP_START_PROGRESS):0;
         lockDuration=crossSpread
           ?Math.max(PAGE_WHEEL_LOCK_MS,flipStartDelay+flipbookMotion.flippingTime+160)
           :Math.max(PAGE_WHEEL_LOCK_MS,PAN_COMMIT_DURATION+120);
+        navigateSinglePage(targetIndex);
       }
-      navigateSinglePage(targetIndex);
     }
     if(wheelTimer.current!==null)window.clearTimeout(wheelTimer.current);
     wheelTimer.current=window.setTimeout(()=>{wheelLocked.current=false;},lockDuration);
   }
 
+  function backEdgeTarget(){
+    if(zoomMode!=='page')return null;
+    if(useCoverContext.getState().side==='back')return Math.max(0,pageCount-1);
+    if(pageIndex===pageCount-1&&showSingleAdd)return pageCount;
+    return null;
+  }
   function canPan(direction:'next'|'prev'){
-    if(zoomMode!=='page'||pageIndex===0||singleMotionActive.current||(!neighborAvailable&&!showSingleAdd))return false;
+    const backActive=useCoverContext.getState().side==='back';
+    if(zoomMode!=='page'||(pageIndex===0&&!backActive)||singleMotionActive.current)return false;
+    if(backEdgeTarget()!==null)return true;
+    if(!neighborAvailable&&!showSingleAdd)return false;
     return direction==='next'?!visualReverse:visualReverse;
   }
   function panTargetShift(direction:'next'|'prev'){return direction==='next'?-pageCanvasWidth*(1-SINGLE_PAGE_PEEK):0;}
   function clearPan(){panGesture.current=null;if(focusTrack.current)focusTrack.current.style.transition='';}
   function finishPan(commit:boolean){
     const gesture=panGesture.current;if(!gesture)return;
+    const syntheticTarget=backEdgeTarget();
     const targetShift=panTargetShift(gesture.direction);
     const remaining=commit?1-gesture.progress:gesture.progress;
     const ratio=Math.max(commit?.42:.45,Math.min(1,remaining));
     const baseDuration=commit?PAN_COMMIT_DURATION:PAN_CANCEL_DURATION;
     const duration=Math.max(commit?150:120,Math.round(baseDuration*ratio));
     singleMotionActive.current=true;
-    setTrackShift(commit?targetShift:focusedShift,`transform ${duration}ms ${commit?'cubic-bezier(.2,.76,.18,1)':'cubic-bezier(.3,.72,.24,1)'}`);
+    setTrackShift(syntheticTarget!==null?focusedShift:commit?targetShift:focusedShift,`transform ${duration}ms ${commit?'cubic-bezier(.2,.76,.18,1)':'cubic-bezier(.3,.72,.24,1)'}`);
     if(singlePanTimer.current!==null)window.clearTimeout(singlePanTimer.current);
     singlePanTimer.current=window.setTimeout(()=>{
       singlePanTimer.current=null;
+      clearPan();
+      if(syntheticTarget!==null){
+        singleMotionActive.current=false;
+        if(commit)navigateSinglePage(syntheticTarget);
+        return;
+      }
       if(commit){
         if(neighborIndex>=0){
           onSelectPage(neighborIndex);
           requestAnimationFrame(()=>setTrackShift(singleShiftFor(neighborIndex),'none'));
         }else if(showSingleAdd)onAddPage();
       }
-      clearPan();
       releaseSingleMotion();
     },duration+16);
   }
@@ -196,8 +238,10 @@ export function usePageNavigation({zoomMode,pageIndex,pageCount,hasSelectedEleme
     if(event.currentTarget.hasPointerCapture(event.pointerId))event.currentTarget.releasePointerCapture(event.pointerId);
     if(gesture.started)finishPan(commit);
     else{
+      const syntheticTarget=backEdgeTarget();
       panGesture.current=null;
-      if(neighborIndex>=0)animateSinglePan(neighborIndex);
+      if(syntheticTarget!==null)navigateSinglePage(syntheticTarget);
+      else if(neighborIndex>=0)animateSinglePan(neighborIndex);
       else if(showSingleAdd)onAddPage();
     }
   }
