@@ -75,4 +75,23 @@ describe('cover presentation model',()=>{
     expect(hidden.opacity).toBe(0);
     expect(hidden.assetId).toBe(photo.id);
   });
+
+  it('exports the stored cover color instead of stale normal-page styling',()=>{
+    const book=newBook('Color','editorial',[photo]);
+    const cover=book.pages[0];
+    cover.background='#e48af5';
+    cover.templateBackground='#1a1a1a';
+    cover.templateOverlay='/reference/legacy-overlay.png';
+    cover.templateDecorations=[{type:'border',x:.1,y:.1,width:.8,height:.8,stroke:'#000000',strokeWidth:2}];
+    cover.pattern='bg-grid.jpg';
+
+    const rendered=frontCoverRenderPage(book);
+    expect(rendered.background).toBe('#e48af5');
+    expect(rendered.templateBackground).toBeUndefined();
+    expect(rendered.templateOverlay).toBeUndefined();
+    expect(rendered.templateDecorations).toBeUndefined();
+    expect(rendered.pattern).toBeUndefined();
+    expect(rendered.patternAssetId).toBeUndefined();
+    expect(book.pages[0].templateBackground).toBe('#1a1a1a');
+  });
 });
