@@ -9,18 +9,55 @@ import {dragCrop,centeredCrop,type Crop} from '../domain/crop';
 import {frameIsFixed} from '../domain/layouts';
 import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetImage,loadStaticImage,frameClip,loadPageFonts,templateDecorationProps} from './renderer';
 
-export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackgroundClick}:{page:Page;width:number;onTextEdit:()=>void;onCrop:()=>void;onImageSelect?:()=>void;onBackgroundClick?:()=>void}){
+type ElementUpdate={id:string;patch:Partial<Element>};
+type EditorCanvasProps={
+  page:Page;
+  width:number;
+  onTextEdit:()=>void;
+  onCrop:()=>void;
+  onImageSelect?:()=>void;
+  onBackgroundClick?:()=>void;
+  selectedIds?:string[];
+  onSelectElement?:(id:string|null,multi?:boolean)=>void;
+  onUpdateElement?:(id:string,patch:Partial<Element>)=>void;
+  onBatchUpdate?:(updates:ElementUpdate[])=>void;
+};
+
+export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackgroundClick,selectedIds,onSelectElement,onUpdateElement,onBatchUpdate}:EditorCanvasProps){
   const transformer=useRef<Konva.Transformer>(null);
   const stage=useRef<Konva.Stage>(null);
   const knownElementIds=useRef(new Set(page.elements.map(element=>element.id)));
-  const selected=useEditor(s=>s.selected);
-  const select=useEditor(s=>s.select);
-  const update=useEditor(s=>s.updateElement);
+  const storeSelected=useEditor(s=>s.selected);
+  const storeSelect=useEditor(s=>s.select);
+  const storeUpdate=useEditor(s=>s.updateElement);
+  const selected=selectedIds??storeSelected;
+  const select=onSelectElement??storeSelect;
+  const update=onUpdateElement??storeUpdate;
   const scale=width/W;
   const [guides,setGuides]=useState<{x?:number;y?:number}>({});
   const [editingTextId,setEditingTextId]=useState<string|null>(null);
   const [selectAllText,setSelectAllText]=useState(false);
   const editingText=editingTextId?page.elements.find(element=>element.id===editingTextId&&element.type==='text'):undefined;
+  const groupDrag=useRef<null|{
+    anchorId:string;
+    anchorX:number;
+    anchorY:number;
+    positions:Array<{id:string;x:number;y:number}>;
+  }>(null);
+
+  const batchUpdate=(updates:ElementUpdate[])=>{
+    if(onBatchUpdate){onBatchUpdate(updates);return;}
+    const state=useEditor.getState();
+    state.change(book=>{
+      const target=book.pages.find(item=>item.id===page.id)??book.pages[state.pageIndex];
+      if(!target)return;
+      for(const {id,patch} of updates){
+        const element=target.elements.find(item=>item.id===id);
+        if(!element||element.locked||frameIsFixed(target,element))continue;
+        Object.assign(element,patch);
+      }
+    });
+  };
 
   useEffect(()=>{
     if(!stage.current||!transformer.current)return;
@@ -36,6 +73,7 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
   useEffect(()=>{
     setEditingTextId(null);
     setSelectAllText(false);
+    groupDrag.current=null;
     knownElementIds.current=new Set(page.elements.map(element=>element.id));
   },[page.id]);
   useEffect(()=>{
@@ -51,13 +89,59 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
   function snap(node:Konva.Node){
     const element=page.elements.find(e=>e.id===node.id());if(!element)return;
     const nodeWidth=node.width(),nodeHeight=node.height();
-    const xTargets=[0,W/2,W,...page.elements.filter(e=>e.id!==element.id).flatMap(e=>[e.x,e.x+e.width/2,e.x+e.width])];
-    const yTargets=[0,H/2,H,...page.elements.filter(e=>e.id!==element.id).flatMap(e=>[e.y,e.y+e.height/2,e.y+e.height])];
+    const ignored=new Set(groupDrag.current?.positions.map(item=>item.id)??[element.id]);
+    const peers=page.elements.filter(e=>!ignored.has(e.id));
+    const xTargets=[0,W/2,W,...peers.flatMap(e=>[e.x,e.x+e.width/2,e.x+e.width])];
+    const yTargets=[0,H/2,H,...peers.flatMap(e=>[e.y,e.y+e.height/2,e.y+e.height])];
     const next:{x?:number;y?:number}={};
     for(const offset of [0,nodeWidth/2,nodeWidth]){const target=xTargets.find(x=>Math.abs(node.x()+offset-x)<8/scale);if(target!==undefined){node.x(target-offset);next.x=target;break;}}
     for(const offset of [0,nodeHeight/2,nodeHeight]){const target=yTargets.find(y=>Math.abs(node.y()+offset-y)<8/scale);if(target!==undefined){node.y(target-offset);next.y=target;break;}}
     setGuides(next);
   }
+  function beginDrag(element:Element,node:Konva.Node){
+    const keepGroup=selected.includes(element.id)&&selected.length>1;
+    if(!selected.includes(element.id))select(element.id);
+    const ids=keepGroup?selected:[element.id];
+    const positions=ids.flatMap(id=>{
+      const peer=page.elements.find(item=>item.id===id);
+      if(!peer||peer.locked||frameIsFixed(page,peer)||(peer.type!=='text'&&peer.type!=='sticker'))return [];
+      const peerNode=stage.current?.findOne(`#${id}`);
+      return peerNode?[{id,x:peerNode.x(),y:peerNode.y()}]:[];
+    });
+    groupDrag.current={anchorId:element.id,anchorX:node.x(),anchorY:node.y(),positions};
+  }
+  function moveDrag(node:Konva.Node){
+    snap(node);
+    const drag=groupDrag.current;
+    if(!drag||drag.anchorId!==node.id()||drag.positions.length<2)return;
+    const dx=node.x()-drag.anchorX,dy=node.y()-drag.anchorY;
+    for(const start of drag.positions){
+      if(start.id===drag.anchorId)continue;
+      const peer=stage.current?.findOne(`#${start.id}`);
+      if(peer){peer.position({x:start.x+dx,y:start.y+dy});}
+    }
+    stage.current?.batchDraw();
+  }
+  function commitNode(element:Element,node:Konva.Node){
+    const drag=groupDrag.current;
+    if(drag&&drag.anchorId===element.id&&drag.positions.length>1){
+      const updates=drag.positions.flatMap(start=>{
+        const peer=stage.current?.findOne(`#${start.id}`);
+        return peer?[{id:start.id,patch:{x:peer.x(),y:peer.y()}}]:[];
+      });
+      groupDrag.current=null;
+      batchUpdate(updates);
+      setGuides({});
+      return;
+    }
+    groupDrag.current=null;
+    const fittedText=element.type==='text';
+    const baseWidth=fittedText?node.width():element.width;
+    const baseHeight=fittedText?node.height():element.height;
+    update(element.id,{x:node.x(),y:node.y(),width:Math.max(20,baseWidth*node.scaleX()),height:Math.max(20,baseHeight*node.scaleY()),rotation:node.rotation()});
+    node.scaleX(1);node.scaleY(1);setGuides({});
+  }
+
   const pageHasImage=page.elements.some(element=>element.type==='image');
   const rotateIconPx=14;
   const rotateOffset=32/scale;
@@ -102,14 +186,10 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
               if(element.type==='sticker')onTextEdit();
               if(element.type==='image')onCrop();
             }}
-            onDragMove={snap}
-            onCommit={node=>{
-              const fittedText=element.type==='text';
-              const baseWidth=fittedText?node.width():element.width;
-              const baseHeight=fittedText?node.height():element.height;
-              update(element.id,{x:node.x(),y:node.y(),width:Math.max(20,baseWidth*node.scaleX()),height:Math.max(20,baseHeight*node.scaleY()),rotation:node.rotation()});
-              node.scaleX(1);node.scaleY(1);setGuides({});
-            }}
+            onDragStart={node=>beginDrag(element,node)}
+            onDragMove={moveDrag}
+            onCommit={node=>commitNode(element,node)}
+            onUpdate={patch=>update(element.id,patch)}
           />)}
         </Group>)}
         {guides.x!==undefined&&<Line points={[guides.x,0,guides.x,H]} stroke="#e53478" strokeWidth={1/scale} listening={false}/ >}
@@ -212,20 +292,20 @@ function InlineTextEditor({element,scale,selectAll,onChange,onClose}:{element:El
 }
 
 function Pattern({pattern,assetId}:{pattern?:string;assetId?:string}){const [image,setImage]=useState<HTMLImageElement>();useEffect(()=>{let alive=true;setImage(undefined);const task=assetId?loadAssetImage(assetId):pattern?loadStaticImage(`/reference/${pattern}`):null;if(task)void task.then(img=>{if(alive)setImage(img);}).catch(()=>{});return()=>{alive=false;};},[pattern,assetId]);return image?<CanvasImage {...pageTextureProps(image)} />:null;}
-function CanvasElement({element,fixed,selected,editing,onClick,onImageSelect,onDoubleClick,onCommit,onDragMove}:{element:Element;fixed:boolean;selected:boolean;editing:boolean;onClick:(multi:boolean)=>void;onImageSelect:()=>void;onDoubleClick:()=>void;onCommit:(node:Konva.Node)=>void;onDragMove:(node:Konva.Node)=>void}){
+function CanvasElement({element,fixed,selected,editing,onClick,onImageSelect,onDoubleClick,onCommit,onDragStart,onDragMove,onUpdate}:{element:Element;fixed:boolean;selected:boolean;editing:boolean;onClick:(multi:boolean)=>void;onImageSelect:()=>void;onDoubleClick:()=>void;onCommit:(node:Konva.Node)=>void;onDragStart:(node:Konva.Node)=>void;onDragMove:(node:Konva.Node)=>void;onUpdate:(patch:Partial<Element>)=>void}){
   const [image,setImage]=useState<HTMLImageElement>();const [failed,setFailed]=useState(false);
   useEffect(()=>{let live=true;setImage(undefined);setFailed(false);if(element.assetId)void loadAssetImage(element.assetId).then(img=>{if(live)setImage(img);}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[element.assetId]);
   const movable=element.type==='text'||element.type==='sticker';
-  const events={draggable:!element.locked,onClick:(e:Konva.KonvaEventObject<MouseEvent>)=>{onClick(e.evt.shiftKey);onImageSelect();},onTap:()=>{onClick(false);onImageSelect();},onDblClick:onDoubleClick,onDblTap:onDoubleClick,onMouseEnter:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable&&!element.locked)setStageCursor(e.target,'move');},onMouseLeave:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable)setStageCursor(e.target,'default');},onDragStart:(e:Konva.KonvaEventObject<DragEvent>)=>{onClick(false);if(movable)setStageCursor(e.target,'grabbing');},onDragMove:(e:Konva.KonvaEventObject<DragEvent>)=>onDragMove(e.target),onDragEnd:(e:Konva.KonvaEventObject<DragEvent>)=>{onCommit(e.target);if(movable)setStageCursor(e.target,'move');},onTransformEnd:(e:Konva.KonvaEventObject<Event>)=>onCommit(e.target)};
-  if(element.type==='image'&&fixed)return <FixedPhoto element={element} image={image} selected={selected} onSelect={()=>onClick(false)} onActivate={onImageSelect} onDoubleClick={onDoubleClick}/>;
+  const events={draggable:!element.locked,onClick:(e:Konva.KonvaEventObject<MouseEvent>)=>{onClick(e.evt.ctrlKey||e.evt.metaKey||e.evt.shiftKey);onImageSelect();},onTap:()=>{onClick(false);onImageSelect();},onDblClick:onDoubleClick,onDblTap:onDoubleClick,onMouseEnter:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable&&!element.locked)setStageCursor(e.target,'move');},onMouseLeave:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable)setStageCursor(e.target,'default');},onDragStart:(e:Konva.KonvaEventObject<DragEvent>)=>{onDragStart(e.target);if(movable)setStageCursor(e.target,'grabbing');},onDragMove:(e:Konva.KonvaEventObject<DragEvent>)=>onDragMove(e.target),onDragEnd:(e:Konva.KonvaEventObject<DragEvent>)=>{onCommit(e.target);if(movable)setStageCursor(e.target,'move');},onTransformEnd:(e:Konva.KonvaEventObject<Event>)=>onCommit(e.target)};
+  if(element.type==='image'&&fixed)return <FixedPhoto element={element} image={image} selected={selected} onSelect={()=>onClick(false)} onActivate={onImageSelect} onDoubleClick={onDoubleClick} onUpdate={onUpdate}/>;
   if(element.type==='image')return image?<CanvasImage {...photoProps(element,image)} {...events}/>:<Rect {...elementProps(element)} fill={failed?'#f9b8b8':'#ddd'} {...events}/>;
   if(element.type==='text'||element.type==='sticker')return <Text {...textProps(element)} {...events} visible={!editing}/>;
   return <Rect {...elementProps(element)} cornerRadius={element.cornerRadius??0} {...events}/>;
 }
 function setStageCursor(node:Konva.Node,cursor:string){const container=node.getStage()?.container();if(container)container.style.cursor=cursor;}
 function Overlay({url}:{url:string}){const [image,setImage]=useState<HTMLImageElement>();useEffect(()=>{let alive=true;void loadStaticImage(url).then(img=>{if(alive)setImage(img);});return()=>{alive=false;};},[url]);return image?<CanvasImage image={image} width={W} height={H} listening={false}/>:null;}
-function FixedPhoto({element,image,selected,onSelect,onActivate,onDoubleClick}:{element:Element;image?:HTMLImageElement;selected:boolean;onSelect:()=>void;onActivate:()=>void;onDoubleClick:()=>void}){
-  const update=useEditor(s=>s.updateElement);const group=useRef<Konva.Group>(null);
+function FixedPhoto({element,image,selected,onSelect,onActivate,onDoubleClick,onUpdate}:{element:Element;image?:HTMLImageElement;selected:boolean;onSelect:()=>void;onActivate:()=>void;onDoubleClick:()=>void;onUpdate:(patch:Partial<Element>)=>void}){
+  const group=useRef<Konva.Group>(null);
   const [preview,setPreview]=useState<Element['crop']>();
   const drag=useRef<{pointerId:number;x:number;y:number;clientX:number;clientY:number;crop:Crop;moved:boolean;target:Konva.Shape}|null>(null);
   const suppressClick=useRef(false);
@@ -250,10 +330,10 @@ function FixedPhoto({element,image,selected,onSelect,onActivate,onDoubleClick}:{
     const start=drag.current;if(!start||start.pointerId!==e.evt.pointerId)return;
     const crop=nextCrop(e);
     start.target.releaseCapture(e.evt.pointerId);drag.current=null;suppressClick.current=start.moved;
-    if(crop&&(crop.x!==start.crop.x||crop.y!==start.crop.y))update(element.id,{crop});
+    if(crop&&(crop.x!==start.crop.x||crop.y!==start.crop.y))onUpdate({crop});
     setPreview(undefined);e.cancelBubble=true;
   }
   function cancel(e:Konva.KonvaEventObject<PointerEvent>){const start=drag.current;if(!start||start.pointerId!==e.evt.pointerId)return;start.target.releaseCapture(e.evt.pointerId);drag.current=null;suppressClick.current=true;setPreview(undefined);}
   function activate(){if(suppressClick.current)return;onSelect();onActivate();}
-  return <Group ref={group} id={element.id} x={element.x} y={element.y} clipFunc={frameClip(element)} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={cancel} onClick={activate} onTap={activate} onDblClick={onDoubleClick} onDblTap={onDoubleClick} onWheel={e=>{if(!selected)return;e.evt.preventDefault();e.evt.stopPropagation();e.cancelBubble=true;const crop=element.crop??{x:.5,y:.5,zoom:1};update(element.id,{crop:{...crop,zoom:Math.max(1,Math.min(4,crop.zoom-e.evt.deltaY*.002))}});}}>{image?<CanvasImage {...photoProps({...shown,x:0,y:0,rotation:0,id:element.id+'-photo'},image)}/>:<Rect width={element.width} height={element.height} fill="#ddd"/>}{selected&&<Rect width={element.width} height={element.height} stroke="#3185ff" strokeWidth={5} listening={false}/>}</Group>;
+  return <Group ref={group} id={element.id} x={element.x} y={element.y} clipFunc={frameClip(element)} onPointerDown={begin} onPointerMove={move} onPointerUp={finish} onPointerCancel={cancel} onClick={activate} onTap={activate} onDblClick={onDoubleClick} onDblTap={onDoubleClick} onWheel={e=>{if(!selected)return;e.evt.preventDefault();e.evt.stopPropagation();e.cancelBubble=true;const crop=element.crop??{x:.5,y:.5,zoom:1};onUpdate({crop:{...crop,zoom:Math.max(1,Math.min(4,crop.zoom-e.evt.deltaY*.002))}});}}>{image?<CanvasImage {...photoProps({...shown,x:0,y:0,rotation:0,id:element.id+'-photo'},image)}/>:<Rect width={element.width} height={element.height} fill="#ddd"/>}{selected&&<Rect width={element.width} height={element.height} stroke="#3185ff" strokeWidth={5} listening={false}/>}</Group>;
 }
