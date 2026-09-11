@@ -26,7 +26,6 @@ type EditorCanvasProps={
 };
 
 export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackgroundClick,selectedIds,onSelectElement,onUpdateElement,onBatchUpdate}:EditorCanvasProps){
-  const transformer=useRef<Konva.Transformer>(null);
   const stage=useRef<Konva.Stage>(null);
   const knownElementIds=useRef(new Set(page.elements.map(element=>element.id)));
   const storeSelected=useEditor(s=>s.selected);
@@ -61,16 +60,6 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
     });
   };
 
-  useEffect(()=>{
-    if(!stage.current||!transformer.current)return;
-    const nodes=selected.filter(id=>{
-      if(id===editingTextId)return false;
-      const e=page.elements.find(element=>element.id===id);
-      return e&&!e.locked&&!frameIsFixed(page,e);
-    }).map(id=>stage.current!.findOne(`#${id}`)).filter(Boolean) as Konva.Node[];
-    transformer.current.nodes(nodes);
-    transformer.current.getLayer()?.batchDraw();
-  },[selected,page,editingTextId]);
   useEffect(()=>{void loadPageFonts(page).then(()=>stage.current?.batchDraw());},[page]);
   useEffect(()=>{
     setEditingTextId(null);
@@ -93,8 +82,12 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
     const nodeWidth=node.width(),nodeHeight=node.height();
     const ignored=new Set(groupDrag.current?.positions.map(item=>item.id)??[element.id]);
     const peers=page.elements.filter(e=>!ignored.has(e.id));
-    const xTargets=[0,W/2,W,...peers.flatMap(e=>[e.x,e.x+e.width/2,e.x+e.width])];
-    const yTargets=[0,H/2,H,...peers.flatMap(e=>[e.y,e.y+e.height/2,e.y+e.height])];
+    const peerBounds=peers.map(e=>{
+      const peer=stage.current?.findOne(`#${e.id}`);
+      return {x:peer?.x()??e.x,y:peer?.y()??e.y,width:peer?.width()??e.width,height:peer?.height()??e.height};
+    });
+    const xTargets=[0,W/2,W,...peerBounds.flatMap(e=>[e.x,e.x+e.width/2,e.x+e.width])];
+    const yTargets=[0,H/2,H,...peerBounds.flatMap(e=>[e.y,e.y+e.height/2,e.y+e.height])];
     const next:{x?:number;y?:number}={};
     for(const offset of [0,nodeWidth/2,nodeWidth]){const target=xTargets.find(x=>Math.abs(node.x()+offset-x)<8/scale);if(target!==undefined){node.x(target-offset);next.x=target;break;}}
     for(const offset of [0,nodeHeight/2,nodeHeight]){const target=yTargets.find(y=>Math.abs(node.y()+offset-y)<8/scale);if(target!==undefined){node.y(target-offset);next.y=target;break;}}
@@ -138,16 +131,34 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
       return;
     }
     groupDrag.current=null;
+    const sx=Math.abs(node.scaleX()),sy=Math.abs(node.scaleY());
+    if(element.type==='sticker'){
+      const factor=Math.max(Number.EPSILON,Math.sqrt(sx*sy));
+      update(element.id,{
+        x:node.x(),y:node.y(),
+        width:Math.max(Number.EPSILON,node.width()*sx),
+        height:Math.max(Number.EPSILON,node.height()*sy),
+        fontSize:(element.fontSize??60)*factor,
+        rotation:node.rotation(),
+      });
+      node.scaleX(1);node.scaleY(1);setGuides({});
+      return;
+    }
     const fittedText=element.type==='text';
     const baseWidth=fittedText?node.width():element.width;
     const baseHeight=fittedText?node.height():element.height;
-    update(element.id,{x:node.x(),y:node.y(),width:Math.max(20,baseWidth*node.scaleX()),height:Math.max(20,baseHeight*node.scaleY()),rotation:node.rotation()});
+    const nextWidth=Math.abs(baseWidth*node.scaleX()),nextHeight=Math.abs(baseHeight*node.scaleY());
+    const freeScale=isPaperTapeElement(element);
+    update(element.id,{
+      x:node.x(),y:node.y(),
+      width:freeScale?Math.max(Number.EPSILON,nextWidth):Math.max(20,nextWidth),
+      height:freeScale?Math.max(Number.EPSILON,nextHeight):Math.max(20,nextHeight),
+      rotation:node.rotation(),
+    });
     node.scaleX(1);node.scaleY(1);setGuides({});
   }
 
   const pageHasImage=page.elements.some(element=>element.type==='image');
-  const rotateIconPx=14;
-  const rotateOffset=32/scale;
   const templateOverlay=effectiveTemplateOverlay(page);
   const templateDecorations=pageTemplateDecorations(page);
   const hasTemplateLayer=!!templateOverlay||templateDecorations.length>0;
@@ -197,44 +208,65 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
         </Group>)}
         {guides.x!==undefined&&<Line points={[guides.x,0,guides.x,H]} stroke="#e53478" strokeWidth={1/scale} listening={false}/ >}
         {guides.y!==undefined&&<Line points={[0,guides.y,W,guides.y]} stroke="#e53478" strokeWidth={1/scale} listening={false}/>} 
-        <Transformer
-          ref={transformer}
-          rotateEnabled
-          rotationSnaps={[0,90,180,270,360]}
-          rotationSnapTolerance={8}
-          rotateAnchorOffset={rotateOffset}
-          flipEnabled={false}
-          borderStroke="#3185ff"
-          anchorStroke="#3185ff"
-          anchorFill="#fff"
-          anchorSize={7}
-          padding={2}
-          anchorStyleFunc={anchor=>{
-            if(!anchor.hasName('rotater'))return;
-            const factor=rotateIconPx/Math.max(1,anchor.width()*scale);
-            anchor.scale({x:factor,y:factor});
-            anchor.opacity(1);
-            anchor.fill('#fff');
-            anchor.stroke('#3185ff');
-            anchor.strokeWidth(.65);
-            anchor.cornerRadius(0);
-            anchor.sceneFunc((context,shape)=>{
-              const w=shape.width(),h=shape.height(),cx=w/2,cy=h/2,r=Math.min(w,h)*.31,start=.58,end=5.54,ex=cx+r*Math.cos(end),ey=cy+r*Math.sin(end),direction=end+Math.PI/2,head=Math.min(w,h)*.17;
-              context.beginPath();
-              context.arc(cx,cy,r,start,end,false);
-              context.moveTo(ex,ey);
-              context.lineTo(ex+head*Math.cos(direction+2.48),ey+head*Math.sin(direction+2.48));
-              context.moveTo(ex,ey);
-              context.lineTo(ex+head*Math.cos(direction-2.48),ey+head*Math.sin(direction-2.48));
-              context.strokeShape(shape);
-            });
-          }}
-          boundBoxFunc={(oldBox,newBox)=>Math.abs(newBox.width)<12||Math.abs(newBox.height)<12?oldBox:newBox}
-        />
+        {selected.map(id=>{
+          const element=page.elements.find(item=>item.id===id);
+          if(!element||id===editingTextId||element.locked||frameIsFixed(page,element))return null;
+          return <SelectionTransformer key={`selection-${id}`} stageRef={stage} element={element} scale={scale}/>;
+        })}
       </Layer>
     </Stage>
     {editingText&&<InlineTextEditor element={editingText} scale={scale} selectAll={selectAllText} onChange={value=>update(editingText.id,{text:value})} onClose={()=>{setEditingTextId(null);setSelectAllText(false);}}/>} 
   </div>;
+}
+
+function SelectionTransformer({stageRef,element,scale}:{stageRef:{current:Konva.Stage|null};element:Element;scale:number}){
+  const transformer=useRef<Konva.Transformer>(null);
+  const rotateIconPx=14;
+  const rotateOffset=32/scale;
+  const freeScale=element.type==='sticker'||isPaperTapeElement(element);
+  useEffect(()=>{
+    const target=stageRef.current?.findOne(`#${element.id}`);
+    const tr=transformer.current;
+    if(!tr)return;
+    tr.nodes(target?[target]:[]);
+    tr.getLayer()?.batchDraw();
+  },[stageRef,element]);
+  return <Transformer
+    ref={transformer}
+    rotateEnabled
+    keepRatio={element.type==='sticker'}
+    enabledAnchors={element.type==='sticker'?['top-left','top-right','bottom-left','bottom-right']:undefined}
+    rotationSnaps={[0,90,180,270,360]}
+    rotationSnapTolerance={8}
+    rotateAnchorOffset={rotateOffset}
+    flipEnabled={false}
+    borderStroke="#3185ff"
+    anchorStroke="#3185ff"
+    anchorFill="#fff"
+    anchorSize={7}
+    padding={2}
+    anchorStyleFunc={anchor=>{
+      if(!anchor.hasName('rotater'))return;
+      const factor=rotateIconPx/Math.max(1,anchor.width()*scale);
+      anchor.scale({x:factor,y:factor});
+      anchor.opacity(1);
+      anchor.fill('#fff');
+      anchor.stroke('#3185ff');
+      anchor.strokeWidth(.65);
+      anchor.cornerRadius(0);
+      anchor.sceneFunc((context,shape)=>{
+        const w=shape.width(),h=shape.height(),cx=w/2,cy=h/2,r=Math.min(w,h)*.31,start=.58,end=5.54,ex=cx+r*Math.cos(end),ey=cy+r*Math.sin(end),direction=end+Math.PI/2,head=Math.min(w,h)*.17;
+        context.beginPath();
+        context.arc(cx,cy,r,start,end,false);
+        context.moveTo(ex,ey);
+        context.lineTo(ex+head*Math.cos(direction+2.48),ey+head*Math.sin(direction+2.48));
+        context.moveTo(ex,ey);
+        context.lineTo(ex+head*Math.cos(direction-2.48),ey+head*Math.sin(direction-2.48));
+        context.strokeShape(shape);
+      });
+    }}
+    boundBoxFunc={freeScale?((_oldBox,newBox)=>newBox):((oldBox,newBox)=>Math.abs(newBox.width)<12||Math.abs(newBox.height)<12?oldBox:newBox)}
+  />;
 }
 
 function InlineTextEditor({element,scale,selectAll,onChange,onClose}:{element:Element;scale:number;selectAll:boolean;onChange:(value:string)=>void;onClose:()=>void}){
