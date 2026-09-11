@@ -177,7 +177,7 @@ export function Editor(){
   const {page,neighborPage,showSingleAdd,spreadUnitWidth,pageCanvasWidth,pageHeight,visualReverse,focusWindowWidth,focusedShift}=layout;
   const fixed=selected?frameIsFixed(page,selected):false;
 
-  return <main className={`phone-shell studio ${wide?'expanded':''} ${panels.bothSideOpen?'libraries-open':''} ${panels.photoSideOpen?'photo-library-open':''} ${panels.templateSideOpen?'template-library-open':''} ${panels.compactPanel==='page-background'?'page-background-open':''}`}>
+  return <main className={`phone-shell studio ${wide?'expanded':''} ${panels.bothSideOpen?'libraries-open':''} ${panels.leftSideOpen?'photo-library-open':''} ${panels.templateSideOpen?'template-library-open':''} ${panels.compactPanel==='page-background'?'page-background-open':''}`}>
     <EditorHeader wide={wide} onBack={()=>void leave('/')} onToggleWide={()=>setWide(value=>!value)}/>
     <ErrorMessage message={error||editorError}/>
 
@@ -273,7 +273,7 @@ export function Editor(){
     {panels.templateSideOpen&&<EditorPanel key={`${page.id}:layouts`} panel="layouts" placement="right" paired={panels.bothSideOpen} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={()=>{panels.setTemplateLibraryOpen(false);if(panels.panel==='layouts')panels.setPanel(null);}}/>}
     {panels.compactPanel&&(panels.compactPanel==='background'||panels.compactPanel==='page-background'
       ?<TextureBackgroundPanel key={`${page.id}:${panels.compactPanel}`} mode={panels.compactPanel==='background'?'workspace':'page'} onClose={()=>panels.setPanel(null)}/>
-      :<EditorPanel key={`${page.id}:${panels.compactPanel}`} panel={page.type!=='cover'&&panels.compactPanel==='cover'?'layouts':panels.compactPanel} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={panels.closeAllPanels}/>)}
+      :<EditorPanel key={`${page.id}:${panels.compactPanel}`} panel={page.type!=='cover'&&panels.compactPanel==='cover'?'layouts':panels.compactPanel} placement={panels.sideLibraries?'left':undefined} paired={panels.bothSideOpen} photoIds={panels.photoDraft} onPhotoIdsChange={panels.setPhotoDraft} onPanel={panels.openTool} onClose={panels.sideLibraries?()=>panels.setPanel(null):panels.closeAllPanels}/>)}
 
     <PageDeleteDialog open={pageDeleteOpen&&pageIndex>0} pageIndex={pageIndex} onClose={()=>setPageDeleteOpen(false)} onConfirm={confirmPageDelete}/>
     <ExportDialog book={book} open={exporting} onClose={()=>setExporting(false)}/>
