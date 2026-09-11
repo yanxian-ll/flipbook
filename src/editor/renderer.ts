@@ -2,6 +2,7 @@ import Konva from 'konva';
 import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
 import {effectiveTemplateOverlay,pageTemplateDecorations,type TemplateDecoration} from '../domain/templateDecorations';
+import {polaroidPhotoFrame,polaroidTemplateFor} from '../domain/polaroids';
 import {repository} from '../db/repository';
 import {decodeImage} from '../domain/assets';
 import {createWorkQueue} from '../domain/workQueue';
@@ -106,7 +107,34 @@ export async function renderPage(page:Page,options:{scale?:number;quality?:'thum
     const ordered=hasTemplateLayer?[...page.elements.filter(e=>e.type==='image'),...page.elements.filter(e=>e.type!=='image')]:page.elements;
     let overlayAdded=false;
     const addOverlay=async()=>{if(overlayAdded)return;if(overlay)layer.add(new Konva.Image({image:await loadStaticImage(overlay),width:W,height:H,listening:false}));for(const decoration of decorations)layer.add(new Konva.Rect(templateDecorationProps(decoration)));overlayAdded=true;};
-    for(const e of ordered){if(e.type!=='image')await addOverlay();if(e.type==='image'&&e.assetId){const img=await loadAssetImage(e.assetId,options.quality??'preview');const group=new Konva.Group({x:e.x,y:e.y,rotation:e.rotation,clipFunc:frameClip(e)});const photo=new Konva.Image(photoProps({...e,x:0,y:0,rotation:0},img));if((e.blur??0)>0){photo.cache({pixelRatio:1});photo.filters([Konva.Filters.Blur]);photo.blurRadius(e.blur??0);}group.add(photo);layer.add(group);}else if(e.type==='text'||e.type==='sticker'){layer.add(new Konva.Text(textProps(e)));}else{layer.add(new Konva.Rect({...elementProps(e),cornerRadius:e.cornerRadius??0}));}}
+    for(const e of ordered){
+      if(e.type!=='image')await addOverlay();
+      if(e.type==='image'&&e.polaroidStyle){
+        const frame=polaroidPhotoFrame(e);
+        const template=polaroidTemplateFor(e.polaroidStyle);
+        const group=new Konva.Group({x:e.x,y:e.y,rotation:e.rotation,opacity:e.opacity});
+        group.add(new Konva.Rect({width:e.width,height:e.height,fill:'#faf9f5'}));
+        if(e.assetId){
+          const img=await loadAssetImage(e.assetId,options.quality??'preview');
+          const photo=new Konva.Image({
+            image:img,
+            x:frame.x,y:frame.y,width:frame.width,height:frame.height,
+            crop:cropRect({width:frame.width,height:frame.height},{width:img.naturalWidth,height:img.naturalHeight},e.crop),
+          });
+          if((e.blur??0)>0){photo.cache({pixelRatio:1});photo.filters([Konva.Filters.Blur]);photo.blurRadius(e.blur??0);}
+          group.add(photo);
+        }else group.add(new Konva.Rect({x:frame.x,y:frame.y,width:frame.width,height:frame.height,fill:'#e7e7e4'}));
+        group.add(new Konva.Image({image:await loadStaticImage(template.overlay),width:e.width,height:e.height,listening:false}));
+        layer.add(group);
+      }else if(e.type==='image'&&e.assetId){
+        const img=await loadAssetImage(e.assetId,options.quality??'preview');
+        const group=new Konva.Group({x:e.x,y:e.y,rotation:e.rotation,clipFunc:frameClip(e)});
+        const photo=new Konva.Image(photoProps({...e,x:0,y:0,rotation:0},img));
+        if((e.blur??0)>0){photo.cache({pixelRatio:1});photo.filters([Konva.Filters.Blur]);photo.blurRadius(e.blur??0);}
+        group.add(photo);layer.add(group);
+      }else if(e.type==='text'||e.type==='sticker')layer.add(new Konva.Text(textProps(e)));
+      else layer.add(new Konva.Rect({...elementProps(e),cornerRadius:e.cornerRadius??0}));
+    }
     await addOverlay();
     layer.draw();const canvas=stage.toCanvas({pixelRatio:options.scale??1});return await new Promise<Blob>((resolve,reject)=>canvas.toBlob(b=>b?resolve(b):reject(new Error('页面加载失败')),options.mimeType??'image/png',.95));
   }finally{stage.destroy();holder.remove();}
