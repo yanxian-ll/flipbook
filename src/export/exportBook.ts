@@ -230,7 +230,86 @@ export function tuneShareViewerHtml(html:string,workspaceCss:string){
   ].join('\n');
   const nav='<div class="nav"><button id="prev" class="page-button" aria-label="上一页">‹</button><span id="count" class="count"></span><button id="next" class="page-button" aria-label="下一页">›</button><button id="autoplay" class="auto-toggle" type="button" aria-pressed="false" aria-label="开始自动播放">▶ 自动播放</button></div>';
   const navWithCovers='<div class="nav"><button id="front-cover" class="page-button cover-jump" type="button" aria-label="跳到前封面" title="前封面">|‹</button><button id="prev" class="page-button" aria-label="上一页">‹</button><span id="count" class="count"></span><button id="next" class="page-button" aria-label="下一页">›</button><button id="back-cover" class="page-button cover-jump" type="button" aria-label="跳到后封面" title="后封面">›|</button><button id="autoplay" class="auto-toggle" type="button" aria-pressed="false" aria-label="开始自动播放">▶ 自动播放</button></div>';
-  const viewerControlsCss='.nav .cover-jump{font-size:15px;font-weight:800;letter-spacing:-2px}.nav .cover-jump[hidden]{display:none}@media(max-width:640px){.nav{gap:6px}.nav button{height:40px}.nav .page-button{width:40px}.nav .count{min-width:60px}.nav .auto-toggle{min-width:76px;padding:0 8px}}';
+  const viewerControlsCss='.nav .cover-jump{font-size:15px;font-weight:800;letter-spacing:-2px}.nav .cover-jump[hidden]{display:none}@media(max-width:640px){.nav{gap:4px;padding-left:6px;padding-right:6px}.nav button{height:40px}.nav .page-button{width:40px}.nav .count{min-width:22px!important;width:22px!important;white-space:nowrap}.nav .auto-toggle{min-width:72px;padding:0 7px}}';
+  const offlineReaderPatch=`<script>
+;(()=>{
+  const saveButton=document.getElementById('save-offline');
+  const count=document.getElementById('count');
+  function compactCount(){
+    if(!count)return;
+    const text=(count.textContent||'').trim();
+    if(!text||text==='封面'||text==='后封面')return;
+    const match=text.match(/(?:第\\s*)?(\\d+)(?:\\s*页)?/);
+    if(match&&count.textContent!==match[1])count.textContent=match[1];
+  }
+  if(count){
+    compactCount();
+    new MutationObserver(compactCount).observe(count,{childList:true,characterData:true,subtree:true});
+  }
+  if(!saveButton)return;
+  function fileName(){
+    const raw=(document.title||'flipbook').trim()||'flipbook';
+    return (raw.replace(/[\\\\/:*?"<>|]+/g,'-').replace(/\\s+/g,' ').trim()||'flipbook')+'.html';
+  }
+  function downloadHtml(html,name){
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;
+    link.download=name;
+    link.rel='noopener';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),60000);
+  }
+  function currentDocumentHtml(){
+    const clone=document.documentElement.cloneNode(true);
+    const cloneSave=clone.querySelector('#save-offline');
+    const cloneRotate=clone.querySelector('#rotate-view');
+    cloneSave&&cloneSave.remove();
+    cloneRotate&&cloneRotate.remove();
+    const cloneStage=clone.querySelector('#stage');
+    const cloneHost=clone.querySelector('#book-host');
+    const cloneBook=clone.querySelector('#book');
+    if(cloneStage&&cloneHost){
+      cloneHost.removeAttribute('style');
+      cloneStage.insertBefore(cloneHost,cloneStage.firstChild);
+      clone.querySelectorAll('.share-book-pan-frame,.share-book-zoom-frame,.share-book-rotate-frame').forEach(node=>node.remove());
+    }
+    if(cloneBook){cloneBook.replaceChildren();cloneBook.removeAttribute('class');cloneBook.removeAttribute('style');}
+    clone.querySelector('.top')&&clone.querySelector('.top').classList.remove('share-top-hidden');
+    return '<!doctype html>\\n'+clone.outerHTML;
+  }
+  async function originalHtml(){
+    if(location.protocol==='http:'||location.protocol==='https:'){
+      try{
+        const response=await fetch(location.href,{cache:'no-store',credentials:'same-origin'});
+        if(response.ok){
+          const text=await response.text();
+          if(text.includes('const pages=')&&text.includes('data:image/'))return text;
+        }
+      }catch{}
+    }
+    return currentDocumentHtml();
+  }
+  saveButton.addEventListener('click',async event=>{
+    event.preventDefault();
+    event.stopImmediatePropagation();
+    const html=await originalHtml();
+    const name=fileName();
+    const blob=new Blob([html],{type:'text/html;charset=utf-8'});
+    const file=typeof File==='function'?new File([blob],name,{type:blob.type}):null;
+    try{
+      if(file&&navigator.share&&navigator.canShare&&navigator.canShare({files:[file]})){
+        await navigator.share({files:[file],title:document.title||'Flipbook'});
+        return;
+      }
+    }catch(error){if(error&&error.name==='AbortError')return;}
+    downloadHtml(html,name);
+  },{capture:true});
+})();
+</script>`;
   return html
     .replace(autoplayDelay,slowerAutoplay)
     .replace(domBindings,domBindingsWithCovers)
@@ -244,7 +323,8 @@ export function tuneShareViewerHtml(html:string,workspaceCss:string){
     .replace(flipActions,flipActionsWithCovers)
     .replace(flipCall,slowerFlip)
     .replace(nav,navWithCovers)
-    .replace('</head>',`<style>${workspaceCss}${viewerControlsCss}</style></head>`);
+    .replace('</head>',`<style>${workspaceCss}${viewerControlsCss}</style></head>`)
+    .replace('</body>',offlineReaderPatch+'</body>');
 }
 
 async function exportSharePage(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions,compressionQuality:number){
