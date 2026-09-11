@@ -3,10 +3,11 @@ import {Stage,Layer,Rect,Text,Image as CanvasImage,Transformer,Line,Group} from 
 import Konva from 'konva';
 import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
+import {effectiveTemplateOverlay,pageTemplateDecorations} from '../domain/templateDecorations';
 import {useEditor} from '../store/editor';
 import {dragCrop,centeredCrop,type Crop} from '../domain/crop';
 import {frameIsFixed} from '../domain/layouts';
-import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetImage,loadStaticImage,frameClip,loadPageFonts} from './renderer';
+import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetImage,loadStaticImage,frameClip,loadPageFonts,templateDecorationProps} from './renderer';
 
 export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackgroundClick}:{page:Page;width:number;onTextEdit:()=>void;onCrop:()=>void;onImageSelect?:()=>void;onBackgroundClick?:()=>void}){
   const transformer=useRef<Konva.Transformer>(null);
@@ -60,6 +61,9 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
   const pageHasImage=page.elements.some(element=>element.type==='image');
   const rotateIconPx=14;
   const rotateOffset=32/scale;
+  const templateOverlay=effectiveTemplateOverlay(page);
+  const templateDecorations=pageTemplateDecorations(page);
+  const hasTemplateLayer=!!templateOverlay||templateDecorations.length>0;
   function backgroundClick(){setEditingTextId(null);setSelectAllText(false);select(null);if(!pageHasImage)onBackgroundClick?.();}
   function editText(element:Element){
     select(element.id);
@@ -81,8 +85,9 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
       <Layer>
         <Rect name="page-background" width={W} height={H} fill={visualPageBackground(page)}/>
         <Pattern pattern={page.pattern} assetId={page.patternAssetId}/>
-        {(page.templateOverlay?[page.elements.filter(e=>e.type==='image'),page.elements.filter(e=>e.type!=='image')]:[page.elements]).map((elements,index)=><Group key={index}>
-          {index===1&&<Overlay url={page.templateOverlay!}/>} 
+        {(hasTemplateLayer?[page.elements.filter(e=>e.type==='image'),page.elements.filter(e=>e.type!=='image')]:[page.elements]).map((elements,index)=><Group key={index}>
+          {index===1&&templateOverlay&&<Overlay url={templateOverlay}/>} 
+          {index===1&&templateDecorations.map(decoration=><Rect key={decoration.id} {...templateDecorationProps(decoration)}/>)}
           {elements.map(element=><CanvasElement
             key={element.id}
             fixed={frameIsFixed(page,element)}
