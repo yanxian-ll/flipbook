@@ -40,12 +40,16 @@ export function textLayout(e:Element){
   const left=e.x;
   const center=e.x+e.width/2;
   const right=e.x+e.width;
-  const available=anchor==='center'
+  const pageAvailable=anchor==='center'
     ?Math.max(20,2*Math.min(center,W-center))
     :anchor==='right'
       ?Math.max(20,right)
       :Math.max(20,W-left);
-  const maxWidth=Math.max(20,Math.min(W-20,available));
+  const storedWidth=Math.max(20,e.width);
+  const crossesSpineIntent=e.x<0||e.x+storedWidth>W;
+  const maxWidth=crossesSpineIntent
+    ?Math.max(20,Math.min(W*2,Math.max(storedWidth,pageAvailable)))
+    :Math.max(20,Math.min(W-20,pageAvailable));
   const probe=new Konva.Text({
     text:e.text??'',fontSize,fontFamily,fontStyle,lineHeight,letterSpacing,wrap:'word'
   });
