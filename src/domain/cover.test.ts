@@ -82,7 +82,7 @@ describe('cover presentation model',()=>{
     cover.background='#e48af5';
     cover.templateBackground='#1a1a1a';
     cover.templateOverlay='/reference/legacy-overlay.png';
-    cover.templateDecorations=[{type:'border',x:.1,y:.1,width:.8,height:.8,stroke:'#000000',strokeWidth:2}];
+    cover.templateDecorations=[{id:'legacy-frame',type:'frame',x:.1,y:.1,width:.8,height:.8,stroke:'#000000',strokeWidth:2}];
     cover.pattern='bg-grid.jpg';
 
     const rendered=frontCoverRenderPage(book);
