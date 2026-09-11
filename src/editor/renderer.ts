@@ -14,12 +14,26 @@ export function imageCrop(element:Element,image:HTMLImageElement){
 export function elementProps(e:Element){return {id:e.id,x:e.x,y:e.y,width:e.width,height:e.height,rotation:e.rotation,opacity:e.opacity,fill:e.color??'#252525',stroke:e.borderColor??'#fff',strokeWidth:e.border??0,shadowEnabled:!!e.shadow,shadowColor:'#000',shadowBlur:e.shadow?22:0,shadowOpacity:.18,shadowOffsetY:8};}
 export function paperTapeImageProps(e:Element,image:HTMLImageElement){return {id:e.id,x:e.x,y:e.y,width:e.width,height:e.height,rotation:e.rotation,opacity:e.opacity,image};}
 function textFontStyle(e:Element){return [e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';}
+export function stickerLayout(e:Element){
+  const fontSize=Math.max(Number.EPSILON,e.fontSize??60);
+  const fontFamily=e.fontFamily??'Arial';
+  const fontStyle=textFontStyle(e);
+  const letterSpacing=e.letterSpacing??0;
+  const probe=new Konva.Text({
+    text:e.text??'',fontSize,fontFamily,fontStyle,lineHeight:1,letterSpacing,wrap:'none'
+  });
+  const width=Math.max(Number.EPSILON,probe.width());
+  const height=Math.max(Number.EPSILON,probe.height());
+  probe.destroy();
+  return {x:e.x,y:e.y,width,height,fontStyle};
+}
 export function textLayout(e:Element){
   const fontSize=Math.max(1,e.fontSize??60);
   const fontFamily=e.fontFamily??'Domine';
   const fontStyle=textFontStyle(e);
   const lineHeight=e.lineHeight??1.2;
   const letterSpacing=e.letterSpacing??0;
+  if(e.type==='sticker')return stickerLayout(e);
   if(e.type!=='text')return {x:e.x,y:e.y,width:e.width,height:e.height,fontStyle};
 
   const anchor=e.align??'left';
@@ -51,7 +65,7 @@ export function textLayout(e:Element){
     fontStyle,
   };
 }
-export function textProps(e:Element){const layout=textLayout(e);return {...elementProps(e),...layout,text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??'Domine',fontStyle:layout.fontStyle,align:e.align??'left',lineHeight:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:'word' as const};}
+export function textProps(e:Element){const layout=textLayout(e),sticker=e.type==='sticker';return {...elementProps(e),...layout,text:e.text??'',fontSize:e.fontSize??60,fontFamily:e.fontFamily??(sticker?'Arial':'Domine'),fontStyle:layout.fontStyle,align:sticker?'left':e.align??'left',lineHeight:sticker?1:e.lineHeight??1.2,letterSpacing:e.letterSpacing??0,wrap:(sticker?'none':'word') as 'none'|'word'};}
 export function frameClip(e:Element){return (ctx:Konva.Context)=>{ctx.beginPath();if(e.frameShape==='ellipse')ctx.ellipse(e.width/2,e.height/2,e.width/2,e.height/2,0,0,Math.PI*2);else ctx.rect(0,0,e.width,e.height);ctx.closePath();};}
 export function photoProps(e:Element,image:HTMLImageElement){const common={...elementProps(e),image,strokeWidth:0,strokeEnabled:false};if(e.fit==='contain'){const ratio=Math.min(e.width/image.naturalWidth,e.height/image.naturalHeight);return {...common,width:image.naturalWidth*ratio,height:image.naturalHeight*ratio};}return {...common,crop:imageCrop(e,image)};}
 export function templateDecorationProps(decoration:TemplateDecoration){return {x:decoration.x*W,y:decoration.y*H,width:decoration.width*W,height:decoration.height*H,stroke:decoration.stroke||'#111',strokeWidth:Math.max(.5,decoration.strokeWidth||1),fillEnabled:false,listening:false};}
@@ -118,7 +132,7 @@ export function loadPaperTapeImage(styleId:TapeStyleId|undefined,color:string|un
   tapeImages.set(key,task);return task;
 }
 export function clearImageCache(){images.clear();imageBytes.clear();tapeImages.clear();}
-export async function loadPageFonts(page:Page){await Promise.all(page.elements.filter(e=>e.type==='text').map(e=>document.fonts.load(`${e.fontStyle==='italic'?'italic ':''}${e.fontWeight===700?'bold ':''}${e.fontSize??60}px ${e.fontFamily??'Domine'}`).catch(()=>[])));}
+export async function loadPageFonts(page:Page){await Promise.all(page.elements.filter(e=>e.type==='text'||e.type==='sticker').map(e=>document.fonts.load(`${e.fontStyle==='italic'?'italic ':''}${e.fontWeight===700?'bold ':''}${e.fontSize??60}px ${e.fontFamily??(e.type==='sticker'?'Arial':'Domine')}`).catch(()=>[])));}
 export async function renderPage(page:Page,options:{scale?:number;quality?:'thumbnail'|'preview'|'original';mimeType?:'image/png'|'image/jpeg'}={}):Promise<Blob>{
   await loadPageFonts(page);
   const holder=document.createElement('div');const stage=new Konva.Stage({container:holder,width:W,height:H});const layer=new Konva.Layer();stage.add(layer);
