@@ -108,7 +108,7 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
   const deleteButton=coverSide===null&&pageIndex>0?<button className="thumbnail-add-page thumbnail-delete-page" type="button" data-page-delete-trigger aria-label={deleteLabel} title={deleteLabel} onClick={onRequestDelete}><Trash2 size={15}/></button>:null;
 
   if(mode==='spread')return <div className={railClass} aria-label="双页预览">
-    <IconButton label="跳到第一页" disabled={pageIndex<=1} onClick={()=>jumpTo(Math.min(1,book.pages.length-1))}><ChevronsLeft size={18}/></IconButton>
+    <IconButton label="跳到前封面" disabled={pageIndex===0&&!backActive} onClick={()=>jumpTo(0)}><ChevronsLeft size={18}/></IconButton>
     <div ref={strip} className="page-strip-scroll"><div className="page-strip-track">
       <button className="cover-spread-thumb" aria-label="封面" onClick={()=>selectPreviewPage(0,false)}><PageThumbnail page={book.pages[0]}/></button>
       {thumbnailSpreads.map(start=>{
@@ -140,11 +140,11 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
     </div></div>
     <button className="thumbnail-add-page" aria-label="添加新页" title="添加新页" onClick={onAddPage}><Plus size={17}/></button>
     {deleteButton}
-    <IconButton label="跳到最后一页" disabled={pageIndex===book.pages.length-1&&!backActive} onClick={()=>jumpTo(book.pages.length-1)}><ChevronsRight size={18}/></IconButton>
+    <IconButton label="跳到后封面" disabled={backActive} onClick={()=>jumpTo(book.pages.length)}><ChevronsRight size={18}/></IconButton>
   </div>;
 
   return <div className={railClass} aria-label="单页预览">
-    <IconButton label="跳到第一页" disabled={pageIndex<=1&&!backActive} onClick={()=>jumpTo(Math.min(1,book.pages.length-1))}><ChevronsLeft size={18}/></IconButton>
+    <IconButton label="跳到前封面" disabled={pageIndex===0&&!backActive} onClick={()=>jumpTo(0)}><ChevronsLeft size={18}/></IconButton>
     <div ref={strip} className="page-strip-scroll"><div className="page-strip-track">
       {book.pages.map((page,index)=>{
         const selected=selectedPageSet.has(page.id),active=!backActive&&pageIndex===index;
