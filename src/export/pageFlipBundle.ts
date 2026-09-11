@@ -1,4 +1,4 @@
-const MOBILE_ROTATE_CONTROL=String.raw`
+const MOBILE_READER_CONTROL=String.raw`
 ;(()=>{
   const nav=document.querySelector('.nav');
   const stage=document.getElementById('stage');
@@ -11,10 +11,11 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   const style=document.createElement('style');
   style.textContent=[
     'body{grid-template-rows:minmax(0,1fr) auto!important}',
+    '.stage{touch-action:none!important;overscroll-behavior:none!important}',
     '.top{position:fixed!important;left:0!important;right:0!important;top:0!important;z-index:30!important;background:transparent!important;backdrop-filter:none!important;-webkit-backdrop-filter:none!important;padding:10px 14px!important;pointer-events:none!important;opacity:.82!important;transition:opacity .28s ease!important;text-shadow:0 1px 5px #fff,0 1px 10px #fff8}',
     '.top.share-top-hidden{opacity:0!important}',
     '.share-book-pan-frame,.share-book-zoom-frame,.share-book-rotate-frame{position:relative;display:flex;align-items:center;justify-content:center;flex:0 0 auto;transform-origin:center center;will-change:transform}',
-    '.share-book-pan-frame{touch-action:none}',
+    '.share-book-pan-frame{touch-action:none!important}',
     '.share-book-zoom-frame{transition:transform .12s ease}',
     '.share-book-rotate-frame{transition:transform .28s cubic-bezier(.2,.72,.2,1)}',
     '.stage.detail-pinching .share-book-zoom-frame,.stage.detail-panning .share-book-pan-frame{transition:none}',
@@ -39,21 +40,24 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   zoomFrame.parentNode.insertBefore(panFrame,zoomFrame);
   panFrame.appendChild(zoomFrame);
 
-  const button=document.createElement('button');
-  button.id='rotate-view';
-  button.className='page-button share-rotate-control';
-  button.type='button';
-  button.textContent='↻';
-  button.setAttribute('aria-label','旋转画册');
-  button.setAttribute('aria-pressed','false');
-  button.title='旋转画册';
-  nav.appendChild(button);
+  const rotateButton=document.createElement('button');
+  rotateButton.id='rotate-view';
+  rotateButton.className='page-button share-rotate-control';
+  rotateButton.type='button';
+  rotateButton.textContent='↻';
+  rotateButton.setAttribute('aria-label','旋转画册');
+  rotateButton.setAttribute('aria-pressed','false');
+  rotateButton.title='旋转画册';
+  nav.appendChild(rotateButton);
 
   const fullPageWidth=480;
   const fullPageHeight=678;
   const fullSpreadWidth=fullPageWidth*2;
+  const mobileMinPageWidth=64;
   const longPressMs=280;
   const tapMoveTolerance=10;
+  const swipeDistance=26;
+
   let rotated=false;
   let rotateScale=1;
   let detailScale=1;
@@ -105,6 +109,17 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     return {width:Math.max(1,width),height:Math.max(1,height)};
   }
 
+  function makeSettingsMobileResponsive(settings){
+    if(!settings)return;
+    const pageWidth=Math.max(1,Number(settings.width)||fullPageWidth);
+    const pageHeight=Math.max(1,Number(settings.height)||fullPageHeight);
+    const responsiveMinWidth=Math.min(Math.max(1,Number(settings.minWidth)||mobileMinPageWidth),mobileMinPageWidth);
+    const responsiveMinHeight=Math.max(1,Math.round(responsiveMinWidth*pageHeight/pageWidth));
+    settings.usePortrait=false;
+    settings.minWidth=responsiveMinWidth;
+    settings.minHeight=Math.min(Math.max(1,Number(settings.minHeight)||responsiveMinHeight),responsiveMinHeight);
+  }
+
   function rememberPageFlipSize(){
     if(!activePageFlip||originalPageFlipSize)return;
     try{
@@ -130,15 +145,17 @@ const MOBILE_ROTATE_CONTROL=String.raw`
       if(!originalPageFlipSize)return;
       if(!target){
         Object.assign(settings,originalPageFlipSize);
+        makeSettingsMobileResponsive(settings);
         return;
       }
       const pageWidth=Math.max(1,target.width/2);
       const pageHeight=Math.max(1,target.height);
       settings.width=pageWidth;
       settings.height=pageHeight;
-      settings.minWidth=Math.min(Number(originalPageFlipSize.minWidth)||pageWidth,pageWidth);
+      settings.usePortrait=false;
+      settings.minWidth=Math.min(mobileMinPageWidth,pageWidth);
       settings.maxWidth=Math.max(pageWidth,settings.minWidth);
-      settings.minHeight=Math.min(Number(originalPageFlipSize.minHeight)||pageHeight,pageHeight);
+      settings.minHeight=Math.min(Math.max(1,Math.round(settings.minWidth*pageHeight/pageWidth)),pageHeight);
       settings.maxHeight=Math.max(pageHeight,settings.minHeight);
     }catch{}
   }
@@ -151,7 +168,6 @@ const MOBILE_ROTATE_CONTROL=String.raw`
         const ui=activePageFlip.getUI&&activePageFlip.getUI();
         if(ui&&typeof ui.update==='function')ui.update();
         if(typeof activePageFlip.update==='function')activePageFlip.update();
-        window.dispatchEvent(new Event('resize'));
       }catch{}
     });
   }
@@ -159,9 +175,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   function baseVisualSize(){
     const width=Math.max(1,rotateFrame.offsetWidth||bookHost.offsetWidth);
     const height=Math.max(1,rotateFrame.offsetHeight||bookHost.offsetHeight);
-    return rotated
-      ?{width:height*rotateScale,height:width*rotateScale}
-      :{width,height};
+    return rotated?{width:height*rotateScale,height:width*rotateScale}:{width,height};
   }
 
   function clampPan(){
@@ -183,7 +197,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
 
   function setDetailScale(value,clientX,clientY){
     const next=Math.max(1,Math.min(4,Number(value)||1));
-    const old=detailScale;
+    const old=Math.max(.0001,detailScale);
     if(next<=1.001){
       detailScale=1;
       panX=0;
@@ -191,7 +205,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
       applyDetailTransform();
       return;
     }
-    if(Number.isFinite(clientX)&&Number.isFinite(clientY)&&old>0){
+    if(Number.isFinite(clientX)&&Number.isFinite(clientY)){
       const center=stageCenter();
       const sx=clientX-center.x;
       const sy=clientY-center.y;
@@ -238,7 +252,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     refreshPageFlipLayout();
   }
 
-  function fitRotatedBook(){
+  function fitBook(){
     cancelAnimationFrame(fitFrame);
     fitFrame=requestAnimationFrame(()=>{
       applyRotatedHostSize();
@@ -265,17 +279,10 @@ const MOBILE_ROTATE_CONTROL=String.raw`
 
   function setRotated(active){
     rotated=active;
-    button.setAttribute('aria-pressed',String(active));
-    button.setAttribute('aria-label',active?'恢复画册方向':'旋转画册');
-    button.title=active?'恢复画册方向':'旋转画册';
-    fitRotatedBook();
-  }
-
-  function resetViewerZoom(){
-    try{window.dispatchEvent(new KeyboardEvent('keydown',{key:'Escape'}));}catch{}
-    bookHost.style.transform='';
-    bookHost.style.transformOrigin='50% 50%';
-    stage.classList.remove('pinching');
+    rotateButton.setAttribute('aria-pressed',String(active));
+    rotateButton.setAttribute('aria-label',active?'恢复画册方向':'旋转画册');
+    rotateButton.title=active?'恢复画册方向':'旋转画册';
+    fitBook();
   }
 
   function offsetInsideFrame(element){
@@ -310,11 +317,12 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   function flipFromTap(clientX,clientY){
     if(!activePageFlip)return;
     stopAutoplayForManualView();
-    if(document.getElementById('book')?.classList.contains('is-cover')){
+    const book=document.getElementById('book');
+    if(book&&book.classList.contains('is-cover')){
       activePageFlip.flipNext&&activePageFlip.flipNext('top');
       return;
     }
-    if(document.getElementById('book')?.classList.contains('is-back-cover')){
+    if(book&&book.classList.contains('is-back-cover')){
       activePageFlip.flipPrev&&activePageFlip.flipPrev('top');
       return;
     }
@@ -330,6 +338,20 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     else activePageFlip.flipPrev&&activePageFlip.flipPrev('top');
   }
 
+  function flipFromSwipe(dx,dy){
+    if(!activePageFlip)return false;
+    let logicalX=dx,logicalY=dy;
+    if(rotated){
+      logicalX=dy/Math.max(.0001,rotateScale);
+      logicalY=-dx/Math.max(.0001,rotateScale);
+    }
+    if(Math.abs(logicalX)<swipeDistance||Math.abs(logicalX)<Math.abs(logicalY))return false;
+    stopAutoplayForManualView();
+    if(logicalX<0)activePageFlip.flipNext&&activePageFlip.flipNext('top');
+    else activePageFlip.flipPrev&&activePageFlip.flipPrev('top');
+    return true;
+  }
+
   function touchDistance(a,b){return Math.hypot(a.clientX-b.clientX,a.clientY-b.clientY);}
   function touchCenter(a,b){return {x:(a.clientX+b.clientX)/2,y:(a.clientY+b.clientY)/2};}
   function findTouch(event,id){
@@ -340,6 +362,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
 
   function beginLongPress(view){
     clearTimeout(longPressTimer);
+    if(detailScale<=1.001)return;
     longPressTimer=setTimeout(()=>{
       if(view!==touchView&&view!==mouseView)return;
       view.panning=true;
@@ -373,12 +396,12 @@ const MOBILE_ROTATE_CONTROL=String.raw`
       stage.classList.add('detail-pinching');
       return;
     }
-    if(event.touches.length===1&&detailScale>1.001){
+    if(event.touches.length===1){
       event.preventDefault();
       event.stopImmediatePropagation();
       stopAutoplayForManualView();
       const touch=event.touches[0];
-      touchView={id:touch.identifier,startX:touch.clientX,startY:touch.clientY,lastX:touch.clientX,lastY:touch.clientY,startAt:performance.now(),panning:false,moved:false};
+      touchView={id:touch.identifier,startX:touch.clientX,startY:touch.clientY,lastX:touch.clientX,lastY:touch.clientY,panning:false,moved:false};
       beginLongPress(touchView);
     }
   },{passive:false,capture:true});
@@ -398,14 +421,14 @@ const MOBILE_ROTATE_CONTROL=String.raw`
       applyDetailTransform();
       return;
     }
-    if(!touchView||detailScale<=1.001)return;
+    if(!touchView)return;
     const touch=findTouch(event,touchView.id);
     if(!touch)return;
     event.preventDefault();
     event.stopImmediatePropagation();
     const total=Math.hypot(touch.clientX-touchView.startX,touch.clientY-touchView.startY);
     if(total>tapMoveTolerance)touchView.moved=true;
-    if(touchView.panning){
+    if(touchView.panning&&detailScale>1.001){
       panX+=touch.clientX-touchView.lastX;
       panY+=touch.clientY-touchView.lastY;
       applyDetailTransform();
@@ -418,8 +441,8 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     if(pinchActive){
       event.preventDefault();
       event.stopImmediatePropagation();
-      suppressClickUntil=performance.now()+550;
-      if(event.touches.length===0){
+      suppressClickUntil=performance.now()+600;
+      if(event.touches.length<2){
         pinchActive=false;
         pinchStartDistance=0;
         stage.classList.remove('detail-pinching');
@@ -435,8 +458,12 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     const touch=findTouch(event,view.id);
     touchView=null;
     stage.classList.remove('detail-panning');
-    suppressClickUntil=performance.now()+400;
-    if(!view.panning&&!view.moved&&touch)flipFromTap(touch.clientX,touch.clientY);
+    suppressClickUntil=performance.now()+450;
+    if(view.panning||!touch)return;
+    const dx=touch.clientX-view.startX;
+    const dy=touch.clientY-view.startY;
+    if(!view.moved)flipFromTap(touch.clientX,touch.clientY);
+    else flipFromSwipe(dx,dy);
   },{passive:false,capture:true});
 
   stage.addEventListener('touchcancel',event=>{
@@ -446,7 +473,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     pinchActive=false;
     touchView=null;
     clearTimeout(longPressTimer);
-    suppressClickUntil=performance.now()+500;
+    suppressClickUntil=performance.now()+550;
     stage.classList.remove('detail-pinching','detail-panning');
   },{passive:false,capture:true});
 
@@ -455,7 +482,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     event.preventDefault();
     event.stopImmediatePropagation();
     stopAutoplayForManualView();
-    mouseView={startX:event.clientX,startY:event.clientY,lastX:event.clientX,lastY:event.clientY,startAt:performance.now(),panning:false,moved:false};
+    mouseView={startX:event.clientX,startY:event.clientY,lastX:event.clientX,lastY:event.clientY,panning:false,moved:false};
     beginLongPress(mouseView);
   },{capture:true});
 
@@ -494,30 +521,31 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   },{capture:true});
 
   const PageFlipCtor=window.St&&window.St.PageFlip;
-  if(PageFlipCtor&&PageFlipCtor.prototype&&!PageFlipCtor.prototype.__shareRotatePointerPatched){
+  if(PageFlipCtor&&PageFlipCtor.prototype&&!PageFlipCtor.prototype.__shareReaderPatched){
     const nativeLoad=PageFlipCtor.prototype.loadFromHTML;
     PageFlipCtor.prototype.loadFromHTML=function(items){
-      const result=nativeLoad.call(this,items);
       activePageFlip=this;
+      try{makeSettingsMobileResponsive(this.getSettings&&this.getSettings());}catch{}
+      const result=nativeLoad.call(this,items);
       rememberPageFlipSize();
       const ui=this.getUI&&this.getUI();
-      if(ui&&typeof ui.getMousePos==='function'&&!ui.__shareRotatePointerPatched){
+      if(ui&&typeof ui.getMousePos==='function'&&!ui.__shareReaderPatched){
         const nativeGetMousePos=ui.getMousePos.bind(ui);
         const distElement=ui.getDistElement&&ui.getDistElement();
         ui.getMousePos=(clientX,clientY)=>rotated&&distElement
           ?rotatedPointFor(distElement,clientX,clientY)
           :nativeGetMousePos(clientX,clientY);
-        ui.__shareRotatePointerPatched=true;
+        ui.__shareReaderPatched=true;
       }
+      requestAnimationFrame(fitBook);
       return result;
     };
-    PageFlipCtor.prototype.__shareRotatePointerPatched=true;
+    PageFlipCtor.prototype.__shareReaderPatched=true;
   }
 
-  button.addEventListener('click',()=>{
+  rotateButton.addEventListener('click',()=>{
     stopAutoplayForManualView();
     resetDetailView();
-    resetViewerZoom();
     setRotated(!rotated);
   });
 
@@ -537,22 +565,22 @@ const MOBILE_ROTATE_CONTROL=String.raw`
 
   if(typeof ResizeObserver!=='undefined'){
     const observer=new ResizeObserver(()=>{
-      if(!rotated)fitRotatedBook();
-      else applyDetailTransform();
+      if(rotated)fitBook();
+      else{
+        refreshPageFlipLayout();
+        fitBook();
+      }
     });
     observer.observe(stage);
     observer.observe(nav);
   }
-  window.addEventListener('resize',()=>{
-    if(rotated)fitRotatedBook();
-    else applyDetailTransform();
-  },{passive:true});
-  window.addEventListener('orientationchange',()=>setTimeout(fitRotatedBook,80),{passive:true});
-  fitRotatedBook();
+  window.addEventListener('resize',fitBook,{passive:true});
+  window.addEventListener('orientationchange',()=>setTimeout(fitBook,80),{passive:true});
+  fitBook();
 })();
 `;
 
 export async function loadEmbeddedPageFlipBundle(){
   const module=await import('page-flip/dist/js/page-flip.browser.js?raw');
-  return (module.default+MOBILE_ROTATE_CONTROL).replace(/<\/script/gi,'<\\/script');
+  return (module.default+MOBILE_READER_CONTROL).replace(/<\/script/gi,'<\\/script');
 }
