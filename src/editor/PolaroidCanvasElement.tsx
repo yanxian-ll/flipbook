@@ -4,7 +4,6 @@ import Konva from 'konva';
 import type {Element} from '../domain/model';
 import {centeredCrop,cropRect,dragCrop,type Crop} from '../domain/crop';
 import {polaroidAssetIdFor,polaroidAssetPatch,polaroidPhotoFrame,polaroidTemplateFor,storedPolaroidAssetId} from '../domain/polaroids';
-import {useEditor} from '../store/editor';
 import {loadAssetImage,loadStaticImage} from './renderer';
 
 type Props={
@@ -67,10 +66,10 @@ export function PolaroidCanvasElement({element,selected,onSelect,onDoubleClick,o
     onSelect(!!e&&(e.evt.ctrlKey||e.evt.metaKey||e.evt.shiftKey));
   }
   function activatePhoto(){
-    // Photo editing is intentionally a separate interaction mode from selecting the outer frame.
-    // Clearing the outer selection hides the Transformer so dragging inside the photo cannot
-    // accidentally move/resize the whole polaroid.
-    useEditor.getState().select(null);
+    // Keep the polaroid selected while editing its inner photo. The photo group stops pointer
+    // propagation, so dragging here edits the crop rather than moving the outer frame. Selection
+    // is cleared only by the canvas/background click handling outside this element.
+    onSelect(false);
   }
   function beginCrop(e:Konva.KonvaEventObject<PointerEvent>){
     if(e.evt.button!==0||drag.current)return;
