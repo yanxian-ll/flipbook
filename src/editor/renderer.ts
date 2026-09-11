@@ -3,6 +3,7 @@ import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
 import {effectiveTemplateOverlay,pageTemplateDecorations,type TemplateDecoration} from '../domain/templateDecorations';
 import {polaroidAssetIdFor,polaroidPhotoFrame,polaroidTemplateFor} from '../domain/polaroids';
+import {isPaperTapeElement,paperTapeStyleFor,type TapeStyleId} from '../domain/tapeStyles';
 import {repository} from '../db/repository';
 import {decodeImage} from '../domain/assets';
 import {createWorkQueue} from '../domain/workQueue';
@@ -11,6 +12,7 @@ export function imageCrop(element:Element,image:HTMLImageElement){
   return cropRect(element,{width:image.naturalWidth,height:image.naturalHeight},element.crop);
 }
 export function elementProps(e:Element){return {id:e.id,x:e.x,y:e.y,width:e.width,height:e.height,rotation:e.rotation,opacity:e.opacity,fill:e.color??'#252525',stroke:e.borderColor??'#fff',strokeWidth:e.border??0,shadowEnabled:!!e.shadow,shadowColor:'#000',shadowBlur:e.shadow?22:0,shadowOpacity:.18,shadowOffsetY:8};}
+export function paperTapeImageProps(e:Element,image:HTMLImageElement){return {id:e.id,x:e.x,y:e.y,width:e.width,height:e.height,rotation:e.rotation,opacity:e.opacity,image};}
 function textFontStyle(e:Element){return [e.fontWeight===700?'bold':'',e.fontStyle==='italic'?'italic':''].filter(Boolean).join(' ')||'normal';}
 export function textLayout(e:Element){
   const fontSize=Math.max(1,e.fontSize??60);
@@ -87,9 +89,35 @@ export function loadAssetImage(id:string,quality:'thumbnail'|'preview'|'original
   const task=decode().then(image=>{if(images.get(key)===task){imageBytes.set(key,image.naturalWidth*image.naturalHeight*4);trimImageCache();}return image;}).catch(error=>{if(images.get(key)===task){images.delete(key);imageBytes.delete(key);}throw error;});
   images.set(key,task);return task;
 }
-export function clearImageCache(){images.clear();imageBytes.clear();}
 const staticImages=new Map<string,Promise<HTMLImageElement>>();
 export function loadStaticImage(url:string){if(!staticImages.has(url))staticImages.set(url,fetch(url).then(response=>{if(!response.ok)throw new Error('背景素材加载失败');return response.blob();}).then(decodeImage).catch(e=>{staticImages.delete(url);throw e;}));return staticImages.get(url)!;}
+const tapeSvgSources=new Map<string,Promise<string>>();
+const tapeImages=new Map<string,Promise<HTMLImageElement>>();
+function normalizeTapeColor(value:string|undefined){
+  const color=(value??'').trim();
+  if(/^#[0-9a-f]{6}$/i.test(color))return color.toLowerCase();
+  if(/^#[0-9a-f]{3}$/i.test(color)){
+    const [r,g,b]=color.slice(1).split('');
+    return `#${r}${r}${g}${g}${b}${b}`.toLowerCase();
+  }
+  return '#d9c9a8';
+}
+function loadTapeSvg(url:string){
+  if(!tapeSvgSources.has(url))tapeSvgSources.set(url,fetch(url).then(response=>{if(!response.ok)throw new Error('纸胶带纹理加载失败');return response.text();}).catch(error=>{tapeSvgSources.delete(url);throw error;}));
+  return tapeSvgSources.get(url)!;
+}
+export function loadPaperTapeImage(styleId:TapeStyleId|undefined,color:string|undefined){
+  const style=paperTapeStyleFor(styleId);
+  const tint=normalizeTapeColor(color||style.defaultColor);
+  const key=`${style.id}:${tint}`;
+  const hit=tapeImages.get(key);if(hit)return hit;
+  const task=loadTapeSvg(style.texture).then(svg=>{
+    const tinted=svg.split(style.sourceColor).join(tint);
+    return decodeImage(new Blob([tinted],{type:'image/svg+xml'}));
+  }).catch(error=>{tapeImages.delete(key);throw error;});
+  tapeImages.set(key,task);return task;
+}
+export function clearImageCache(){images.clear();imageBytes.clear();tapeImages.clear();}
 export async function loadPageFonts(page:Page){await Promise.all(page.elements.filter(e=>e.type==='text').map(e=>document.fonts.load(`${e.fontStyle==='italic'?'italic ':''}${e.fontWeight===700?'bold ':''}${e.fontSize??60}px ${e.fontFamily??'Domine'}`).catch(()=>[])));}
 export async function renderPage(page:Page,options:{scale?:number;quality?:'thumbnail'|'preview'|'original';mimeType?:'image/png'|'image/jpeg'}={}):Promise<Blob>{
   await loadPageFonts(page);
@@ -133,7 +161,8 @@ export async function renderPage(page:Page,options:{scale?:number;quality?:'thum
         const photo=new Konva.Image(photoProps({...e,x:0,y:0,rotation:0},img));
         if((e.blur??0)>0){photo.cache({pixelRatio:1});photo.filters([Konva.Filters.Blur]);photo.blurRadius(e.blur??0);}
         group.add(photo);layer.add(group);
-      }else if(e.type==='text'||e.type==='sticker')layer.add(new Konva.Text(textProps(e)));
+      }else if(isPaperTapeElement(e))layer.add(new Konva.Image(paperTapeImageProps(e,await loadPaperTapeImage(e.tapeStyle,e.color))));
+      else if(e.type==='text'||e.type==='sticker')layer.add(new Konva.Text(textProps(e)));
       else layer.add(new Konva.Rect({...elementProps(e),cornerRadius:e.cornerRadius??0}));
     }
     await addOverlay();
