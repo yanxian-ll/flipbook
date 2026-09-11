@@ -160,6 +160,7 @@ function expandedFromBounds(bounds){
 }
 
 function currentExpanded(window){
+  if(window.isMaximized()||window.isFullScreen())return true;
   return expandedFromBounds(window.getBounds());
 }
 
@@ -169,7 +170,7 @@ function notifyExpanded(window,expanded=currentExpanded(window)){
 }
 
 function layoutBounds(window,expanded,baseBounds){
-  const current=baseBounds??window.getBounds();
+  const current=baseBounds??(window.isMaximized()?window.getNormalBounds():window.getBounds());
   const display=screen.getDisplayMatching(current);
   const area=display.workArea;
   const availableWidth=Math.max(320,area.width-32);
@@ -186,8 +187,11 @@ function layoutBounds(window,expanded,baseBounds){
 
 function applyExpanded(window,expanded,baseBounds){
   const next=Boolean(expanded);
-  const bounds=layoutBounds(window,next,baseBounds);
-  window.setBounds(bounds,true);
+  const source=baseBounds??(window.isMaximized()?window.getNormalBounds():window.getBounds());
+  const bounds=layoutBounds(window,next,source);
+  if(window.isFullScreen())window.setFullScreen(false);
+  if(window.isMaximized())window.unmaximize();
+  window.setBounds(bounds,false);
   notifyExpanded(window,next);
   return bounds;
 }
@@ -203,7 +207,7 @@ async function createWindow(){
     minWidth:320,
     minHeight:480,
     resizable:true,
-    maximizable:false,
+    maximizable:true,
     fullscreenable:true,
     movable:true,
     frame:false,
@@ -240,6 +244,8 @@ async function createWindow(){
     notifyExpanded(window,expanded);
   };
   window.on('resize',reportExpanded);
+  window.on('maximize',reportExpanded);
+  window.on('unmaximize',reportExpanded);
   window.webContents.on('did-finish-load',()=>{
     lastReportedExpanded=currentExpanded(window);
     notifyExpanded(window,lastReportedExpanded);
@@ -262,14 +268,6 @@ ipcMain.handle('desktop-window:set-expanded',(event,expanded)=>{
   const window=BrowserWindow.fromWebContents(event.sender);
   if(!window)return null;
   return applyExpanded(window,Boolean(expanded));
-});
-
-ipcMain.handle('desktop-window:toggle-expanded',event=>{
-  const window=BrowserWindow.fromWebContents(event.sender);
-  if(!window)return false;
-  const next=!currentExpanded(window);
-  applyExpanded(window,next);
-  return next;
 });
 
 app.whenReady().then(async()=>{
