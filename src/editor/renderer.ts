@@ -2,7 +2,7 @@ import Konva from 'konva';
 import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
 import {effectiveTemplateOverlay,pageTemplateDecorations,type TemplateDecoration} from '../domain/templateDecorations';
-import {polaroidPhotoFrame,polaroidTemplateFor} from '../domain/polaroids';
+import {polaroidAssetIdFor,polaroidPhotoFrame,polaroidTemplateFor} from '../domain/polaroids';
 import {repository} from '../db/repository';
 import {decodeImage} from '../domain/assets';
 import {createWorkQueue} from '../domain/workQueue';
@@ -114,8 +114,9 @@ export async function renderPage(page:Page,options:{scale?:number;quality?:'thum
         const template=polaroidTemplateFor(e.polaroidStyle);
         const group=new Konva.Group({x:e.x,y:e.y,rotation:e.rotation,opacity:e.opacity});
         group.add(new Konva.Rect({width:e.width,height:e.height,fill:'#faf9f5'}));
-        if(e.assetId){
-          const img=await loadAssetImage(e.assetId,options.quality??'preview');
+        const polaroidAssetId=polaroidAssetIdFor(e);
+        if(polaroidAssetId){
+          const img=await loadAssetImage(polaroidAssetId,options.quality??'preview');
           const photo=new Konva.Image({
             image:img,
             x:frame.x,y:frame.y,width:frame.width,height:frame.height,
