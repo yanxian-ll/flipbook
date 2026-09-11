@@ -28,9 +28,9 @@ function pageList(indices:number[]){
 }
 
 export function exportRenderScale(format:ExportFormat,quality:number){
-  if(format==='share')return Math.max(1,Math.min(1.6,quality));
-  if(format==='mp4')return Math.max(.8,Math.min(1.1,.65+quality*.15));
-  return Math.max(1,Math.min(2,quality));
+  if(format==='share')return Math.max(.35,Math.min(3,quality));
+  if(format==='mp4')return Math.max(.35,Math.min(1.1,quality));
+  return Math.max(.35,Math.min(2,quality));
 }
 
 function imageNeedsMorePixels(element:Element,asset:{width:number;height:number},scale:number){
