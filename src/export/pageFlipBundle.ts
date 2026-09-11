@@ -38,7 +38,11 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   let rotated=false;
   let rotateScale=1;
   let fitFrame=0;
+  let layoutFrame=0;
   let topTimer=0;
+  let activePageFlip=null;
+  let appliedHostWidth=0;
+  let appliedHostHeight=0;
 
   function availableStageSize(){
     const computed=getComputedStyle(stage);
@@ -50,21 +54,79 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     };
   }
 
+  function cssNumber(name,fallback){
+    const value=parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
+    return Number.isFinite(value)&&value>0?value:fallback;
+  }
+
+  function desiredRotatedHostSize(){
+    const available=availableStageSize();
+    const currentWidth=Math.max(1,bookHost.offsetWidth);
+    const currentHeight=Math.max(1,bookHost.offsetHeight);
+    const intrinsicWidth=cssNumber('--share-spread-width',currentWidth);
+    const intrinsicHeight=cssNumber('--share-page-height',currentHeight);
+    const aspect=Math.max(.2,intrinsicWidth/Math.max(1,intrinsicHeight));
+    const maxLogicalWidth=Math.max(1,available.height*.965);
+    const maxLogicalHeight=Math.max(1,available.width*.965);
+    let width=Math.min(intrinsicWidth,maxLogicalWidth);
+    let height=width/aspect;
+    if(height>maxLogicalHeight){
+      height=maxLogicalHeight;
+      width=height*aspect;
+    }
+    return {width:Math.max(1,width),height:Math.max(1,height)};
+  }
+
+  function refreshPageFlipLayout(){
+    cancelAnimationFrame(layoutFrame);
+    layoutFrame=requestAnimationFrame(()=>{
+      if(!activePageFlip)return;
+      try{
+        const ui=activePageFlip.getUI&&activePageFlip.getUI();
+        if(ui&&typeof ui.update==='function')ui.update();
+        if(typeof activePageFlip.update==='function')activePageFlip.update();
+      }catch{}
+    });
+  }
+
+  function applyRotatedHostSize(){
+    if(!rotated){
+      if(appliedHostWidth||appliedHostHeight){
+        bookHost.style.width='';
+        bookHost.style.height='';
+        appliedHostWidth=0;
+        appliedHostHeight=0;
+        refreshPageFlipLayout();
+      }
+      return;
+    }
+    const target=desiredRotatedHostSize();
+    if(Math.abs(target.width-appliedHostWidth)<.5&&Math.abs(target.height-appliedHostHeight)<.5)return;
+    appliedHostWidth=target.width;
+    appliedHostHeight=target.height;
+    bookHost.style.width=target.width+'px';
+    bookHost.style.height=target.height+'px';
+    refreshPageFlipLayout();
+  }
+
   function fitRotatedBook(){
     cancelAnimationFrame(fitFrame);
     fitFrame=requestAnimationFrame(()=>{
-      const width=Math.max(1,bookHost.offsetWidth);
-      const height=Math.max(1,bookHost.offsetHeight);
-      rotateFrame.style.width=width+'px';
-      rotateFrame.style.height=height+'px';
-      if(!rotated){
-        rotateScale=1;
-        rotateFrame.style.transform='';
-        return;
-      }
-      const available=availableStageSize();
-      rotateScale=Math.max(.1,Math.min(1.15,available.width/height,available.height/width)*.97);
-      rotateFrame.style.transform='rotate(90deg) scale('+rotateScale+')';
+      applyRotatedHostSize();
+      requestAnimationFrame(()=>{
+        const width=Math.max(1,bookHost.offsetWidth);
+        const height=Math.max(1,bookHost.offsetHeight);
+        rotateFrame.style.width=width+'px';
+        rotateFrame.style.height=height+'px';
+        if(!rotated){
+          rotateScale=1;
+          rotateFrame.style.transform='';
+          return;
+        }
+        const available=availableStageSize();
+        rotateScale=Math.max(.1,Math.min(1,available.width/height,available.height/width)*.995);
+        rotateFrame.style.transform='rotate(90deg) scale('+rotateScale+')';
+      });
     });
   }
 
@@ -112,6 +174,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     const nativeLoad=PageFlipCtor.prototype.loadFromHTML;
     PageFlipCtor.prototype.loadFromHTML=function(items){
       const result=nativeLoad.call(this,items);
+      activePageFlip=this;
       const ui=this.getUI&&this.getUI();
       if(ui&&typeof ui.getMousePos==='function'&&!ui.__shareRotatePointerPatched){
         const nativeGetMousePos=ui.getMousePos.bind(ui);
@@ -144,9 +207,10 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   document.addEventListener('pointermove',event=>{if(event.pointerType==='mouse')showTopBriefly();},{passive:true});
 
   if(typeof ResizeObserver!=='undefined'){
-    const observer=new ResizeObserver(fitRotatedBook);
+    const observer=new ResizeObserver(()=>{
+      if(!rotated)fitRotatedBook();
+    });
     observer.observe(stage);
-    observer.observe(bookHost);
     observer.observe(nav);
   }
   window.addEventListener('resize',fitRotatedBook,{passive:true});
