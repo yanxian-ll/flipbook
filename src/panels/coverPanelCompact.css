@@ -1,0 +1,8 @@
+.studio:has(.editor-pageflip-shell.is-cover) .editor-panel .muted,
+.studio:has(.editor-pageflip-shell.is-cover) .editor-panel .settings-intro,
+.studio:has(.editor-pageflip-shell.is-cover) .editor-panel .cover-library-note,
+.studio:has(.editor-pageflip-shell.is-back-cover) .editor-panel .muted,
+.studio:has(.editor-pageflip-shell.is-back-cover) .editor-panel .settings-intro,
+.studio:has(.editor-pageflip-shell.is-back-cover) .editor-panel .cover-library-note {
+  display:none!important;
+}
