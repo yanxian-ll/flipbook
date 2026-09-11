@@ -24,7 +24,9 @@ const MIME_TYPES={
 const DEFAULT_RENDERER_PORT=41731;
 const RENDERER_PORT_FILE='renderer-port.txt';
 const COMPACT_WIDTH=430;
+const COMPACT_HEIGHT=780;
 const EXPANDED_WIDTH=1280;
+const EXPANDED_HEIGHT=932;
 const EXPANDED_THRESHOLD=640;
 let server=null;
 let serverOrigin='';
@@ -149,7 +151,7 @@ function initialContentSize(){
   const {width,height}=screen.getPrimaryDisplay().workAreaSize;
   return {
     width:Math.min(COMPACT_WIDTH,Math.max(320,width-32)),
-    height:Math.min(932,Math.max(480,height-48)),
+    height:Math.min(COMPACT_HEIGHT,Math.max(480,height-48)),
   };
 }
 
@@ -173,7 +175,8 @@ function layoutBounds(window,expanded,baseBounds){
   const availableWidth=Math.max(320,area.width-32);
   const availableHeight=Math.max(480,area.height-32);
   const width=expanded?Math.min(EXPANDED_WIDTH,availableWidth):Math.min(COMPACT_WIDTH,availableWidth);
-  const height=Math.min(932,availableHeight);
+  const targetHeight=expanded?EXPANDED_HEIGHT:COMPACT_HEIGHT;
+  const height=Math.min(targetHeight,availableHeight);
   const centerX=current.x+current.width/2;
   const centerY=current.y+current.height/2;
   const x=Math.max(area.x,Math.min(Math.round(centerX-width/2),area.x+area.width-width));
