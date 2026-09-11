@@ -1,17 +1,31 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1000 1250">
   <defs>
-    <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%"><feDropShadow dx="14" dy="20" stdDeviation="18" flood-color="#000" flood-opacity=".18"/></filter>
-    <mask id="frontMask"><rect x="220" y="210" width="700" height="920" rx="28" fill="white"/><rect x="285" y="315" width="560" height="560" rx="8" fill="black"/></mask>
+    <filter id="shadow" x="-25%" y="-25%" width="150%" height="160%">
+      <feDropShadow dx="10" dy="18" stdDeviation="18" flood-color="#000" flood-opacity=".16"/>
+    </filter>
+    <mask id="frameMask">
+      <rect x="110" y="70" width="780" height="1110" rx="30" fill="white"/>
+      <rect x="160" y="180" width="680" height="680" rx="10" fill="black"/>
+    </mask>
   </defs>
-  <g transform="rotate(-8 360 520)" filter="url(#shadow)">
-    <rect x="80" y="92" width="610" height="850" rx="26" fill="#faf8f1"/>
-    <rect x="135" y="170" width="500" height="500" rx="8" fill="#e7e7e4" stroke="#d0cec7" stroke-width="7"/>
-    <rect x="80" y="92" width="610" height="850" rx="26" fill="none" stroke="#e5e0d7" stroke-width="5"/>
+
+  <!-- Hearts stay behind the single polaroid so the decoration peeks out naturally. -->
+  <g transform="rotate(-10 150 330)" opacity=".95">
+    <path d="M150 455C95 405 38 350 38 282C38 224 78 188 128 188C162 188 190 208 210 238C230 208 258 188 292 188C342 188 382 224 382 282C382 350 325 405 210 500Z" fill="#e7a1a5"/>
+    <path d="M210 446C160 402 112 355 112 306C112 272 135 250 165 250C185 250 201 261 210 278C220 261 236 250 256 250C286 250 309 272 309 306C309 355 261 402 210 446Z" fill="#f8dadd" opacity=".72"/>
   </g>
+  <path d="M842 930c-34-43-92-15-92 34 0 54 92 112 92 112s92-58 92-112c0-49-58-77-92-34z" fill="none" stroke="#d8848d" stroke-width="16" stroke-linecap="round" stroke-linejoin="round" opacity=".9"/>
+
+  <!-- One classic instant-photo frame. The image hole matches src/domain/polaroids.ts. -->
   <g filter="url(#shadow)">
-    <rect x="220" y="210" width="700" height="920" rx="28" fill="#fbfaf6" mask="url(#frontMask)"/>
-    <rect x="285" y="315" width="560" height="560" rx="8" fill="none" stroke="#d7d5cf" stroke-width="7"/>
+    <rect x="110" y="70" width="780" height="1110" rx="30" fill="#fbfaf6" mask="url(#frameMask)"/>
+    <rect x="110" y="70" width="780" height="1110" rx="30" fill="none" stroke="#e3dfd6" stroke-width="6"/>
+    <rect x="160" y="180" width="680" height="680" rx="10" fill="none" stroke="#d7d5cf" stroke-width="7"/>
   </g>
-  <g transform="rotate(-7 360 210)"><rect x="210" y="145" width="300" height="102" rx="8" fill="#d9a39b"/><g fill="#fff5ef" opacity=".9"><path d="M255 183c-18-22-47 7 0 45 47-38 18-67 0-45z"/><path d="M330 183c-18-22-47 7 0 45 47-38 18-67 0-45z"/><path d="M405 183c-18-22-47 7 0 45 47-38 18-67 0-45z"/></g></g>
-  <g transform="translate(830 230) rotate(10)"><path d="M0 0c42-24 78 0 78 40v190c0 70-100 70-100 0V55c0-46 62-46 62 0v154c0 25-36 25-36 0V78" fill="none" stroke="#b28a3d" stroke-width="18" stroke-linecap="round"/><path d="M0 0c42-24 78 0 78 40v190c0 70-100 70-100 0V55c0-46 62-46 62 0v154c0 25-36 25-36 0V78" fill="none" stroke="#f5d77d" stroke-width="6" stroke-linecap="round"/></g>
+
+  <!-- Gold paper clip on the upper-right corner. -->
+  <g transform="translate(820 108) rotate(11)">
+    <path d="M0 0c42-24 78 0 78 40v190c0 70-100 70-100 0V55c0-46 62-46 62 0v154c0 25-36 25-36 0V78" fill="none" stroke="#9b7737" stroke-width="18" stroke-linecap="round"/>
+    <path d="M0 0c42-24 78 0 78 40v190c0 70-100 70-100 0V55c0-46 62-46 62 0v154c0 25-36 25-36 0V78" fill="none" stroke="#f2d273" stroke-width="6" stroke-linecap="round"/>
+  </g>
 </svg>
