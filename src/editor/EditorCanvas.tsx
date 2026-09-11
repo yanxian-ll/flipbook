@@ -5,6 +5,7 @@ import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
 import {effectiveTemplateOverlay,pageTemplateDecorations} from '../domain/templateDecorations';
 import {isPaperTapeElement} from '../domain/tapeStyles';
+import {isSpreadBorrowedElement} from '../domain/spreadElements';
 import {useEditor} from '../store/editor';
 import {dragCrop,centeredCrop,type Crop} from '../domain/crop';
 import {frameIsFixed} from '../domain/layouts';
@@ -70,7 +71,7 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
   useEffect(()=>{
     const previous=knownElementIds.current;
     const next=new Set(page.elements.map(element=>element.id));
-    const addedText=page.elements.find(element=>element.type==='text'&&selected.includes(element.id)&&!previous.has(element.id));
+    const addedText=page.elements.find(element=>element.type==='text'&&!isSpreadBorrowedElement(element)&&selected.includes(element.id)&&!previous.has(element.id));
     knownElementIds.current=next;
     if(!addedText)return;
     setSelectAllText(true);
@@ -81,7 +82,7 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
     const element=page.elements.find(e=>e.id===node.id());if(!element)return;
     const nodeWidth=node.width(),nodeHeight=node.height();
     const ignored=new Set(groupDrag.current?.positions.map(item=>item.id)??[element.id]);
-    const peers=page.elements.filter(e=>!ignored.has(e.id));
+    const peers=page.elements.filter(e=>!ignored.has(e.id)&&!isSpreadBorrowedElement(e));
     const peerBounds=peers.map(e=>{
       const peer=stage.current?.findOne(`#${e.id}`);
       return {x:peer?.x()??e.x,y:peer?.y()??e.y,width:peer?.width()??e.width,height:peer?.height()??e.height};
@@ -158,7 +159,7 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
     node.scaleX(1);node.scaleY(1);setGuides({});
   }
 
-  const pageHasImage=page.elements.some(element=>element.type==='image');
+  const pageHasImage=page.elements.some(element=>!isSpreadBorrowedElement(element)&&element.type==='image');
   const templateOverlay=effectiveTemplateOverlay(page);
   const templateDecorations=pageTemplateDecorations(page);
   const hasTemplateLayer=!!templateOverlay||templateDecorations.length>0;
@@ -186,31 +187,36 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
         {(hasTemplateLayer?[page.elements.filter(e=>e.type==='image'),page.elements.filter(e=>e.type!=='image')]:[page.elements]).map((elements,index)=><Group key={index}>
           {index===1&&templateOverlay&&<Overlay url={templateOverlay}/>} 
           {index===1&&templateDecorations.map(decoration=><Rect key={decoration.id} {...templateDecorationProps(decoration)}/>)}
-          {elements.map(element=><CanvasElement
-            key={element.id}
-            fixed={frameIsFixed(page,element)}
-            selected={selected.includes(element.id)}
-            editing={editingTextId===element.id}
-            element={element}
-            onClick={multi=>{select(element.id,multi);}}
-            onImageSelect={()=>{if(element.type==='image')onImageSelect?.();}}
-            onDoubleClick={()=>{
-              if(element.type==='text'){editText(element);return;}
-              select(element.id);
-              if(element.type==='sticker')onTextEdit();
-              if(element.type==='image')onCrop();
-            }}
-            onDragStart={node=>beginDrag(element,node)}
-            onDragMove={moveDrag}
-            onCommit={node=>commitNode(element,node)}
-            onUpdate={patch=>update(element.id,patch)}
-          />)}
+          {elements.map(element=>{
+            const borrowed=isSpreadBorrowedElement(element);
+            const canvas=<CanvasElement
+              key={element.id}
+              fixed={borrowed||frameIsFixed(page,element)}
+              selected={!borrowed&&selected.includes(element.id)}
+              editing={!borrowed&&editingTextId===element.id}
+              element={element}
+              onClick={multi=>{if(!borrowed)select(element.id,multi);}}
+              onImageSelect={()=>{if(!borrowed&&element.type==='image')onImageSelect?.();}}
+              onDoubleClick={()=>{
+                if(borrowed)return;
+                if(element.type==='text'){editText(element);return;}
+                select(element.id);
+                if(element.type==='sticker')onTextEdit();
+                if(element.type==='image')onCrop();
+              }}
+              onDragStart={node=>beginDrag(element,node)}
+              onDragMove={moveDrag}
+              onCommit={node=>commitNode(element,node)}
+              onUpdate={patch=>update(element.id,patch)}
+            />;
+            return borrowed?<Group key={element.id} listening={false}>{canvas}</Group>:canvas;
+          })}
         </Group>)}
         {guides.x!==undefined&&<Line points={[guides.x,0,guides.x,H]} stroke="#e53478" strokeWidth={1/scale} listening={false}/ >}
         {guides.y!==undefined&&<Line points={[0,guides.y,W,guides.y]} stroke="#e53478" strokeWidth={1/scale} listening={false}/>} 
         {selected.map(id=>{
           const element=page.elements.find(item=>item.id===id);
-          if(!element||id===editingTextId||element.locked||frameIsFixed(page,element))return null;
+          if(!element||isSpreadBorrowedElement(element)||id===editingTextId||element.locked||frameIsFixed(page,element))return null;
           return <SelectionTransformer key={`selection-${id}`} stageRef={stage} element={element} scale={scale}/>;
         })}
       </Layer>
