@@ -8,6 +8,7 @@ import {useEditor} from '../store/editor';
 import {dragCrop,centeredCrop,type Crop} from '../domain/crop';
 import {frameIsFixed} from '../domain/layouts';
 import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetImage,loadStaticImage,frameClip,loadPageFonts,templateDecorationProps} from './renderer';
+import {PolaroidCanvasElement} from './PolaroidCanvasElement';
 
 type ElementUpdate={id:string;patch:Partial<Element>};
 type EditorCanvasProps={
@@ -297,6 +298,7 @@ function CanvasElement({element,fixed,selected,editing,onClick,onImageSelect,onD
   useEffect(()=>{let live=true;setImage(undefined);setFailed(false);if(element.assetId)void loadAssetImage(element.assetId).then(img=>{if(live)setImage(img);}).catch(()=>{if(live)setFailed(true);});return()=>{live=false;};},[element.assetId]);
   const movable=element.type==='text'||element.type==='sticker';
   const events={draggable:!element.locked,onClick:(e:Konva.KonvaEventObject<MouseEvent>)=>{onClick(e.evt.ctrlKey||e.evt.metaKey||e.evt.shiftKey);onImageSelect();},onTap:()=>{onClick(false);onImageSelect();},onDblClick:onDoubleClick,onDblTap:onDoubleClick,onMouseEnter:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable&&!element.locked)setStageCursor(e.target,'move');},onMouseLeave:(e:Konva.KonvaEventObject<MouseEvent>)=>{if(movable)setStageCursor(e.target,'default');},onDragStart:(e:Konva.KonvaEventObject<DragEvent>)=>{onDragStart(e.target);if(movable)setStageCursor(e.target,'grabbing');},onDragMove:(e:Konva.KonvaEventObject<DragEvent>)=>onDragMove(e.target),onDragEnd:(e:Konva.KonvaEventObject<DragEvent>)=>{onCommit(e.target);if(movable)setStageCursor(e.target,'move');},onTransformEnd:(e:Konva.KonvaEventObject<Event>)=>onCommit(e.target)};
+  if(element.type==='image'&&element.polaroidStyle)return <PolaroidCanvasElement element={element} image={image} failed={failed} selected={selected} onSelect={onClick} onDoubleClick={onDoubleClick} onCommit={onCommit} onDragStart={onDragStart} onDragMove={onDragMove} onUpdate={onUpdate}/>;
   if(element.type==='image'&&fixed)return <FixedPhoto element={element} image={image} selected={selected} onSelect={()=>onClick(false)} onActivate={onImageSelect} onDoubleClick={onDoubleClick} onUpdate={onUpdate}/>;
   if(element.type==='image')return image?<CanvasImage {...photoProps(element,image)} {...events}/>:<Rect {...elementProps(element)} fill={failed?'#f9b8b8':'#ddd'} {...events}/>;
   if(element.type==='text'||element.type==='sticker')return <Text {...textProps(element)} {...events} visible={!editing}/>;
