@@ -40,6 +40,8 @@ export interface BackCover {
   crop?:{x:number;y:number;zoom:number};
   text?:string;
   textColor?:string;
+  /** Free decorations placed directly on the synthetic back-cover page. */
+  elements?:Element[];
 }
 export interface Book {
   id: string; title: string; themeId: ThemeId; format: { width: number; height: number };
@@ -81,7 +83,7 @@ export function newBook(title: string, themeId: ThemeId, assets: Asset[] = []): 
   const cover = blankPage(0, themeId === 'scrapbook' ? '#f5ec30' : '#e8e2cf');
   if(assets[0]) cover.elements.push(imageElement(assets[0].id,{x:414,y:360,width:372,height:498}));
   cover.elements.push(textElement('TIME TO FLIPBOOK',{x:180,y:1550,width:840,height:40,fontSize:26,align:'center',color:'#4a3f1a'}));
-  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3',backCover:{mode:'match-front',backgroundMode:'match-front',background:cover.background,templateId:'plain',text:'',textColor:'#4a3f1a'}};
+  return {id:uid(),title,themeId,format:{width:W,height:H},coverPageId:cover.id,pages:[cover],assets,createdAt:Date.now(),updatedAt:Date.now(),version:1,workspaceBackground:'#e9eaec',coverTemplate:'cutout',defaultPageBackground:'#eeeae3',backCover:{mode:'match-front',backgroundMode:'match-front',background:cover.background,templateId:'plain',text:'',textColor:'#4a3f1a',elements:[]}};
 }
 export function validateBook(value: unknown): asserts value is Book {
   const b = value as Book;
@@ -110,6 +112,7 @@ export function backCoverFor(book:Book){
     crop:configured?.crop??{x:.5,y:.5,zoom:1},
     text:configured?.text??'',
     textColor:configured?.textColor??'#4a3f1a',
+    elements:configured?.elements??[],
   } as const;
 }
 export function backCoverPage(book:Book):Page{
@@ -127,11 +130,12 @@ export function backCoverPage(book:Book):Page{
   if(cover.text.trim()){
     elements.push({
       id:`${book.id}:back-text`,type:'text',text:cover.text,
-      x:180,y:1480,width:840,height:90,rotation:0,opacity:1,
+      x:180,y:1480,width:840,height:90,rotation:0,opacity:1,locked:true,
       fontFamily:bookStyleFor(book).fontFamily,fontSize:30,fontWeight:400,
       color:cover.textColor,align:'center',
     });
   }
+  elements.push(...cover.elements.map(element=>({...element})));
   return {id:`${book.id}:back-cover`,type:'normal',background,elements,order:book.pages.length};
 }
 
@@ -159,6 +163,8 @@ export function migrateLegacyBrandBook(value:Book){
       if(element.text)element.text=update(element.text);
     }
   }
+  if(book.backCover?.text)book.backCover.text=update(book.backCover.text);
+  for(const element of book.backCover?.elements??[]){if(element.text)element.text=update(element.text);}
   if(book.customLayouts)for(const layout of book.customLayouts)layout.name=update(layout.name);
   if(book.customCoverTemplates)for(const template of book.customCoverTemplates)template.name=update(template.name);
   return {book,changed};
