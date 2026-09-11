@@ -111,8 +111,9 @@ export function EditorPanel(props:EditorPanelProps){
   },[props.panel,coverSide]);
 
   useLayoutEffect(()=>{
-    if(props.panel!=='text'||page?.type!=='cover')return;
+    if((props.panel!=='text'&&props.panel!=='stickers')||page?.type!=='cover')return;
     if(useCoverContext.getState().side!=='front')useCoverContext.getState().setSide('front');
+    if(props.panel!=='text')return;
     const state=useEditor.getState();
     const current=state.book?.pages[state.pageIndex];
     if(!current)return;
