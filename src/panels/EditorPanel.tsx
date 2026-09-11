@@ -3,10 +3,12 @@ import {createPortal} from 'react-dom';
 import {Copy,Trash2,X} from 'lucide-react';
 import {backCoverFor,textElement,uid,type Element} from '../domain/model';
 import {createPolaroidElement,polaroidTemplates,type PolaroidStyleId} from '../domain/polaroids';
+import {isPaperTapeElement,paperTapeStyleFor,type TapeStyleId} from '../domain/tapeStyles';
 import {addBackCoverElement,copyBackCoverElements,deleteBackCoverElements,pasteBackCoverElements,updateBackCoverElement} from '../domain/backCoverElements';
 import {useCoverContext} from '../store/coverContext';
 import {useEditor} from '../store/editor';
 import {Button,IconButton} from '../components/ui';
+import {PaperTapePicker} from '../components/PaperTapePicker';
 import {EditorPanel as EditorPanelCore} from './EditorPanelCore';
 import './coverPanelCompact.css';
 export type {PanelId} from './EditorPanelCore';
@@ -42,20 +44,55 @@ function PolaroidStickerSection(){
   </section>;
 }
 
-function PaperTapeSelectionActions(){
-  const page=useEditor(state=>state.book?.pages[state.pageIndex]);
+function PaperTapeSection(){
+  const book=useEditor(state=>state.book)!;
+  const pageIndex=useEditor(state=>state.pageIndex);
   const selectedIds=useEditor(state=>state.selected);
-  const hasPaperTape=page?.elements.some(element=>
-    selectedIds.includes(element.id)
-    &&element.type==='shape'
-    &&!element.shadow
-    &&element.width/Math.max(1,element.height)>=3
-  );
-  if(!hasPaperTape)return null;
-  return <div className="segments" style={{marginTop:14}} aria-label="纸胶带选择操作">
-    <Button disabled={!selectedIds.length} onClick={()=>useEditor.getState().duplicateSelected()}><Copy size={15}/>复制所选</Button>
-    <Button className="danger" disabled={!selectedIds.length} onClick={()=>useEditor.getState().deleteSelected()}><Trash2 size={15}/>删除所选</Button>
-  </div>;
+  const page=book.pages[pageIndex];
+  const selectedTape=page.elements.find(element=>selectedIds.includes(element.id)&&isPaperTapeElement(element));
+  const initialStyle=selectedTape?.tapeStyle??'kraft';
+  const initialDefinition=paperTapeStyleFor(initialStyle);
+  const [styleId,setStyleId]=useState<TapeStyleId>(initialStyle);
+  const [color,setColor]=useState(selectedTape?.color??initialDefinition.defaultColor);
+  const [opacity,setOpacity]=useState(selectedTape?.opacity??.72);
+
+  useEffect(()=>{
+    if(!selectedTape)return;
+    const nextStyle=selectedTape.tapeStyle??'kraft';
+    setStyleId(nextStyle);
+    setColor(selectedTape.color??paperTapeStyleFor(nextStyle).defaultColor);
+    setOpacity(Math.max(.1,Math.min(1,selectedTape.opacity)));
+  },[selectedTape?.id,selectedTape?.tapeStyle,selectedTape?.color,selectedTape?.opacity]);
+
+  function chooseStyle(next:TapeStyleId){
+    setStyleId(next);
+    const state=useEditor.getState();
+    if(selectedTape){
+      state.updateElement(selectedTape.id,{tapeStyle:next});
+      return;
+    }
+    state.addElement({
+      id:uid(),type:'shape',x:280,y:180,width:460,height:90,rotation:-7,
+      opacity,color:color||paperTapeStyleFor(next).defaultColor,tapeStyle:next,
+    });
+  }
+  function changeColor(next:string){
+    setColor(next);
+    if(selectedTape)useEditor.getState().updateElement(selectedTape.id,{color:next});
+  }
+  function changeOpacity(next:number){
+    const value=Math.max(.1,Math.min(1,next));
+    setOpacity(value);
+    if(selectedTape)useEditor.getState().updateElement(selectedTape.id,{opacity:value});
+  }
+
+  return <>
+    <PaperTapePicker styleId={styleId} color={color} opacity={opacity} onStyleChange={chooseStyle} onColorChange={changeColor} onOpacityChange={changeOpacity}/>
+    {selectedTape&&<div className="segments" style={{marginTop:14}} aria-label="纸胶带选择操作">
+      <Button disabled={!selectedIds.length} onClick={()=>useEditor.getState().duplicateSelected()}><Copy size={15}/>复制所选</Button>
+      <Button className="danger" disabled={!selectedIds.length} onClick={()=>useEditor.getState().deleteSelected()}><Trash2 size={15}/>删除所选</Button>
+    </div>}
+  </>;
 }
 
 type EditorPanelProps=ComponentProps<typeof EditorPanelCore>;
@@ -100,16 +137,52 @@ function BackCoverStickerPanel({onClose,placement,paired}:CoverPanelProps){
   const selectedIds=useEditor(state=>state.selected);
   const change=useEditor(state=>state.change);
   const select=useEditor(state=>state.select);
-  const selected=backCoverFor(book).elements.find(element=>selectedIds.includes(element.id)&&element.type==='sticker');
+  const selectedElement=backCoverFor(book).elements.find(element=>selectedIds.includes(element.id));
+  const selectedSticker=selectedElement?.type==='sticker'?selectedElement:undefined;
+  const selectedTape=selectedElement&&isPaperTapeElement(selectedElement)?selectedElement:undefined;
+  const initialStyle=selectedTape?.tapeStyle??'kraft';
+  const [tapeStyle,setTapeStyle]=useState<TapeStyleId>(initialStyle);
+  const [tapeColor,setTapeColor]=useState(selectedTape?.color??paperTapeStyleFor(initialStyle).defaultColor);
+  const [tapeOpacity,setTapeOpacity]=useState(selectedTape?.opacity??.72);
+
+  useEffect(()=>{
+    if(!selectedTape)return;
+    const style=selectedTape.tapeStyle??'kraft';
+    setTapeStyle(style);
+    setTapeColor(selectedTape.color??paperTapeStyleFor(style).defaultColor);
+    setTapeOpacity(Math.max(.1,Math.min(1,selectedTape.opacity)));
+  },[selectedTape?.id,selectedTape?.tapeStyle,selectedTape?.color,selectedTape?.opacity]);
 
   function addSticker(value:string,emoji=false){
     const element={...textElement(value,{x:470,y:650,width:260,height:280,fontSize:180,fontFamily:emoji?emojiFont:'Arial',color:'#b47d7d'}),id:uid(),type:'sticker' as const};
     change(draft=>addBackCoverElement(draft,element));
     select(element.id);
   }
-  function updateSelected(patch:Partial<Element>){
-    if(!selected)return;
-    change(draft=>updateBackCoverElement(draft,selected.id,patch));
+  function updateSticker(patch:Partial<Element>){
+    if(!selectedSticker)return;
+    change(draft=>updateBackCoverElement(draft,selectedSticker.id,patch));
+  }
+  function chooseTapeStyle(next:TapeStyleId){
+    setTapeStyle(next);
+    if(selectedTape){
+      change(draft=>updateBackCoverElement(draft,selectedTape.id,{tapeStyle:next}));
+      return;
+    }
+    const element:Element={
+      id:uid(),type:'shape',x:280,y:180,width:460,height:90,rotation:-7,
+      opacity:tapeOpacity,color:tapeColor||paperTapeStyleFor(next).defaultColor,tapeStyle:next,
+    };
+    change(draft=>addBackCoverElement(draft,element));
+    select(element.id);
+  }
+  function changeTapeColor(next:string){
+    setTapeColor(next);
+    if(selectedTape)change(draft=>updateBackCoverElement(draft,selectedTape.id,{color:next}));
+  }
+  function changeTapeOpacity(next:number){
+    const value=Math.max(.1,Math.min(1,next));
+    setTapeOpacity(value);
+    if(selectedTape)change(draft=>updateBackCoverElement(draft,selectedTape.id,{opacity:value}));
   }
   function duplicateSelected(){
     const source=copyBackCoverElements(book,selectedIds);
@@ -125,10 +198,11 @@ function BackCoverStickerPanel({onClose,placement,paired}:CoverPanelProps){
   }
 
   return <PanelShell title="贴纸" onClose={onClose} placement={placement} paired={paired}>
-    {selected&&<label className="field">当前贴纸颜色<input type="color" value={selected.color??'#b47d7d'} onChange={event=>updateSelected({color:event.target.value})}/></label>}
+    {selectedSticker&&<label className="field">当前贴纸颜色<input type="color" value={selectedSticker.color??'#b47d7d'} onChange={event=>updateSticker({color:event.target.value})}/></label>}
     <div className="sticker-grid">{baseStickers.map(sticker=><button key={sticker} type="button" onClick={()=>addSticker(sticker)}>{sticker}</button>)}</div>
     <p className="field-label">Cake / Birthday</p>
     <div className="sticker-grid">{cakeStickers.map(sticker=><button key={sticker} type="button" onClick={()=>addSticker(sticker,true)}>{sticker}</button>)}</div>
+    <PaperTapePicker styleId={tapeStyle} color={tapeColor} opacity={tapeOpacity} onStyleChange={chooseTapeStyle} onColorChange={changeTapeColor} onOpacityChange={changeTapeOpacity}/>
     <div className="segments" style={{marginTop:16}}>
       <Button disabled={!selectedIds.length} onClick={duplicateSelected}><Copy size={15}/>复制所选</Button>
       <Button className="danger" disabled={!selectedIds.length} onClick={removeSelected}><Trash2 size={15}/>删除所选</Button>
@@ -141,13 +215,24 @@ export function EditorPanel(props:EditorPanelProps){
   const coverSide=useCoverContext(state=>state.side);
   const page=useEditor(state=>state.book?.pages[state.pageIndex]);
   const selectedIds=useEditor(state=>state.selected);
+  const effectiveCoverSide=page?.type==='cover'?'front':coverSide;
 
   useEffect(()=>{
     setStickerGrid(null);
-    if(props.panel!=='stickers'||coverSide==='back')return;
+    if(props.panel!=='stickers'||effectiveCoverSide==='back')return;
     const frame=requestAnimationFrame(()=>setStickerGrid(document.querySelector<HTMLElement>('.editor-panel .sticker-grid')));
     return()=>cancelAnimationFrame(frame);
-  },[props.panel,coverSide]);
+  },[props.panel,effectiveCoverSide,page?.id]);
+
+  useLayoutEffect(()=>{
+    if(props.panel!=='stickers'||effectiveCoverSide==='back')return;
+    const node=document.querySelector<HTMLElement>('.editor-panel .tape-creator');
+    if(!node)return;
+    const display=node.style.display;
+    node.style.display='none';
+    node.setAttribute('aria-hidden','true');
+    return()=>{node.style.display=display;node.removeAttribute('aria-hidden');};
+  },[props.panel,effectiveCoverSide,page?.id]);
 
   useLayoutEffect(()=>{
     if((props.panel!=='text'&&props.panel!=='stickers')||page?.type!=='cover')return;
@@ -162,14 +247,12 @@ export function EditorPanel(props:EditorPanelProps){
     if(firstText)state.select(firstText.id);
   },[props.panel,page?.id,page?.type,selectedIds.join('|')]);
 
-  const effectiveCoverSide=page?.type==='cover'?'front':coverSide;
   if(props.panel==='text'&&effectiveCoverSide==='back')return <BackCoverTextPanel onClose={props.onClose} placement={props.placement} paired={props.paired}/>;
   if(props.panel==='stickers'&&effectiveCoverSide==='back')return <BackCoverStickerPanel onClose={props.onClose} placement={props.placement} paired={props.paired}/>;
 
   return <>
     <EditorPanelCore {...props}/>
     {props.panel==='stickers'&&stickerGrid&&createPortal(<CakeStickerButtons/>,stickerGrid)}
-    {props.panel==='stickers'&&stickerGrid?.parentElement&&createPortal(<PolaroidStickerSection/>,stickerGrid.parentElement)}
-    {props.panel==='stickers'&&stickerGrid?.parentElement&&createPortal(<PaperTapeSelectionActions/>,stickerGrid.parentElement)}
+    {props.panel==='stickers'&&stickerGrid?.parentElement&&createPortal(<><PaperTapeSection/><PolaroidStickerSection/></>,stickerGrid.parentElement)}
   </>;
 }
