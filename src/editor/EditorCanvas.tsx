@@ -1,16 +1,18 @@
 import {useEffect,useRef,useState} from 'react';
+import {createPortal} from 'react-dom';
 import {Stage,Layer,Rect,Text,Image as CanvasImage,Transformer,Line,Group} from 'react-konva';
 import Konva from 'konva';
 import type {Element,Page} from '../domain/model';
 import {W,H,visualPageBackground} from '../domain/model';
 import {effectiveTemplateOverlay,pageTemplateDecorations} from '../domain/templateDecorations';
 import {isPaperTapeElement} from '../domain/tapeStyles';
-import {isSpreadBorrowedElement} from '../domain/spreadElements';
+import {canSpanSpread,isSpreadBorrowedElement} from '../domain/spreadElements';
 import {useEditor} from '../store/editor';
 import {dragCrop,centeredCrop,type Crop} from '../domain/crop';
 import {frameIsFixed} from '../domain/layouts';
 import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetImage,loadStaticImage,loadPaperTapeImage,paperTapeImageProps,frameClip,loadPageFonts,templateDecorationProps} from './renderer';
 import {PolaroidCanvasElement} from './PolaroidCanvasElement';
+import {SpreadDragOverlay,type SpreadDragSide} from './SpreadDragOverlay';
 
 type ElementUpdate={id:string;patch:Partial<Element>};
 type EditorCanvasProps={
@@ -26,6 +28,8 @@ type EditorCanvasProps={
   onBatchUpdate?:(updates:ElementUpdate[])=>void;
 };
 
+type SpreadPreview={host:HTMLElement;side:SpreadDragSide;elements:Element[]};
+
 export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackgroundClick,selectedIds,onSelectElement,onUpdateElement,onBatchUpdate}:EditorCanvasProps){
   const stage=useRef<Konva.Stage>(null);
   const knownElementIds=useRef(new Set(page.elements.map(element=>element.id)));
@@ -39,6 +43,7 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
   const [guides,setGuides]=useState<{x?:number;y?:number}>({});
   const [editingTextId,setEditingTextId]=useState<string|null>(null);
   const [selectAllText,setSelectAllText]=useState(false);
+  const [spreadPreview,setSpreadPreview]=useState<SpreadPreview|null>(null);
   const editingText=editingTextId?page.elements.find(element=>element.id===editingTextId&&element.type==='text'):undefined;
   const groupDrag=useRef<null|{
     anchorId:string;
@@ -65,6 +70,7 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
   useEffect(()=>{
     setEditingTextId(null);
     setSelectAllText(false);
+    setSpreadPreview(null);
     groupDrag.current=null;
     knownElementIds.current=new Set(page.elements.map(element=>element.id));
   },[page.id]);
@@ -94,32 +100,59 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
     for(const offset of [0,nodeHeight/2,nodeHeight]){const target=yTargets.find(y=>Math.abs(node.y()+offset-y)<8/scale);if(target!==undefined){node.y(target-offset);next.y=target;break;}}
     setGuides(next);
   }
+  function spreadContext(){
+    const container=stage.current?.container();
+    const host=container?.closest<HTMLElement>('.editor-pageflip-shell');
+    const leaf=container?.closest<HTMLElement>('.editor-flip-page[data-book-side]');
+    const side=leaf?.dataset.bookSide;
+    if(!host||(side!=='left'&&side!=='right'))return null;
+    return {host,side:side as SpreadDragSide};
+  }
+  function refreshSpreadPreview(){
+    const drag=groupDrag.current;
+    const context=spreadContext();
+    if(!drag||!context){setSpreadPreview(null);return;}
+    const ids=[...new Set([drag.anchorId,...drag.positions.map(item=>item.id)])];
+    const elements=ids.flatMap(id=>{
+      const element=page.elements.find(item=>item.id===id&&!isSpreadBorrowedElement(item));
+      if(!element||!canSpanSpread(element))return [];
+      const node=stage.current?.findOne(`#${id}`);
+      if(!node)return [];
+      return [{...element,x:node.x(),y:node.y(),rotation:node.rotation()}];
+    });
+    setSpreadPreview(elements.length?{...context,elements}:null);
+  }
   function beginDrag(element:Element,node:Konva.Node){
     const keepGroup=selected.includes(element.id)&&selected.length>1;
     if(!selected.includes(element.id))select(element.id);
     const ids=keepGroup?selected:[element.id];
     const positions=ids.flatMap(id=>{
       const peer=page.elements.find(item=>item.id===id);
-      const movablePeer=peer&&(peer.type==='text'||peer.type==='sticker'||isPaperTapeElement(peer));
+      const movablePeer=peer&&canSpanSpread(peer);
       if(!peer||peer.locked||frameIsFixed(page,peer)||!movablePeer)return [];
       const peerNode=stage.current?.findOne(`#${id}`);
       return peerNode?[{id,x:peerNode.x(),y:peerNode.y()}]:[];
     });
     groupDrag.current={anchorId:element.id,anchorX:node.x(),anchorY:node.y(),positions};
+    refreshSpreadPreview();
   }
   function moveDrag(node:Konva.Node){
     snap(node);
     const drag=groupDrag.current;
-    if(!drag||drag.anchorId!==node.id()||drag.positions.length<2)return;
-    const dx=node.x()-drag.anchorX,dy=node.y()-drag.anchorY;
-    for(const start of drag.positions){
-      if(start.id===drag.anchorId)continue;
-      const peer=stage.current?.findOne(`#${start.id}`);
-      if(peer){peer.position({x:start.x+dx,y:start.y+dy});}
+    if(!drag||drag.anchorId!==node.id())return;
+    if(drag.positions.length>=2){
+      const dx=node.x()-drag.anchorX,dy=node.y()-drag.anchorY;
+      for(const start of drag.positions){
+        if(start.id===drag.anchorId)continue;
+        const peer=stage.current?.findOne(`#${start.id}`);
+        if(peer){peer.position({x:start.x+dx,y:start.y+dy});}
+      }
     }
     stage.current?.batchDraw();
+    refreshSpreadPreview();
   }
   function commitNode(element:Element,node:Konva.Node){
+    setSpreadPreview(null);
     const drag=groupDrag.current;
     if(drag&&drag.anchorId===element.id&&drag.positions.length>1){
       const updates=drag.positions.flatMap(start=>{
@@ -222,6 +255,7 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
       </Layer>
     </Stage>
     {editingText&&<InlineTextEditor element={editingText} scale={scale} selectAll={selectAllText} onChange={value=>update(editingText.id,{text:value})} onClose={()=>{setEditingTextId(null);setSelectAllText(false);}}/>} 
+    {spreadPreview&&createPortal(<SpreadDragOverlay side={spreadPreview.side} elements={spreadPreview.elements} pageWidth={width}/>,spreadPreview.host)}
   </div>;
 }
 
