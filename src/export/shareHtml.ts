@@ -54,7 +54,7 @@ html,body{margin:0;min-height:100%;font-family:Arial,"Microsoft YaHei",sans-seri
 body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:100dvh;overflow:hidden}
 .top{display:flex;align-items:center;justify-content:space-between;padding:16px 20px;font-weight:700;background:#ffffffd9;backdrop-filter:blur(14px);z-index:5}
 .stage{position:relative;display:flex;align-items:center;justify-content:center;min-height:0;padding:26px 18px;overflow:hidden}
-.book-host{width:min(960px,78vw);height:min(64dvh,678px);display:flex;align-items:center;justify-content:center}
+.book-host{width:min(var(--share-spread-width,960px),78vw);height:min(64dvh,var(--share-page-height,678px));display:flex;align-items:center;justify-content:center}
 .share-page{position:relative;width:100%;height:100%;overflow:hidden;background:#fff}
 .share-page>img{display:block;width:100%;height:100%;object-fit:fill;user-select:none;-webkit-user-drag:none}
 .share-page.stf__item{position:absolute}
@@ -63,7 +63,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:100dvh;o
 .nav button:disabled{opacity:.3;cursor:default}
 .count{min-width:150px;text-align:center;color:#666;font-size:12px}
 .hint{position:absolute;left:50%;bottom:6px;transform:translateX(-50%);font-size:10px;color:#777;white-space:nowrap;pointer-events:none}
-.single-static{width:min(480px,68vw)!important;height:auto!important;filter:drop-shadow(0 18px 22px #0003)}
+.single-static{width:min(var(--share-page-width,480px),68vw)!important;height:auto!important;filter:drop-shadow(0 18px 22px #0003)}
 .single-static .share-page{display:block!important;position:relative!important;aspect-ratio:1200/1696}
 #book{transition:transform .28s cubic-bezier(.2,.72,.2,1)}
 #book.is-cover{transform:translateX(-25%)}
@@ -84,7 +84,7 @@ body{display:grid;grid-template-rows:auto minmax(0,1fr) auto;min-height:100dvh;o
 @media(max-width:640px){
   .top{padding:13px 16px}
   .stage{padding:14px 6px}
-  .book-host{width:84vw;height:62dvh}
+  .book-host{width:min(var(--share-spread-width,960px),84vw);height:min(62dvh,var(--share-page-height,678px))}
   .nav{padding-bottom:max(16px,env(safe-area-inset-bottom))}
   .count{min-width:112px}
   .hint{display:none}
@@ -104,6 +104,10 @@ export function buildShareViewerScript(input:Omit<ShareHtmlInput,'title'|'librar
 const pages=${pages},labels=${labels},showCover=${String(input.showCover)},coverTexture=${coverTexture},backColor=${backColor},backPage=${backPage},leafPlan=${leafPlan},viewerConfig=${viewerConfig};
 const root=document.getElementById("book"),count=document.getElementById("count"),prev=document.getElementById("prev"),next=document.getElementById("next"),stage=document.getElementById("stage"),loadError=document.getElementById("load-error");
 const needsFiller=showCover&&leafPlan.needsFiller,backIndex=showCover?leafPlan.backIndex:-1;
+const viewerPageWidth=Math.max(1,Number(viewerConfig.maxWidth)||Number(viewerConfig.width)||480),viewerPageHeight=Math.max(1,Number(viewerConfig.maxHeight)||Number(viewerConfig.height)||678);
+document.documentElement.style.setProperty("--share-page-width",viewerPageWidth+"px");
+document.documentElement.style.setProperty("--share-page-height",viewerPageHeight+"px");
+document.documentElement.style.setProperty("--share-spread-width",viewerPageWidth*2+"px");
 
 function decorateCover(leaf,back){
   const grain=document.createElement("span");
@@ -122,7 +126,7 @@ function makeLeaf(src,label,density,cover,staticMode){
   if(cover)leaf.dataset.cover="true";
   if(staticMode){
     leaf.style.position="relative";
-    leaf.style.width="min(480px,39vw)";
+    leaf.style.width="min("+viewerPageWidth+"px,39vw)";
     leaf.style.height="auto";
     leaf.style.aspectRatio="1200/1696";
     leaf.style.display="block";
@@ -177,8 +181,8 @@ if(pages.length<=1&&!showCover){
     root.style.display="flex";
     root.style.alignItems="center";
     root.style.justifyContent="center";
-    root.style.width="min(960px,78vw)";
-    root.style.height="min(64dvh,678px)";
+    root.style.width="min("+viewerPageWidth*2+"px,78vw)";
+    root.style.height="min(64dvh,"+viewerPageHeight+"px)";
 
     if(backOnly){
       root.replaceChildren(makeBack(true));
