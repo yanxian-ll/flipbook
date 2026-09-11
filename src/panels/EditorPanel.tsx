@@ -125,7 +125,7 @@ function BackCoverTextPanel({onClose,placement,paired}:CoverPanelProps){
     };
   });
   return <PanelShell title="文字" onClose={onClose} placement={placement} paired={paired}>
-    <label className="field stack">后封面文字<textarea aria-label="文字内容" rows={3} value={back.text} placeholder="例如：日期、地点或一句话" onChange={event=>update({text:event.value})}/></label>
+    <label className="field stack">后封面文字<textarea aria-label="文字内容" rows={3} value={back.text} placeholder="例如：日期、地点或一句话" onChange={event=>update({text:event.target.value})}/></label>
     <label className="field">文字颜色<input type="color" value={back.textColor} onChange={event=>update({textColor:event.target.value})}/></label>
   </PanelShell>;
 }
