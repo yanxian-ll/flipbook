@@ -9,6 +9,11 @@ import {useCoverContext} from '../../store/coverContext';
 
 type ViewMode='spread'|'page';
 
+function spreadAnchor(index:number){
+  if(index<=0)return 0;
+  return index%2===0?index-1:index;
+}
+
 export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,onRequestDelete}:{
   book:Book;
   mode:ViewMode;
@@ -50,6 +55,14 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
 
   if(pageIndex===0&&!backActive)return null;
 
+  const commitSpreadTarget=(index:number)=>{
+    const state=useEditor.getState();
+    flipBook.current?.turnTo(spreadAnchor(index));
+    // page-flip reports the visible spread anchor from turnToPage. Re-apply the
+    // clicked logical page after that report so clicking a right-hand thumbnail
+    // edits the right page instead of being overwritten by the left page.
+    requestAnimationFrame(()=>requestAnimationFrame(()=>state.selectPreviewPage(index,false)));
+  };
   const selectPreviewPage=(index:number,multi=false)=>{
     const state=useEditor.getState();
     if(multi&&index<book.pages.length){
@@ -63,11 +76,10 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
       return;
     }
     if(index>=book.pages.length){
-      flipBook.current?.flipTo(index);
+      flipBook.current?.turnTo(index);
       return;
     }
-    flipBook.current?.flipTo(index);
-    state.selectPreviewPage(index,false);
+    commitSpreadTarget(index);
   };
   const jumpTo=(index:number)=>{
     if(mode==='page'){
@@ -75,8 +87,7 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
       return;
     }
     if(index>=book.pages.length){flipBook.current?.turnTo(index);return;}
-    flipBook.current?.turnTo(index);
-    useEditor.getState().selectPreviewPage(index,false);
+    commitSpreadTarget(index);
   };
   const dropSpread=(targetStart:number)=>{
     const from=dragSpread;
@@ -85,7 +96,7 @@ export function EditorPreviewRail({book,mode,flipBook,onNavigatePage,onAddPage,o
     suppressClick.current=true;
     useEditor.getState().reorderSpread(from,targetStart);
     requestAnimationFrame(()=>requestAnimationFrame(()=>{
-      flipBook.current?.turnTo(useEditor.getState().pageIndex);
+      flipBook.current?.turnTo(spreadAnchor(useEditor.getState().pageIndex));
       window.setTimeout(()=>{suppressClick.current=false;},0);
     }));
   };
