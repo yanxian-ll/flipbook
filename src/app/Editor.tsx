@@ -11,10 +11,8 @@ import {EditorPanel,type PanelId} from '../panels/EditorPanel';
 import {TextureBackgroundPanel} from '../panels/TextureBackgroundPanel';
 import {ExportDialog} from '../export/ExportDialog';
 import {VersionHistoryDialog} from '../components/VersionHistoryDialog';
-import {frameIsFixed} from '../domain/layouts';
 import {EditorHeader,PageDeleteDialog,ViewModeSwitch,WorkspaceToolbar} from './editor/EditorChrome';
 import {EditorPreviewRail} from './editor/EditorPreviewRail';
-import {EditorContextToolbar} from './editor/EditorContextToolbar';
 import {useEditorShortcuts} from './editor/useEditorShortcuts';
 import {useEditorLayout} from './editor/useEditorLayout';
 import {useEditorPanels} from './editor/useEditorPanels';
@@ -175,7 +173,6 @@ export function Editor(){
   if(!book||!layout||error&&book.id!==bookId)return <main className="phone-shell"><ErrorMessage message={error}/><Button onClick={()=>navigate('/')}>返回书架</Button></main>;
 
   const {page,neighborPage,showSingleAdd,spreadUnitWidth,pageCanvasWidth,pageHeight,visualReverse,focusWindowWidth,focusedShift}=layout;
-  const fixed=selected?frameIsFixed(page,selected):false;
 
   return <main className={`phone-shell studio ${wide?'expanded':''} ${panels.bothSideOpen?'libraries-open':''} ${panels.leftSideOpen?'photo-library-open':''} ${panels.templateSideOpen?'template-library-open':''} ${panels.compactPanel==='page-background'?'page-background-open':''}`}>
     <EditorHeader wide={wide} onBack={()=>void leave('/')} onToggleWide={()=>setWide(value=>!value)}/>
@@ -193,16 +190,6 @@ export function Editor(){
         top={!wide&&zoomMode==='spread'?`max(46px, calc(50% - ${spreadUnitWidth*PAGE_ASPECT_RATIO/2+52}px))`:undefined}
         onChange={changeViewMode}
       />
-
-      {selected&&<EditorContextToolbar
-        element={selected}
-        fixed={fixed}
-        onReplace={()=>panels.openTool('photos')}
-        onEditText={openTextEditor}
-        onAdjust={()=>panels.openTool('adjust')}
-        onDuplicate={()=>useEditor.getState().duplicateSelected()}
-        onDelete={()=>useEditor.getState().deleteSelected()}
-      />}
 
       <div ref={spreadStage} className={`spread-area native-book-stage ${panels.panel||panels.photoSideOpen||panels.templateSideOpen?'panel-open':''} zoom-${zoomMode}`} onWheelCapture={pageNavigation.handlePageWheel}>
         {zoomMode==='spread'
