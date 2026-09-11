@@ -15,10 +15,26 @@ const formats=([
   ['pdf',FileText,'整本 PDF','每张 PDF 页面使用所选拼页与相框样式'],
   ['share',Share2,'分享网页','生成可直接打开和转发的独立网页']
 ] as const);
+const resolutionPresets=([
+  [.35,'超小 · 画面长边约 600 px'],
+  [.5,'分享 · 画面长边约 850 px'],
+  [.75,'轻量 · 画面长边约 1270 px'],
+  [1,'标准 · 画面长边 1696 px'],
+  [1.5,'高清 · 画面长边 2544 px'],
+  [2,'高清+ · 画面长边 3392 px'],
+  [3,'超清 · 画面长边 5088 px'],
+] as const);
+function compressionLabel(value:number){
+  if(value<=45)return '极小文件';
+  if(value<=60)return '轻量分享';
+  if(value<=75)return '均衡';
+  if(value<=88)return '高质量';
+  return '接近原图';
+}
 
 export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose:()=>void}){
-  const [format,setFormat]=useState<ExportFormat|null>(null),[quality,setQuality]=useState(1),[selected,setSelected]=useState<number[]>(book.pages.map((_,i)=>i)),[options,setOptions]=useState<CompositionOptions>(defaultComposition),[previewIndex,setPreviewIndex]=useState(0),[busy,setBusy]=useState(false),[progress,setProgress]=useState(0),[error,setError]=useState(''),[missingStoredAssetIds,setMissingStoredAssetIds]=useState<string[]>([]),[assetCheckBusy,setAssetCheckBusy]=useState(false);
-  useEffect(()=>{if(!open)return;setFormat(null);setSelected(book.pages.map((_,i)=>i));setQuality(1);setOptions(defaultComposition);setPreviewIndex(0);setBusy(false);setProgress(0);setError('');setMissingStoredAssetIds([]);setAssetCheckBusy(false);},[open,book.id,book.pages.length]);
+  const [format,setFormat]=useState<ExportFormat|null>(null),[quality,setQuality]=useState(.75),[compression,setCompression]=useState(72),[selected,setSelected]=useState<number[]>(book.pages.map((_,i)=>i)),[options,setOptions]=useState<CompositionOptions>(defaultComposition),[previewIndex,setPreviewIndex]=useState(0),[busy,setBusy]=useState(false),[progress,setProgress]=useState(0),[error,setError]=useState(''),[missingStoredAssetIds,setMissingStoredAssetIds]=useState<string[]>([]),[assetCheckBusy,setAssetCheckBusy]=useState(false);
+  useEffect(()=>{if(!open)return;setFormat(null);setSelected(book.pages.map((_,i)=>i));setQuality(.75);setCompression(72);setOptions(defaultComposition);setPreviewIndex(0);setBusy(false);setProgress(0);setError('');setMissingStoredAssetIds([]);setAssetCheckBusy(false);},[open,book.id,book.pages.length]);
   useEffect(()=>{
     if(!open||!format||!selected.length){setMissingStoredAssetIds([]);setAssetCheckBusy(false);return;}
     let live=true;
@@ -35,14 +51,23 @@ export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose
     setPreviewIndex(0);
     setError('');
     setProgress(0);
-
+    if(next==='share'){
+      setQuality(.5);
+      setCompression(60);
+    }else if(next==='mp4'){
+      setQuality(.75);
+      setCompression(70);
+    }else{
+      setQuality(.75);
+      setCompression(78);
+    }
   }
   async function run(){
     if(!format)return;
     setBusy(true);setError('');setProgress(0);
     try{
       const valid=selected.filter(i=>i>=0&&i<book.pages.length);
-      const artifact=await exportBook(book,format,valid,quality,setProgress,options);
+      const artifact=await exportBook(book,format,valid,quality,setProgress,{...options,compressionQuality:compression/100});
       const safe=book.title.replace(/[<>:"/\\|?*]/g,'_').trim()||'flipbook';
       const name=`${safe}${artifact.suffix}.${artifact.extension}`;
       if(format==='share'&&typeof navigator.share==='function'&&typeof navigator.canShare==='function'){
@@ -71,6 +96,7 @@ export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose
   const selectedFormat=formats.find(([value])=>value===format);
   const SelectedFormatIcon=selectedFormat?.[1];
   const preflight=format?inspectExport(book,selected,format,quality,missingStoredAssetIds):null;
+  const visibleResolutionPresets=format==='mp4'?resolutionPresets.filter(([value])=>value<=1):resolutionPresets;
   return <Modal open={open} onClose={()=>{if(!busy)onClose();}} title="导出 Flipbook" description={format?'选择页面和导出参数':'选一种格式导出'} wide className={format&&format!=='share'?'export-dialog export-dialog-composing':'export-dialog'}>
     <ErrorMessage message={error}/>
     {!format?
@@ -92,7 +118,9 @@ export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose
             {options.frame&&options.ratio==='custom'&&<div className="composition-custom">{(['frameWidth','frameHeight'] as const).map((key,i)=><label className="field" key={key}>{i?'高度比例值':'宽度比例值'}<input type="number" min={1} max={10000} value={options[key]} onChange={e=>setOptions({...options,[key]:Math.max(1,Math.min(10000,Number(e.target.value)||1))})}/></label>)}</div>}
             {options.frame&&<div className="composition-adjust">{([['zoom','缩放',.25,2.5],['offsetX','水平位置',-1,1],['offsetY','垂直位置',-1,1]] as const).map(([key,label,min,max])=><label key={key}>{label}<input type="range" min={min} max={max} step={.01} value={options[key]} onChange={e=>setOptions({...options,[key]:Number(e.target.value)})}/><span>{Math.round((options[key]??0)*100)}%</span></label>)}<Button type="button" onClick={()=>setOptions({...options,zoom:1,offsetX:0,offsetY:0})}>重置位置与缩放</Button></div>}
           </>}
-          <label className="field">清晰度<select value={quality} onChange={e=>setQuality(Number(e.target.value))}><option value={1}>标准 · 画面长边 1696 px</option><option value={2}>高清 · 画面长边 3392 px</option><option value={3}>超清 · 画面长边 5088 px</option></select></label>
+          <label className="field">清晰度<select value={quality} onChange={e=>setQuality(Number(e.target.value))}>{visibleResolutionPresets.map(([value,label])=><option key={value} value={value}>{label}</option>)}</select></label>
+          <label className="field">压缩质量<input type="range" min={35} max={95} step={1} value={compression} onChange={e=>setCompression(Number(e.target.value))}/><span>{compression}% · {compressionLabel(compression)}</span></label>
+          <p className="export-hint">清晰度控制像素尺寸；压缩质量控制文件体积。低分辨率 + 55–70% 更适合 100–200 页分享。</p>
           <div className="export-selection"><button type="button" onClick={()=>setSelected(available.map(({i})=>i))}>全选</button><button type="button" onClick={()=>setSelected(available.filter(({i})=>i>0).map(({i})=>i))}>仅内页</button><button type="button" onClick={()=>setSelected([])}>清空</button><span>已选 {selectedCount} 页</span></div>
           <div className="export-pages">{available.map(({page,i})=><button type="button" key={page.id} className={selected.includes(i)?'chosen':''} aria-label={`选择第 ${i+1} 页`} aria-pressed={selected.includes(i)} onClick={()=>setSelected(selected.includes(i)?selected.filter(x=>x!==i):[...selected,i].sort((a,b)=>a-b))}><PageThumbnail page={page}/><span>{i===0?'封面':i} {selected.includes(i)?'✓':''}</span></button>)}</div>
           {selectedCount>0&&preflight&&<div className={'export-preflight '+(preflight.issues.length?'has-issues':'passed')}>
@@ -103,12 +131,12 @@ export function ExportDialog({book,open,onClose}:{book:Book;open:boolean;onClose
             </div>
             {!assetCheckBusy&&preflight.issues.length>0&&<details><summary>查看检查结果</summary><div className="export-preflight-list">{preflight.issues.map(issue=><article key={issue.id} data-severity={issue.severity}><b>{issue.title}</b><p>{issue.detail}</p></article>)}</div></details>}
           </div>}
-          {format==='mp4'&&<p className="export-hint">每组拼页作为一个视频画面，组间滑动切换。视频宽度最高 1080 px，保持所选相框比例。</p>}
-          {format==='share'&&<p className="export-hint">生成一个完全离线的单文件 HTML，页面图片与翻页组件都会内嵌。支持系统文件分享时会直接调起分享面板，否则下载网页文件。</p>}
+          {format==='mp4'&&<p className="export-hint">每组拼页作为一个视频画面，组间滑动切换。清晰度最高到标准档，压缩质量会同步调整视频码率。</p>}
+          {format==='share'&&<p className="export-hint">生成一个完全离线的单文件 HTML；页面图片会压缩为 WebP 后内嵌，压缩质量越低，网页文件越小。支持系统文件分享时会直接调起分享面板，否则下载网页文件。</p>}
           {format==='collage'&&selectedCount>pagesPerCollage&&<p className="export-hint">页数超过单张容量时，会生成多张拼图并打包为 ZIP。</p>}
           </fieldset>
         </div>
-        <div className="export-footer"><p role="status">{selectedCount?`已选 ${selectedCount} 页${format==='share'?' · 1 份网页':` · ${groups} 个画面`}`:'请至少选择一页'}</p>
+        <div className="export-footer"><p role="status">{selectedCount?`已选 ${selectedCount} 页${format==='share'?' · 1 份网页':` · ${groups} 个画面`} · ${Math.round(1696*quality)} px · 压缩 ${compression}%`:'请至少选择一页'}</p>
         {busy&&<div className="export-progress" role="progressbar" aria-label="导出进度" aria-valuemin={0} aria-valuemax={100} aria-valuenow={Math.round(progress*100)}><span style={{transform:`scaleX(${progress})`}}/></div>}
         <Button className="primary full" disabled={busy||!selectedCount} onClick={()=>void run()}>{busy?`正在渲染… ${Math.round(progress*100)}%`:'确认导出'}</Button></div>
       </>}
