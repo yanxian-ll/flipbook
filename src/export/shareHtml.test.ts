@@ -56,6 +56,18 @@ describe('shared HTML viewer',()=>{
     expect(html).toContain('data:image/jpeg;base64,BACK');
   });
 
+  it('includes temporary detail zoom and a bottom autoplay control',()=>{
+    const html=buildShareHtmlDocument(input);
+    const script=buildShareViewerScript(input);
+    expect(html).toContain('id="book-host"');
+    expect(html).toContain('id="autoplay"');
+    expect(html).toContain('双指或 Ctrl + 滚轮放大');
+    expect(script).toContain('function applyZoom');
+    expect(script).toContain('event.ctrlKey');
+    expect(script).toContain('autoplay.onclick');
+    expect(script).toContain('scheduleAutoplay');
+  });
+
   it('serializes inline JSON safely for script tags',()=>{
     const json=serializeInlineJson('</script>\u2028next');
     expect(json).not.toContain('</script>');
