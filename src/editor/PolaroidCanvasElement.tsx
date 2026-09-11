@@ -3,8 +3,9 @@ import {Group,Image as CanvasImage,Rect} from 'react-konva';
 import Konva from 'konva';
 import type {Element} from '../domain/model';
 import {centeredCrop,cropRect,dragCrop,type Crop} from '../domain/crop';
-import {polaroidPhotoFrame,polaroidTemplateFor} from '../domain/polaroids';
-import {loadStaticImage} from './renderer';
+import {polaroidAssetIdFor,polaroidAssetPatch,polaroidPhotoFrame,polaroidTemplateFor,storedPolaroidAssetId} from '../domain/polaroids';
+import {useEditor} from '../store/editor';
+import {loadAssetImage,loadStaticImage} from './renderer';
 
 type Props={
   element:Element;
@@ -19,15 +20,20 @@ type Props={
   onUpdate:(patch:Partial<Element>)=>void;
 };
 
-export function PolaroidCanvasElement({element,image,failed,selected,onSelect,onDoubleClick,onCommit,onDragStart,onDragMove,onUpdate}:Props){
+export function PolaroidCanvasElement({element,selected,onSelect,onDoubleClick,onCommit,onDragStart,onDragMove,onUpdate}:Props){
   const group=useRef<Konva.Group>(null);
   const photoGroup=useRef<Konva.Group>(null);
   const [overlay,setOverlay]=useState<HTMLImageElement>();
+  const [image,setImage]=useState<HTMLImageElement>();
+  const [failed,setFailed]=useState(false);
+  const [photoHover,setPhotoHover]=useState(false);
   const [preview,setPreview]=useState<Element['crop']>();
   const drag=useRef<{pointerId:number;x:number;y:number;clientX:number;clientY:number;crop:Crop;moved:boolean;target:Konva.Shape}|null>(null);
   const frame=polaroidPhotoFrame(element);
   const template=polaroidTemplateFor(element.polaroidStyle);
   const shownCrop=preview??element.crop??centeredCrop;
+  const storedAssetId=storedPolaroidAssetId(element);
+  const assetId=polaroidAssetIdFor(element);
 
   useEffect(()=>{
     let alive=true;
@@ -36,22 +42,47 @@ export function PolaroidCanvasElement({element,image,failed,selected,onSelect,on
     return()=>{alive=false;};
   },[template.overlay]);
 
+  useEffect(()=>{
+    let alive=true;
+    setImage(undefined);
+    setFailed(false);
+    if(!assetId)return()=>{alive=false;};
+    void loadAssetImage(assetId).then(value=>{if(alive)setImage(value);}).catch(()=>{if(alive)setFailed(true);});
+    return()=>{alive=false;};
+  },[assetId]);
+
+  // Migrate polaroids created by the first implementation. This removes their photo from the
+  // legacy assetId field so the page template no longer counts it as one of its own images.
+  useEffect(()=>{
+    if(!element.polaroidStyle||storedAssetId||!element.assetId)return;
+    onUpdate(polaroidAssetPatch(element.assetId,false));
+  },[element.id,element.polaroidStyle,element.assetId,storedAssetId]);
+
   function setCursor(cursor:string){
     const container=group.current?.getStage()?.container();
     if(container)container.style.cursor=cursor;
   }
   function point(){return photoGroup.current?.getRelativePointerPosition();}
-  function selectFromEvent(e:Konva.KonvaEventObject<MouseEvent>){onSelect(e.evt.ctrlKey||e.evt.metaKey||e.evt.shiftKey);}
+  function selectFrame(e?:Konva.KonvaEventObject<MouseEvent>){
+    onSelect(!!e&&(e.evt.ctrlKey||e.evt.metaKey||e.evt.shiftKey));
+  }
+  function activatePhoto(){
+    // Photo editing is intentionally a separate interaction mode from selecting the outer frame.
+    // Clearing the outer selection hides the Transformer so dragging inside the photo cannot
+    // accidentally move/resize the whole polaroid.
+    useEditor.getState().select(null);
+  }
   function beginCrop(e:Konva.KonvaEventObject<PointerEvent>){
-    if(!image||e.evt.button!==0||drag.current)return;
+    if(e.evt.button!==0||drag.current)return;
+    activatePhoto();
+    e.cancelBubble=true;
+    if(!image)return;
     const p=point();if(!p)return;
-    onSelect(false);
     group.current?.draggable(false);
     setCursor('grabbing');
     const target=e.target as Konva.Shape;
     drag.current={...p,pointerId:e.evt.pointerId,clientX:e.evt.clientX,clientY:e.evt.clientY,crop:element.crop??centeredCrop,moved:false,target};
     target.setPointerCapture(e.evt.pointerId);
-    e.cancelBubble=true;
   }
   function nextCrop(e:Konva.KonvaEventObject<PointerEvent>){
     const start=drag.current,p=point();
@@ -84,7 +115,8 @@ export function PolaroidCanvasElement({element,image,failed,selected,onSelect,on
     e.cancelBubble=true;
   }
   function zoomPhoto(e:Konva.KonvaEventObject<WheelEvent>){
-    if(!selected||!image)return;
+    if(!image)return;
+    activatePhoto();
     e.evt.preventDefault();e.evt.stopPropagation();e.cancelBubble=true;
     const crop=element.crop??centeredCrop;
     onUpdate({crop:{...crop,zoom:Math.max(1,Math.min(4,crop.zoom-e.evt.deltaY*.002))}});
@@ -101,18 +133,24 @@ export function PolaroidCanvasElement({element,image,failed,selected,onSelect,on
     rotation={element.rotation}
     opacity={element.opacity}
     draggable={!element.locked}
-    onClick={selectFromEvent}
-    onTap={()=>onSelect(false)}
-    onDblClick={onDoubleClick}
-    onDblTap={onDoubleClick}
-    onMouseEnter={()=>setCursor('move')}
-    onMouseLeave={()=>setCursor('default')}
     onDragStart={e=>{onDragStart(e.target);setCursor('grabbing');}}
     onDragMove={e=>onDragMove(e.target)}
     onDragEnd={e=>{onCommit(e.target);setCursor('move');}}
     onTransformEnd={e=>onCommit(e.target)}
   >
     <Rect width={element.width} height={element.height} fill="#faf9f5" shadowEnabled shadowColor="#000" shadowBlur={16} shadowOpacity={.12} shadowOffsetY={8} cornerRadius={10} listening={false}/>
+    {/* Transparent hit area: the outer frame itself selects/moves the whole polaroid. */}
+    <Rect
+      width={element.width}
+      height={element.height}
+      fill="rgba(0,0,0,0.001)"
+      onClick={selectFrame}
+      onTap={()=>onSelect(false)}
+      onDblClick={onDoubleClick}
+      onDblTap={onDoubleClick}
+      onMouseEnter={()=>setCursor('move')}
+      onMouseLeave={()=>setCursor('default')}
+    />
     <Group
       ref={photoGroup}
       x={frame.x}
@@ -126,16 +164,17 @@ export function PolaroidCanvasElement({element,image,failed,selected,onSelect,on
       onPointerUp={finishCrop}
       onPointerCancel={cancelCrop}
       onWheel={zoomPhoto}
-      onClick={e=>{onSelect(false);e.cancelBubble=true;}}
-      onTap={e=>{onSelect(false);e.cancelBubble=true;}}
+      onClick={e=>{activatePhoto();e.cancelBubble=true;}}
+      onTap={e=>{activatePhoto();e.cancelBubble=true;}}
       onDblClick={e=>{onDoubleClick();e.cancelBubble=true;}}
       onDblTap={e=>{onDoubleClick();e.cancelBubble=true;}}
-      onMouseEnter={()=>{if(image)setCursor('grab');}}
-      onMouseLeave={()=>setCursor('move')}
+      onMouseEnter={()=>{setPhotoHover(true);setCursor(image?'grab':'pointer');}}
+      onMouseLeave={()=>{setPhotoHover(false);setCursor('move');}}
     >
       {image&&crop
         ?<CanvasImage image={image} width={frame.width} height={frame.height} crop={crop}/>
         :<Rect width={frame.width} height={frame.height} fill={failed?'#f5b4b4':'#e7e7e4'}/>} 
+      {photoHover&&<Rect width={frame.width} height={frame.height} stroke="#e9933b" strokeWidth={4} listening={false}/>} 
     </Group>
     {overlay?<CanvasImage image={overlay} width={element.width} height={element.height} listening={false}/>:null}
     {selected&&<Rect width={element.width} height={element.height} stroke="#3185ff" strokeWidth={3} dash={[8,6]} listening={false}/>} 
