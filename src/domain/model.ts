@@ -1,4 +1,5 @@
 import type {Layout,Slot} from './layouts';
+import type {TemplateDecoration} from './templateDecorations';
 export type ThemeId = 'scrapbook' | 'editorial';
 export interface Asset {
   id: string; name: string; mimeType: string; width: number; height: number;
@@ -19,6 +20,7 @@ export interface Page {
   id: string; type: 'cover' | 'normal'; background: string; pattern?: string; patternAssetId?: string;
   elements: Element[]; layoutId?: string; layoutSlots?: Slot[]; order: number;
   templateOverlay?: string; templateBackground?: string; templateTextSchema?: number;
+  templateDecorations?: TemplateDecoration[];
 }
 export interface CoverTemplate {id:string;name:string;slot?:Slot}
 export interface BookStyle {
