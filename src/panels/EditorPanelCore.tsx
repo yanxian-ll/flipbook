@@ -8,6 +8,7 @@ import {VisualTemplateEditor} from '../editor/VisualTemplateEditor';
 import {useEditor} from '../store/editor';
 import {useCoverContext,type CoverSide} from '../store/coverContext';
 import {applyLayout,layoutsForTheme,fitAssetIds,frameIsFixed,type Slot} from '../domain/layouts';
+import {polaroidAssetIdFor,polaroidAssetPatch} from '../domain/polaroids';
 import {PageThumbnail} from '../components/PageThumbnail';
 import {H,W,backCoverFor,coverTemplateFor,coverTemplatesFor,imageElement,textElement,uid,type Book,type Element,type Asset,type CoverTemplate} from '../domain/model';
 import {prepareAsset} from '../domain/assets';
@@ -115,17 +116,20 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const contextSide=useCoverContext(state=>state.side);
   const coverSide:CoverSide|null=contextSide??(page.type==='cover'?'front':null);
   const coverTarget=coverSide!==null;
-  const frontPhoto=book.pages[0].elements.find(element=>element.type==='image');
+  const frontPhoto=book.pages[0].elements.find(element=>element.type==='image'&&!element.polaroidStyle);
   const back=backCoverFor(book);
   const coverAssetId=coverSide==='front'?frontPhoto?.assetId:coverSide==='back'?back.assetId:undefined;
   const coverTemplateId=coverSide==='front'?book.coverTemplate:coverSide==='back'?back.templateId:undefined;
   const coverBackground=coverSide==='front'?book.pages[0].background:coverSide==='back'?(back.backgroundMode==='match-front'?book.pages[0].background:back.background):page.background;
   const selected=coverSide==='back'?undefined:page.elements.find(element=>s.selected.includes(element.id));
+  const selectedPolaroid=selected?.polaroidStyle?selected:undefined;
+  const polaroidMode=panel==='photos'&&!coverTarget&&!!selectedPolaroid;
+  const currentPolaroidAssetId=selectedPolaroid?polaroidAssetIdFor(selectedPolaroid):undefined;
   const selectedTape=selected?.type==='shape'&&!selected.shadow&&selected.width/Math.max(1,selected.height)>=3?selected:undefined;
 
   const initialPhotoIds=()=>coverTarget
     ?coverAssetId?[coverAssetId]:[]
-    :[...new Set(page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id))];
+    :[...new Set(page.elements.filter(element=>element.type==='image'&&!element.polaroidStyle).map(element=>element.assetId).filter((id):id is string=>!!id))];
   const [error,setError]=useState(''),[busy,setBusy]=useState(false),[count,setCount]=useState(0),[localPhotoIds,setLocalPhotoIds]=useState<string[]>(initialPhotoIds),[dragAssetId,setDragAssetId]=useState<string|null>(null),[dragOverAssetId,setDragOverAssetId]=useState<string|null>(null),[assetFilter,setAssetFilter]=useState<'all'|'used'|'unused'>('all'),[assetSort,setAssetSort]=useState<'recent'|'oldest'|'name'>('recent'),[assetQuery,setAssetQuery]=useState(''),[assetDeleteOpen,setAssetDeleteOpen]=useState(false);
   const [tapeColor,setTapeColor]=useState<string>(tapePaletteColors[0]),[tapeOpacity,setTapeOpacity]=useState(.65);
   const input=useRef<HTMLInputElement>(null),suppressAssetClick=useRef(false),cancelUpload=useRef(false);
@@ -156,9 +160,9 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         return;
       }
       const cover=draft.pages[0];
-      const existing=cover.elements.find(element=>element.type==='image');
+      const existing=cover.elements.find(element=>element.type==='image'&&!element.polaroidStyle);
       if(!assetId){
-        cover.elements=cover.elements.filter(element=>element.type!=='image');
+        cover.elements=cover.elements.filter(element=>element.type!=='image'||!!element.polaroidStyle);
         return;
       }
       if(existing){
@@ -182,7 +186,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     next.splice(to,0,moved);
     setPhotoIds(next);
     if(!coverTarget&&page.type!=='cover'&&page.layoutId){
-      const applied=[...new Set(page.elements.filter(element=>element.type==='image'&&!element.freeImage&&element.assetId).map(element=>element.assetId!))];
+      const applied=[...new Set(page.elements.filter(element=>element.type==='image'&&!element.polaroidStyle&&!element.freeImage&&element.assetId).map(element=>element.assetId!))];
       const pureReorder=applied.length===next.length&&applied.every(id=>next.includes(id));
       if(pureReorder)s.setPhotos(next);
     }
@@ -199,9 +203,14 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     if(page.type==='cover'){
       if(photoIds.includes(assetId)){setPhotoIds([]);return;}
       setPhotoIds([assetId]);
-      const image=page.elements.find(element=>element.type==='image');
+      const image=page.elements.find(element=>element.type==='image'&&!element.polaroidStyle);
       if(image)s.updateElement(image.id,{assetId,crop:{x:.5,y:.5,zoom:1}});
       else s.setPhotos([assetId]);
+      return;
+    }
+    if(polaroidMode&&selectedPolaroid){
+      const next=currentPolaroidAssetId===assetId?undefined:assetId;
+      s.updateElement(selectedPolaroid.id,polaroidAssetPatch(next));
       return;
     }
     if(selected?.type==='image'){
@@ -244,15 +253,24 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     finally{setBusy(false);}
   }
 
-  const selectedAssets=useMemo(()=>photoIds.map(id=>book.assets.find(asset=>asset.id===id)).filter((asset):asset is Asset=>!!asset),[book.assets,photoIds]);
+  const selectedDisplayIds=useMemo(()=>{
+    if(coverTarget)return photoIds;
+    return [...new Set([...photoIds,...(polaroidMode&&currentPolaroidAssetId?[currentPolaroidAssetId]:[])])];
+  },[coverTarget,photoIds,polaroidMode,currentPolaroidAssetId]);
+  const selectedAssets=useMemo(()=>selectedDisplayIds.map(id=>book.assets.find(asset=>asset.id===id)).filter((asset):asset is Asset=>!!asset),[book.assets,selectedDisplayIds]);
   const usedAssetIds=useMemo(()=>{
-    const ids=new Set(book.pages.flatMap(item=>item.elements.filter(element=>element.type==='image'&&element.assetId).map(element=>element.assetId!)));
+    const ids=new Set<string>();
+    for(const item of book.pages.flatMap(page=>page.elements)){
+      if(item.type!=='image')continue;
+      const id=item.polaroidStyle?polaroidAssetIdFor(item):item.assetId;
+      if(id)ids.add(id);
+    }
     if(book.workspaceImageId)ids.add(book.workspaceImageId);
     if(book.backCover?.assetId)ids.add(book.backCover.assetId);
     return ids;
   },[book.pages,book.workspaceImageId,book.backCover?.assetId]);
   const selectedUsedCount=useMemo(()=>photoIds.filter(id=>usedAssetIds.has(id)).length,[photoIds,usedAssetIds]);
-  const selectedUsePages=useMemo(()=>book.pages.filter(item=>item.elements.some(element=>element.type==='image'&&!!element.assetId&&photoIds.includes(element.assetId))).length,[book.pages,photoIds]);
+  const selectedUsePages=useMemo(()=>book.pages.filter(item=>item.elements.some(element=>element.type==='image'&&!element.polaroidStyle&&!!element.assetId&&photoIds.includes(element.assetId))).length,[book.pages,photoIds]);
   const selectedSpecialUses=Number(!!book.backCover?.assetId&&photoIds.includes(book.backCover.assetId))+Number(!!book.workspaceImageId&&photoIds.includes(book.workspaceImageId));
   const deleteDescription=selectedUsedCount
     ?`其中 ${selectedUsedCount} 张正在 ${selectedUsePages} 个页面${selectedSpecialUses?`及 ${selectedSpecialUses} 个封面/背景位置`:''}中使用。删除后对应位置会变为空白；素材删除不进入普通撤销栈，但删除前会保留历史版本。`
@@ -262,14 +280,14 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     unused:book.assets.reduce((sum,asset)=>sum+Number(!usedAssetIds.has(asset.id)),0),
   }),[book.assets,usedAssetIds]);
   const libraryAssets=useMemo(()=>{
-    const selectedSet=new Set(photoIds),query=assetQuery.trim().toLocaleLowerCase();
+    const selectedSet=new Set(selectedDisplayIds),query=assetQuery.trim().toLocaleLowerCase();
     return book.assets.filter(asset=>{
       if(selectedSet.has(asset.id))return false;
       if(assetFilter==='used'&&!usedAssetIds.has(asset.id))return false;
       if(assetFilter==='unused'&&usedAssetIds.has(asset.id))return false;
       return !query||asset.name.toLocaleLowerCase().includes(query);
     });
-  },[book.assets,photoIds,assetFilter,assetQuery,usedAssetIds]);
+  },[book.assets,selectedDisplayIds,assetFilter,assetQuery,usedAssetIds]);
   const assetBatches=useMemo(()=>{
     if(assetSort==='name'){
       return libraryAssets.length?[{id:'__name__',at:0,legacy:false,assets:[...libraryAssets].sort((a,b)=>a.name.localeCompare(b.name,'zh-CN',{numeric:true}))}]:[];
@@ -293,7 +311,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   const [customMode,setCustomMode]=useState<'create'|'edit-page'>('create');
   const pagePhotoIds=coverTarget
     ?coverAssetId?[coverAssetId]:[]
-    :page.elements.filter(element=>element.type==='image').map(element=>element.assetId).filter((id):id is string=>!!id);
+    :page.elements.filter(element=>element.type==='image'&&!element.polaroidStyle).map(element=>element.assetId).filter((id):id is string=>!!id);
   const photoCount=pagePhotoIds.length;
   const layoutSourceIds=photoIds.length?photoIds:[...new Set(pagePhotoIds)];
   const previewSourceIds=layoutSourceIds.length?layoutSourceIds:book.assets.slice(0,1).map(asset=>asset.id);
@@ -319,7 +337,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         return;
       }
       draft.coverTemplate=template.id;
-      const image=draft.pages[0].elements.find(element=>element.type==='image');
+      const image=draft.pages[0].elements.find(element=>element.type==='image'&&!element.polaroidStyle);
       if(image&&template.slot)Object.assign(image,{
         x:template.slot.x*W,
         y:template.slot.y*H,
@@ -339,7 +357,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
       setCustomSlots([{...slot}]);
       setCustomName('我的封面模板');
     }else{
-      setCustomSlots(page.elements.filter(element=>element.type==='image').map(element=>({x:element.x/W,y:element.y/H,width:element.width/W,height:element.height/H,shape:element.frameShape})));
+      setCustomSlots(page.elements.filter(element=>element.type==='image'&&!element.polaroidStyle).map(element=>({x:element.x/W,y:element.y/H,width:element.width/W,height:element.height/H,shape:element.frameShape})));
       setCustomName('我的模板');
     }
     setCustomOpen(true);
@@ -349,7 +367,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     if(coverTarget||page.type==='cover')return;
     setError('');
     setCustomMode('edit-page');
-    setCustomSlots((page.layoutSlots??page.elements.filter(element=>element.type==='image').map(element=>({x:element.x/W,y:element.y/H,width:element.width/W,height:element.height/H,shape:element.frameShape}))).map(slot=>({...slot})));
+    setCustomSlots((page.layoutSlots??page.elements.filter(element=>element.type==='image'&&!element.polaroidStyle).map(element=>({x:element.x/W,y:element.y/H,width:element.width/W,height:element.height/H,shape:element.frameShape}))).map(slot=>({...slot})));
     setCustomOpen(true);
   }
 
@@ -361,7 +379,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     if(customMode==='edit-page'&&!coverTarget){
       s.change(draft=>{
         const currentPage=draft.pages[s.pageIndex];
-        const sourceImages=currentPage.elements.filter(element=>element.type==='image');
+        const sourceImages=currentPage.elements.filter(element=>element.type==='image'&&!element.polaroidStyle);
         const sourceIds=sourceImages.map(element=>element.assetId).filter((id):id is string=>!!id);
         const ids=fitAssetIds(sourceIds,customSlots.length);
         const nextImages:Element[]=customSlots.flatMap((slot,index)=>{
@@ -373,7 +391,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         });
         let imageIndex=0;
         currentPage.elements=currentPage.elements.flatMap(element=>{
-          if(element.type!=='image')return [element];
+          if(element.type!=='image'||element.polaroidStyle)return [element];
           const replacement=nextImages[imageIndex++];
           return replacement?[replacement]:[];
         });
@@ -393,7 +411,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         if(coverSide==='back')patchBackCover(draft,{templateId:template.id});
         else{
           draft.coverTemplate=template.id;
-          const image=draft.pages[0].elements.find(element=>element.type==='image');
+          const image=draft.pages[0].elements.find(element=>element.type==='image'&&!element.polaroidStyle);
           if(image)Object.assign(image,{x:slot.x*W,y:slot.y*H,width:slot.width*W,height:slot.height*H,frameLocked:true,frameShape:slot.shape});
         }
       });
@@ -424,7 +442,7 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
     <ErrorMessage message={error}/>
     <div className="panel-body">
       {panel==='photos'&&<>
-        <p className="muted">{coverTarget?`点击任意素材，直接设置${coverLabel}照片。模板只控制照片是否显示以及照片窗口的位置。`:selected?.type==='image'?'点击任意素材，直接替换当前图框。':'选择本页照片（最多 9 张）'}</p>
+        <p className="muted">{coverTarget?`点击任意素材，直接设置${coverLabel}照片。模板只控制照片是否显示以及照片窗口的位置。`:polaroidMode?'正在为当前拍立得选择 1 张照片。蓝框是本页模板照片，橙框是当前拍立得照片；同一张素材可以同时使用。':selected?.type==='image'?'点击任意素材，直接替换当前图框。':'选择本页照片（最多 9 张）'}</p>
         {coverTarget&&!coverTemplateFor(book,coverTemplateId).slot&&<p className="cover-library-note">当前模板不显示照片。你仍可先选好照片，切换到带图模板后会自动显示。</p>}
         <input ref={input} type="file" multiple accept="image/jpeg,image/png,image/webp,image/gif,image/avif" hidden onChange={event=>void upload(event.target.files)}/>
         <div className="asset-library-manager">
@@ -441,7 +459,11 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         <div className="asset-batches">
           {selectedAssets.length>0&&<section className="asset-batch asset-batch-selected">
             <div className="asset-batch-header"><span><b>{coverTarget?`${coverLabel}照片`:'本页已选'}</b></span><small>{selectedAssets.length} 张</small></div>
-            <div className="asset-grid">{selectedAssets.map((asset,index)=><AssetTile key={asset.id} asset={asset} selectionIndex={index+1} draggable={!coverTarget} dragging={dragAssetId===asset.id} dragOver={dragOverAssetId===asset.id&&dragAssetId!==asset.id} onDragStart={event=>{suppressAssetClick.current=true;setDragAssetId(asset.id);setDragOverAssetId(asset.id);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',asset.id);}} onDragEnter={event=>{event.preventDefault();if(dragAssetId&&dragAssetId!==asset.id)setDragOverAssetId(asset.id);}} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect='move';}} onDrop={event=>{event.preventDefault();reorderSelectedAsset(asset.id);setDragAssetId(null);setDragOverAssetId(null);window.setTimeout(()=>{suppressAssetClick.current=false;},0);}} onDragEnd={()=>{setDragAssetId(null);setDragOverAssetId(null);window.setTimeout(()=>{suppressAssetClick.current=false;},0);}} onClick={()=>{setError('');chooseAsset(asset.id);}}/>)}</div>
+            <div className="asset-grid">{selectedAssets.map(asset=>{
+              const templateIndex=photoIds.indexOf(asset.id)+1;
+              const polaroidSelected=polaroidMode&&currentPolaroidAssetId===asset.id;
+              return <AssetTile key={asset.id} asset={asset} selectionIndex={templateIndex} polaroidSelected={polaroidSelected} draggable={!coverTarget&&templateIndex>0} dragging={dragAssetId===asset.id} dragOver={dragOverAssetId===asset.id&&dragAssetId!==asset.id} onDragStart={event=>{suppressAssetClick.current=true;setDragAssetId(asset.id);setDragOverAssetId(asset.id);event.dataTransfer.effectAllowed='move';event.dataTransfer.setData('text/plain',asset.id);}} onDragEnter={event=>{event.preventDefault();if(dragAssetId&&dragAssetId!==asset.id)setDragOverAssetId(asset.id);}} onDragOver={event=>{event.preventDefault();event.dataTransfer.dropEffect='move';}} onDrop={event=>{event.preventDefault();reorderSelectedAsset(asset.id);setDragAssetId(null);setDragOverAssetId(null);window.setTimeout(()=>{suppressAssetClick.current=false;},0);}} onDragEnd={()=>{setDragAssetId(null);setDragOverAssetId(null);window.setTimeout(()=>{suppressAssetClick.current=false;},0);}} onClick={()=>{setError('');chooseAsset(asset.id);}}/>;
+            })}</div>
           </section>}
           <VirtualAssetLibrary batches={assetBatches} label={(batch,index)=>assetSort==='name'?<>按文件名 <b>A–Z</b></>:<>{batch.legacy?'较早上传':assetSort==='oldest'?(index===0?'最早上传':'上传于'):(index===0?'最近上传':'上传于')} <b>{batch.legacy?'':formatBatch(batch)}</b></>} renderAsset={asset=><AssetTile key={asset.id} asset={asset} selectionIndex={0} used={usedAssetIds.has(asset.id)} onClick={()=>{setError('');chooseAsset(asset.id);}}/>}/>
           {book.assets.length>0&&libraryAssetCount===0&&<p className="asset-library-empty">{assetQuery?'没有匹配这个文件名的其他素材':'当前筛选下没有其他素材'}</p>}
@@ -449,13 +471,14 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
         {!book.assets.length&&<p className="empty-panel">还没有照片<br/>从下方添加照片开始制作。</p>}
         <div className="photo-selection-actions photo-library-actions">
           {busy?<Button onClick={()=>{cancelUpload.current=true;}}>取消处理 {count?`· ${count}`:''}</Button>:<Button onClick={()=>input.current?.click()}><Upload size={15}/>添加照片</Button>}
-          <Button className="danger" disabled={busy||!photoIds.length} onClick={()=>setAssetDeleteOpen(true)}><Trash2 size={15}/>删除</Button>
+          <Button className="danger" disabled={busy||polaroidMode||!photoIds.length} onClick={()=>setAssetDeleteOpen(true)}><Trash2 size={15}/>删除</Button>
           <Button className="primary" disabled={busy} onClick={()=>{
+            if(polaroidMode){onClose();return;}
             if(coverTarget){applyCoverPhoto(photoIds[0]);if(!paired)onClose();return;}
             s.setPhotos(photoIds);
             if(!photoIds.length){if(!paired)onClose();return;}
             if(page.type==='cover')onClose();else if(!paired)onPanel('layouts');
-          }}>使用 {photoIds.length} 张</Button>
+          }}>{polaroidMode?'完成':`使用 ${photoIds.length} 张`}</Button>
         </div>
       </>}
 
@@ -507,7 +530,6 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
           </div>
           <label className="tape-opacity-field"><span>不透明度</span><input type="range" min={.1} max={1} step={.05} value={tapeOpacity} onChange={event=>updateTapeOpacity(+event.target.value)}/><span>{Math.round(tapeOpacity*100)}%</span></label>
         </section>
-        <Button className="full" onClick={()=>s.addElement({id:uid(),type:'shape',x:140,y:250,width:800,height:1050,rotation:3,opacity:1,color:'#fff',shadow:true})}>添加拍立得底纸</Button>
       </>)}
       {panel==='background'&&<WorkspaceBackgroundPanel/>}
       {panel==='page-background'&&<><p className="settings-intro">只修改当前内页的纸张底色和纹理。</p><label className="field">当前页面背景<input type="color" value={page.background} onChange={event=>s.change(draft=>{draft.pages[s.pageIndex].background=event.target.value;draft.pages[s.pageIndex].templateBackground=undefined;})}/></label><div className="swatches">{colors.map(color=><button key={color} aria-label={`背景 ${color}`} style={{backgroundColor:color}} className={page.background===color?'chosen':''} onClick={()=>s.change(draft=>{draft.pages[s.pageIndex].background=color;draft.pages[s.pageIndex].templateBackground=undefined;})}/>)}</div><p className="field-label">纸张与纹理</p><div className="background-grid">{['','bg-dots.jpg','bg-grid.jpg','bg2.jpg','bg3.jpg','bg4.jpg','bg5.jpg'].map((name,index)=><button key={name} className={page.pattern===name?'chosen':''} onClick={()=>s.change(draft=>{draft.pages[s.pageIndex].pattern=name||undefined;})} style={name?{backgroundImage:`url(/reference/${name})`}:{}}>{index===0?'纯色':['','波点','格纹','纸张','织物','纹理','牛皮纸'][index]}</button>)}</div></>}
@@ -527,12 +549,23 @@ export function EditorPanel({panel,onClose,onPanel,placement,photoIds:controlled
   </aside>;
 }
 
-function AssetTile({asset,selectionIndex,onClick,used=false,draggable=false,dragging=false,dragOver=false,onDragStart,onDragEnter,onDragOver,onDrop,onDragEnd}:{asset:Asset;selectionIndex:number;onClick:()=>void;used?:boolean;draggable?:boolean;dragging?:boolean;dragOver?:boolean;onDragStart?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnter?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDragOver?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDrop?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnd?:()=>void}){
+function AssetTile({asset,selectionIndex,onClick,used=false,polaroidSelected=false,draggable=false,dragging=false,dragOver=false,onDragStart,onDragEnter,onDragOver,onDrop,onDragEnd}:{asset:Asset;selectionIndex:number;onClick:()=>void;used?:boolean;polaroidSelected?:boolean;draggable?:boolean;dragging?:boolean;dragOver?:boolean;onDragStart?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnter?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDragOver?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDrop?:(event:ReactDragEvent<HTMLButtonElement>)=>void;onDragEnd?:()=>void}){
   const [url,setUrl]=useState('');
   useEffect(()=>{
     let url='',active=true;
     void assetThumbnail(asset.id).then(blob=>{if(blob&&active){url=URL.createObjectURL(blob);setUrl(url);}}).catch(()=>{});
     return()=>{active=false;if(url)URL.revokeObjectURL(url);};
   },[asset.id]);
-  return <button draggable={draggable} className={`${selectionIndex?'asset-tile-selected':''} ${dragging?'asset-tile-dragging':''} ${dragOver?'asset-tile-drag-over':''}`.trim()} title={selectionIndex?`已选第 ${selectionIndex} 张 · 可拖动排序 · ${asset.name}`:used?`已使用 · ${asset.name}`:asset.name} aria-pressed={selectionIndex>0} onDragStart={onDragStart} onDragEnter={onDragEnter} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}><img src={url||undefined} alt={asset.name} loading="lazy" decoding="async"/>{selectionIndex>0&&<span className="asset-selection-index" aria-label={`第 ${selectionIndex} 张`}>{selectionIndex}</span>}{!selectionIndex&&used&&<span className="asset-usage-badge">已用</span>}</button>;
+  const templateSelected=selectionIndex>0;
+  const selected=templateSelected||polaroidSelected;
+  const title=polaroidSelected
+    ?templateSelected?`模板第 ${selectionIndex} 张 + 当前拍立得 · 再次点击取消拍立得选择 · ${asset.name}`:`当前拍立得 · 再次点击取消 · ${asset.name}`
+    :templateSelected?`模板已选第 ${selectionIndex} 张 · 可拖动排序 · ${asset.name}`
+      :used?`已使用 · ${asset.name}`:asset.name;
+  const style=polaroidSelected?{
+    outline:'3px solid #e9933b',
+    outlineOffset:-2,
+    boxShadow:templateSelected?'inset 0 0 0 3px #3185ff':undefined,
+  }:undefined;
+  return <button draggable={draggable} style={style} className={`${templateSelected?'asset-tile-selected':''} ${dragging?'asset-tile-dragging':''} ${dragOver?'asset-tile-drag-over':''}`.trim()} title={title} aria-pressed={selected} onDragStart={onDragStart} onDragEnter={onDragEnter} onDragOver={onDragOver} onDrop={onDrop} onDragEnd={onDragEnd} onClick={onClick}><img src={url||undefined} alt={asset.name} loading="lazy" decoding="async"/>{templateSelected&&<span className="asset-selection-index" aria-label={`模板第 ${selectionIndex} 张`}>{selectionIndex}</span>}{polaroidSelected&&<span className="asset-usage-badge" style={{background:'#e9933b',color:'#fff'}}>拍</span>}{!selected&&used&&<span className="asset-usage-badge">已用</span>}</button>;
 }
