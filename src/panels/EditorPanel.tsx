@@ -42,6 +42,22 @@ function PolaroidStickerSection(){
   </section>;
 }
 
+function PaperTapeSelectionActions(){
+  const page=useEditor(state=>state.book?.pages[state.pageIndex]);
+  const selectedIds=useEditor(state=>state.selected);
+  const hasPaperTape=page?.elements.some(element=>
+    selectedIds.includes(element.id)
+    &&element.type==='shape'
+    &&!element.shadow
+    &&element.width/Math.max(1,element.height)>=3
+  );
+  if(!hasPaperTape)return null;
+  return <div className="segments" style={{marginTop:14}} aria-label="纸胶带选择操作">
+    <Button disabled={!selectedIds.length} onClick={()=>useEditor.getState().duplicateSelected()}><Copy size={15}/>复制所选</Button>
+    <Button className="danger" disabled={!selectedIds.length} onClick={()=>useEditor.getState().deleteSelected()}><Trash2 size={15}/>删除所选</Button>
+  </div>;
+}
+
 type EditorPanelProps=ComponentProps<typeof EditorPanelCore>;
 type CoverPanelProps={onClose:()=>void;placement?:'left'|'right';paired?:boolean};
 
@@ -154,5 +170,6 @@ export function EditorPanel(props:EditorPanelProps){
     <EditorPanelCore {...props}/>
     {props.panel==='stickers'&&stickerGrid&&createPortal(<CakeStickerButtons/>,stickerGrid)}
     {props.panel==='stickers'&&stickerGrid?.parentElement&&createPortal(<PolaroidStickerSection/>,stickerGrid.parentElement)}
+    {props.panel==='stickers'&&stickerGrid?.parentElement&&createPortal(<PaperTapeSelectionActions/>,stickerGrid.parentElement)}
   </>;
 }
