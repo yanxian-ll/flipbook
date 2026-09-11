@@ -1,6 +1,6 @@
 import {useEffect,useRef,useState} from 'react';
 import {Check,ChevronLeft,Download,Eye,History,Maximize2,Minimize2,Palette,Undo2,Redo2} from 'lucide-react';
-import {Button,IconButton,Modal} from '../../components/ui';
+import {Button,DesktopCloseControl,IconButton,Modal} from '../../components/ui';
 import {useEditor} from '../../store/editor';
 import {commitEditorTitle} from './editorTitle';
 import './editorControls.css';
@@ -42,7 +42,10 @@ export function EditorHeader({wide,onBack,onToggleWide}:{wide:boolean;onBack:()=
         }
       }}
     />
-    <IconButton label={wide?'收起工作区':'展开工作区'} onClick={onToggleWide}>{wide?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</IconButton>
+    <div className="studio-header-actions">
+      <IconButton label={wide?'收起工作区':'展开工作区'} onClick={onToggleWide}>{wide?<Minimize2 size={17}/>:<Maximize2 size={17}/>}</IconButton>
+      <DesktopCloseControl/>
+    </div>
   </header>;
 }
 
