@@ -138,8 +138,7 @@
 .preview-depth-leaf{
   position:absolute;
   top:50%;
-  height:84%;
-  max-width:48%;
+  width:min(48%,420px);
   aspect-ratio:1200/1696;
   overflow:hidden;
   border-radius:3px 7px 7px 3px;
@@ -233,9 +232,6 @@
   .preview-shell .preview-depth-stack{
     inset:14px 6px 0;
   }
-  .preview-shell .preview-depth-leaf{
-    height:78%;
-  }
   .preview-view-toggle{
     top:6px;
     right:8px;
@@ -259,7 +255,7 @@
   padding-top:34px;
 }
 .preview-shell:fullscreen .preview-depth-stack{
-  inset-top:34px;
+  top:34px;
 }
 @media(prefers-reduced-motion:reduce){
   .preview-shell,.preview-shell .flip-book,.preview-depth-leaf{
