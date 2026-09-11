@@ -35,12 +35,16 @@ const MOBILE_ROTATE_CONTROL=String.raw`
   button.title='旋转画册';
   nav.appendChild(button);
 
+  const fullPageWidth=480;
+  const fullPageHeight=678;
+  const fullSpreadWidth=fullPageWidth*2;
   let rotated=false;
   let rotateScale=1;
   let fitFrame=0;
   let layoutFrame=0;
   let topTimer=0;
   let activePageFlip=null;
+  let originalPageFlipSize=null;
   let appliedHostWidth=0;
   let appliedHostHeight=0;
 
@@ -54,27 +58,56 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     };
   }
 
-  function cssNumber(name,fallback){
-    const value=parseFloat(getComputedStyle(document.documentElement).getPropertyValue(name));
-    return Number.isFinite(value)&&value>0?value:fallback;
-  }
-
   function desiredRotatedHostSize(){
     const available=availableStageSize();
-    const currentWidth=Math.max(1,bookHost.offsetWidth);
-    const currentHeight=Math.max(1,bookHost.offsetHeight);
-    const intrinsicWidth=cssNumber('--share-spread-width',currentWidth);
-    const intrinsicHeight=cssNumber('--share-page-height',currentHeight);
-    const aspect=Math.max(.2,intrinsicWidth/Math.max(1,intrinsicHeight));
+    const aspect=fullSpreadWidth/fullPageHeight;
     const maxLogicalWidth=Math.max(1,available.height*.965);
     const maxLogicalHeight=Math.max(1,available.width*.965);
-    let width=Math.min(intrinsicWidth,maxLogicalWidth);
+    let width=Math.min(fullSpreadWidth,maxLogicalWidth);
     let height=width/aspect;
     if(height>maxLogicalHeight){
-      height=maxLogicalHeight;
+      height=Math.min(fullPageHeight,maxLogicalHeight);
       width=height*aspect;
     }
     return {width:Math.max(1,width),height:Math.max(1,height)};
+  }
+
+  function rememberPageFlipSize(){
+    if(!activePageFlip||originalPageFlipSize)return;
+    try{
+      const settings=activePageFlip.getSettings&&activePageFlip.getSettings();
+      if(!settings)return;
+      originalPageFlipSize={
+        width:settings.width,
+        height:settings.height,
+        minWidth:settings.minWidth,
+        maxWidth:settings.maxWidth,
+        minHeight:settings.minHeight,
+        maxHeight:settings.maxHeight
+      };
+    }catch{}
+  }
+
+  function applyPageFlipSize(target){
+    if(!activePageFlip)return;
+    try{
+      const settings=activePageFlip.getSettings&&activePageFlip.getSettings();
+      if(!settings)return;
+      rememberPageFlipSize();
+      if(!originalPageFlipSize)return;
+      if(!target){
+        Object.assign(settings,originalPageFlipSize);
+        return;
+      }
+      const pageWidth=Math.max(1,target.width/2);
+      const pageHeight=Math.max(1,target.height);
+      settings.width=pageWidth;
+      settings.height=pageHeight;
+      settings.minWidth=Math.min(Number(originalPageFlipSize.minWidth)||pageWidth,pageWidth);
+      settings.maxWidth=Math.max(pageWidth,settings.minWidth);
+      settings.minHeight=Math.min(Number(originalPageFlipSize.minHeight)||pageHeight,pageHeight);
+      settings.maxHeight=Math.max(pageHeight,settings.minHeight);
+    }catch{}
   }
 
   function refreshPageFlipLayout(){
@@ -85,12 +118,14 @@ const MOBILE_ROTATE_CONTROL=String.raw`
         const ui=activePageFlip.getUI&&activePageFlip.getUI();
         if(ui&&typeof ui.update==='function')ui.update();
         if(typeof activePageFlip.update==='function')activePageFlip.update();
+        window.dispatchEvent(new Event('resize'));
       }catch{}
     });
   }
 
   function applyRotatedHostSize(){
     if(!rotated){
+      applyPageFlipSize(null);
       if(appliedHostWidth||appliedHostHeight){
         bookHost.style.width='';
         bookHost.style.height='';
@@ -101,6 +136,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
       return;
     }
     const target=desiredRotatedHostSize();
+    applyPageFlipSize(target);
     if(Math.abs(target.width-appliedHostWidth)<.5&&Math.abs(target.height-appliedHostHeight)<.5)return;
     appliedHostWidth=target.width;
     appliedHostHeight=target.height;
@@ -175,6 +211,7 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     PageFlipCtor.prototype.loadFromHTML=function(items){
       const result=nativeLoad.call(this,items);
       activePageFlip=this;
+      rememberPageFlipSize();
       const ui=this.getUI&&this.getUI();
       if(ui&&typeof ui.getMousePos==='function'&&!ui.__shareRotatePointerPatched){
         const nativeGetMousePos=ui.getMousePos.bind(ui);
@@ -213,7 +250,9 @@ const MOBILE_ROTATE_CONTROL=String.raw`
     observer.observe(stage);
     observer.observe(nav);
   }
-  window.addEventListener('resize',fitRotatedBook,{passive:true});
+  window.addEventListener('resize',()=>{
+    if(rotated)fitRotatedBook();
+  },{passive:true});
   window.addEventListener('orientationchange',()=>setTimeout(fitRotatedBook,80),{passive:true});
   fitRotatedBook();
 })();
