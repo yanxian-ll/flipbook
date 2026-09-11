@@ -18,6 +18,7 @@ import {useEditorLayout} from './editor/useEditorLayout';
 import {useEditorPanels} from './editor/useEditorPanels';
 import {usePageNavigation} from './editor/usePageNavigation';
 import {PAGE_ASPECT_RATIO} from './editor/constants';
+import {useWorkspaceExpansion} from './useWorkspaceExpansion';
 
 const LAST_PAGE_KEY_PREFIX='flipbook:last-page:';
 function lastPageKey(bookId:string){return `${LAST_PAGE_KEY_PREFIX}${bookId}`;}
@@ -48,7 +49,7 @@ export function Editor(){
 
   const [loading,setLoading]=useState(true);
   const [error,setError]=useState('');
-  const [wide,setWide]=useState(true);
+  const {wide,toggleWide}=useWorkspaceExpansion();
   const [exporting,setExporting]=useState(false);
   const [historyOpen,setHistoryOpen]=useState(false);
   const [pageDeleteOpen,setPageDeleteOpen]=useState(false);
@@ -175,7 +176,7 @@ export function Editor(){
   const {page,neighborPage,showSingleAdd,spreadUnitWidth,pageCanvasWidth,pageHeight,visualReverse,focusWindowWidth,focusedShift}=layout;
 
   return <main className={`phone-shell studio ${wide?'expanded':''} ${panels.bothSideOpen?'libraries-open':''} ${panels.leftSideOpen?'photo-library-open':''} ${panels.templateSideOpen?'template-library-open':''} ${panels.compactPanel==='page-background'?'page-background-open':''}`}>
-    <EditorHeader wide={wide} onBack={()=>void leave('/')} onToggleWide={()=>setWide(value=>!value)}/>
+    <EditorHeader wide={wide} onBack={()=>void leave('/')} onToggleWide={toggleWide}/>
     <ErrorMessage message={error||editorError}/>
 
     <div className="editor-workspace" ref={workspace} style={workspaceStyle}>
