@@ -2,6 +2,7 @@ import {useEffect,useLayoutEffect,useState,type ComponentProps,type ReactNode} f
 import {createPortal} from 'react-dom';
 import {Copy,Trash2,X} from 'lucide-react';
 import {backCoverFor,textElement,uid,type Element} from '../domain/model';
+import {createPolaroidElement,polaroidTemplates,type PolaroidStyleId} from '../domain/polaroids';
 import {addBackCoverElement,copyBackCoverElements,deleteBackCoverElements,pasteBackCoverElements,updateBackCoverElement} from '../domain/backCoverElements';
 import {useCoverContext} from '../store/coverContext';
 import {useEditor} from '../store/editor';
@@ -15,6 +16,29 @@ const emojiFont='"Segoe UI Emoji","Apple Color Emoji","Noto Color Emoji",sans-se
 
 function CakeStickerButtons(){
   return <>{cakeStickers.map(sticker=><button key={sticker} type="button" title={`添加 ${sticker} 贴纸`} aria-label={`添加 ${sticker} 贴纸`} onClick={()=>useEditor.getState().addElement({...textElement(sticker,{fontSize:180,width:260,height:280,fontFamily:emojiFont,color:'#b47d7d'}),type:'sticker'})}>{sticker}</button>)}</>;
+}
+
+function PolaroidStickerSection(){
+  const add=(style:PolaroidStyleId)=>useEditor.getState().addElement(createPolaroidElement(style));
+  return <section style={{marginTop:18}} aria-label="拍立得贴纸">
+    <p className="field-label">拍立得</p>
+    <p className="muted" style={{marginTop:-4}}>点击添加；双击画布中的拍立得可去素材库换图。照片区域可拖动构图、滚轮缩放，外框可拖动、旋转和缩放。</p>
+    <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}}>
+      {polaroidTemplates.map(template=><button
+        key={template.id}
+        type="button"
+        onClick={()=>add(template.id)}
+        title={`添加${template.name}`}
+        style={{display:'flex',flexDirection:'column',gap:7,alignItems:'stretch',padding:8,border:'1px solid rgba(38,38,38,.12)',borderRadius:10,background:'rgba(255,255,255,.66)',cursor:'pointer',textAlign:'left'}}
+      >
+        <span style={{position:'relative',display:'block',aspectRatio:'4 / 5',overflow:'hidden',borderRadius:7,background:'linear-gradient(145deg,#ecebe7,#dcdad4)'}}>
+          <img src={template.overlay} alt="" draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'contain'}}/>
+        </span>
+        <span style={{fontSize:12,fontWeight:650,color:'inherit'}}>{template.name}</span>
+        <span className="muted" style={{fontSize:10,lineHeight:1.35}}>{template.description}</span>
+      </button>)}
+    </div>
+  </section>;
 }
 
 type EditorPanelProps=ComponentProps<typeof EditorPanelCore>;
@@ -130,5 +154,6 @@ export function EditorPanel(props:EditorPanelProps){
   return <>
     <EditorPanelCore {...props}/>
     {props.panel==='stickers'&&stickerGrid&&createPortal(<CakeStickerButtons/>,stickerGrid)}
+    {props.panel==='stickers'&&stickerGrid?.parentElement&&createPortal(<PolaroidStickerSection/>,stickerGrid.parentElement)}
   </>;
 }
