@@ -183,15 +183,20 @@ function EditorFlipBookInner(
   const pageHeight=Math.round(safeWidth*1696/1200);
   const imageScale=Math.max(.24,Math.min(.5,safeWidth/1200*1.15));
   const {lastReal,plusIndex,needsFiller,backIndex}=editorLeafPlan(book.pages.length);
+  const logicalBackIndex=book.pages.length;
   const showCenteredAdd=displayedIndex===plusIndex||(plusIndex%2===0&&displayedIndex===lastReal);
+  const leafIndexForLogicalPage=(page:number)=>page===logicalBackIndex?backIndex:Math.max(0,Math.min(lastReal,page));
 
   useImperativeHandle(ref,()=>({
     flipNext:()=>flip.current?.pageFlip?.().flipNext?.(flipbookMotion.corner),
     flipPrev:()=>flipPrevSafely(flip.current?.pageFlip?.()),
-    flipTo:(page:number)=>flipToSafely(flip.current?.pageFlip?.(),Math.max(0,Math.min(lastReal,page))),
-    turnTo:(page:number)=>flip.current?.pageFlip?.().turnToPage?.(Math.max(0,Math.min(lastReal,page))),
-    current:()=>flip.current?.pageFlip?.().getCurrentPageIndex?.()??0,
-  }),[lastReal]);
+    flipTo:(page:number)=>flipToSafely(flip.current?.pageFlip?.(),leafIndexForLogicalPage(page)),
+    turnTo:(page:number)=>flip.current?.pageFlip?.().turnToPage?.(leafIndexForLogicalPage(page)),
+    current:()=>{
+      const current=flip.current?.pageFlip?.().getCurrentPageIndex?.()??0;
+      return current>=backIndex?logicalBackIndex:Math.max(0,Math.min(lastReal,current));
+    },
+  }),[lastReal,backIndex,logicalBackIndex]);
 
   const resetKey=`${book.id}:${book.pages.map(page=>page.id).join('.') }:${safeWidth}`;
   useEffect(()=>setDisplayedIndex(activeIndex),[activeIndex]);
@@ -251,6 +256,7 @@ function EditorFlipBookInner(
           if(!Number.isFinite(index)||index<0)return;
           setDisplayedIndex(index);
           if(index<=lastReal)onFlip(index);
+          else if(index>=backIndex)onFlip(logicalBackIndex);
         }}
       >
         {Children.toArray([
