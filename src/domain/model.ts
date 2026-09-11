@@ -1,5 +1,6 @@
 import type {Layout,Slot} from './layouts';
 import type {TemplateDecoration} from './templateDecorations';
+import type {TapeStyleId} from './tapeStyles';
 export type ThemeId = 'scrapbook' | 'editorial';
 export interface Asset {
   id: string; name: string; mimeType: string; width: number; height: number;
@@ -16,6 +17,7 @@ export interface Element {
   frameLocked?: boolean; frameShape?: 'ellipse'; templateTextKey?: string;
   freeImage?: boolean; lineHeight?: number; letterSpacing?: number; blur?: number;
   polaroidStyle?: 'classic' | 'pastel' | 'vintage' | 'stacked';
+  tapeStyle?: TapeStyleId;
 }
 export interface Page {
   id: string; type: 'cover' | 'normal'; background: string; pattern?: string; patternAssetId?: string;
