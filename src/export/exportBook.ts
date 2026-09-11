@@ -1,6 +1,7 @@
 import type {Book} from '../domain/model';
 import {H,backCoverFor,backCoverPage} from '../domain/model';
 import {presentationPage} from '../domain/coverPresentation';
+import {repository} from '../db/repository';
 import {drawComposition,compositionGeometry,defaultComposition,type CompositionOptions} from './composition';
 import {renderPage} from '../editor/renderer';
 import {flipbookMotion,readerLeafPlan,shareViewerSizeForScale} from '../flipbook/spec';
@@ -148,6 +149,61 @@ async function loadCoverTextureDataUrl(){
   }
 }
 
+function safeWorkspaceColor(value:string|undefined){return /^#[0-9a-f]{3}([0-9a-f]{3})?$/i.test(value??'')?value!:'#e9eaec';}
+function workspaceTint(hex:string,alpha=.45){
+  const normalized=hex.slice(1);
+  const value=normalized.length===3?normalized.split('').map(char=>char+char).join(''):normalized;
+  const number=parseInt(value,16);
+  return `rgba(${number>>16},${number>>8&255},${number&255},${alpha})`;
+}
+async function loadWorkspaceBackgroundCss(book:Book){
+  const color=safeWorkspaceColor(book.workspaceBackground);
+  const textureId=book.workspaceTextureId;
+  const imageId=textureId??book.workspaceImageId;
+  if(imageId){
+    try{
+      const asset=await repository.getAsset(imageId);
+      if(asset){
+        const image=await blobToDataUrl(asset.preview);
+        if(textureId){
+          const tint=workspaceTint(color);
+          return `html,body{background-color:${color};background-image:linear-gradient(${tint},${tint}),url("${image}");background-size:auto,clamp(720px,70vw,960px) auto;background-position:center,center;background-repeat:no-repeat,repeat}`;
+        }
+        return `html,body{background-color:${color};background-image:url("${image}");background-size:cover;background-position:center;background-repeat:no-repeat}`;
+      }
+    }catch{/* Fall back to the saved color below. */}
+  }
+  if(book.workspacePattern){
+    try{
+      const response=await fetch(`/reference/${encodeURIComponent(book.workspacePattern)}`);
+      if(response.ok){
+        const image=await blobToDataUrl(await response.blob());
+        const tint=workspaceTint(color);
+        const size=book.workspacePattern.startsWith('bg-')?'clamp(560px,55vw,760px) auto':'clamp(720px,70vw,960px) auto';
+        return `html,body{background-color:${color};background-image:linear-gradient(${tint},${tint}),url("${image}");background-size:auto,${size};background-position:center,center;background-repeat:no-repeat,repeat}`;
+      }
+    }catch{/* Fall back to the saved color below. */}
+  }
+  return `html,body{background-color:${color}}`;
+}
+
+function tuneShareViewerHtml(html:string,workspaceCss:string){
+  const autoplayDelay='const autoplayDelay=Math.max(3600,(Number(viewerConfig.flippingTime)||620)+2400);';
+  const fastAutoplay='const autoplayDelay=200,autoplayFlipDuration=180;';
+  const flipCall='    pageFlip.flipNext(viewerConfig.corner);';
+  const fastFlip=[
+    '    const autoplaySettings=autoPlaying&&pageFlip.getSettings?pageFlip.getSettings():null;',
+    '    const normalFlippingTime=autoplaySettings?autoplaySettings.flippingTime:0;',
+    '    if(autoplaySettings)autoplaySettings.flippingTime=autoplayFlipDuration;',
+    '    pageFlip.flipNext(viewerConfig.corner);',
+    '    if(autoplaySettings)setTimeout(()=>{if(autoplaySettings.flippingTime===autoplayFlipDuration)autoplaySettings.flippingTime=normalFlippingTime;},190);',
+  ].join('\n');
+  return html
+    .replace(autoplayDelay,fastAutoplay)
+    .replace(flipCall,fastFlip)
+    .replace('</head>',`<style>${workspaceCss}</style></head>`);
+}
+
 async function exportSharePage(book:Book,indices:number[],quality:number,onProgress:(n:number)=>void,options:ExportOptions,compressionQuality:number){
   void options;
   const scale=clamp(quality,.35,3);
@@ -161,10 +217,11 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
   const labels=indices.map(index=>index===0?'封面':'第 '+index+' 页');
   const showCover=indices[0]===0;
   const back=backCoverFor(book);
-  const [pageFlipSource,coverTexture,backSource]=await Promise.all([
+  const [pageFlipSource,coverTexture,backSource,workspaceCss]=await Promise.all([
     loadEmbeddedPageFlipBundle(),
     loadCoverTextureDataUrl(),
     showCover?renderPage(backCoverPage(book),{scale,quality:sourceQuality(scale),mimeType:'image/jpeg'}):Promise.resolve(null),
+    loadWorkspaceBackgroundCss(book),
   ]);
   const backBlob=backSource?await transcodeBlob(backSource,'image/webp',compressionQuality):null;
   const backPage=backBlob?await blobToDataUrl(backBlob):'';
@@ -172,7 +229,7 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
 
   const libraryScript='<script>'+pageFlipSource+'</'+'script>';
 
-  const html=buildShareHtmlDocument({
+  const html=tuneShareViewerHtml(buildShareHtmlDocument({
     title:book.title,
     pages,
     labels,
@@ -183,7 +240,7 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
     leafPlan:readerLeafPlan(pages.length),
     viewerConfig:{...shareViewerSizeForScale(scale),...flipbookMotion},
     libraryScript,
-  });
+  }),workspaceCss);
 
   onProgress(1);
   return new Blob([html],{type:'text/html;charset=utf-8'});
