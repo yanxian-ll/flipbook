@@ -71,6 +71,13 @@ html.desktop-app .desktop-close-button:focus-visible{outline:2px solid #3185ff;o
 html:not(.desktop-app) .desktop-close-button{display:none}
 html.desktop-app .phone-shell>header{padding-right:56px!important;box-sizing:border-box}
 
+/* In compact desktop editing, a bottom sheet should reveal the canvas rather
+   than cover it. The lift follows viewport height and is capped so the book
+   stays below the top toolbar. */
+html.desktop-app .studio:not(.expanded) .spread-area.panel-open{
+  transform:translateY(clamp(-150px,-18vh,-110px));
+}
+
 /* Keep native drag regions physically separate from the close button while
    positioning the close affordance directly beside the other header tools. */
 html.desktop-app .shelf-header{
