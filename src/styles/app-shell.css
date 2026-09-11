@@ -53,6 +53,10 @@ html.desktop-app .desktop-close-button{
   -webkit-app-region:no-drag;
   transition:background .15s ease,color .15s ease,transform .15s ease;
 }
+html.desktop-app #root:has(.shelf) .desktop-close-button{
+  background:var(--ui-surface-soft);
+  font-size:20px;
+}
 html.desktop-app #root:has(.studio) .desktop-close-button{
   width:34px;
   height:34px;
@@ -67,16 +71,15 @@ html.desktop-app .desktop-close-button:focus-visible{outline:2px solid #3185ff;o
 html:not(.desktop-app) .desktop-close-button{display:none}
 html.desktop-app .phone-shell>header{padding-right:56px!important;box-sizing:border-box}
 
-/* The native drag box must never sit underneath the sibling close button.
-   Shrink the header box while keeping its visible controls at exactly the
-   same x positions they had with the old right padding. */
+/* Keep native drag regions physically separate from the close button while
+   positioning the close affordance directly beside the other header tools. */
 html.desktop-app .shelf-header{
-  right:74px;
+  right:56px;
   padding-right:0!important;
 }
 html.desktop-app .studio-header{
-  width:calc(100% - 56px);
-  padding-right:12px!important;
+  width:calc(100% - 52px);
+  padding-right:0!important;
   align-self:flex-start;
 }
 
