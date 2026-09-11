@@ -11,12 +11,14 @@ import {elementProps,textLayout,textProps,photoProps,pageTextureProps,loadAssetI
 export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackgroundClick}:{page:Page;width:number;onTextEdit:()=>void;onCrop:()=>void;onImageSelect?:()=>void;onBackgroundClick?:()=>void}){
   const transformer=useRef<Konva.Transformer>(null);
   const stage=useRef<Konva.Stage>(null);
+  const knownElementIds=useRef(new Set(page.elements.map(element=>element.id)));
   const selected=useEditor(s=>s.selected);
   const select=useEditor(s=>s.select);
   const update=useEditor(s=>s.updateElement);
   const scale=width/W;
   const [guides,setGuides]=useState<{x?:number;y?:number}>({});
   const [editingTextId,setEditingTextId]=useState<string|null>(null);
+  const [selectAllText,setSelectAllText]=useState(false);
   const editingText=editingTextId?page.elements.find(element=>element.id===editingTextId&&element.type==='text'):undefined;
 
   useEffect(()=>{
@@ -30,7 +32,20 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
     transformer.current.getLayer()?.batchDraw();
   },[selected,page,editingTextId]);
   useEffect(()=>{void loadPageFonts(page).then(()=>stage.current?.batchDraw());},[page]);
-  useEffect(()=>{setEditingTextId(null);},[page.id]);
+  useEffect(()=>{
+    setEditingTextId(null);
+    setSelectAllText(false);
+    knownElementIds.current=new Set(page.elements.map(element=>element.id));
+  },[page.id]);
+  useEffect(()=>{
+    const previous=knownElementIds.current;
+    const next=new Set(page.elements.map(element=>element.id));
+    const addedText=page.elements.find(element=>element.type==='text'&&selected.includes(element.id)&&!previous.has(element.id));
+    knownElementIds.current=next;
+    if(!addedText)return;
+    setSelectAllText(true);
+    setEditingTextId(addedText.id);
+  },[page.elements,selected]);
 
   function snap(node:Konva.Node){
     const element=page.elements.find(e=>e.id===node.id());if(!element)return;
@@ -45,9 +60,10 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
   const pageHasImage=page.elements.some(element=>element.type==='image');
   const rotateIconPx=14;
   const rotateOffset=32/scale;
-  function backgroundClick(){setEditingTextId(null);select(null);if(!pageHasImage)onBackgroundClick?.();}
+  function backgroundClick(){setEditingTextId(null);setSelectAllText(false);select(null);if(!pageHasImage)onBackgroundClick?.();}
   function editText(element:Element){
     select(element.id);
+    setSelectAllText(false);
     setEditingTextId(element.id);
     onTextEdit();
   }
@@ -129,21 +145,22 @@ export function EditorCanvas({page,width,onTextEdit,onCrop,onImageSelect,onBackg
         />
       </Layer>
     </Stage>
-    {editingText&&<InlineTextEditor element={editingText} scale={scale} onChange={value=>update(editingText.id,{text:value})} onClose={()=>setEditingTextId(null)}/>} 
+    {editingText&&<InlineTextEditor element={editingText} scale={scale} selectAll={selectAllText} onChange={value=>update(editingText.id,{text:value})} onClose={()=>{setEditingTextId(null);setSelectAllText(false);}}/>} 
   </div>;
 }
 
-function InlineTextEditor({element,scale,onChange,onClose}:{element:Element;scale:number;onChange:(value:string)=>void;onClose:()=>void}){
+function InlineTextEditor({element,scale,selectAll,onChange,onClose}:{element:Element;scale:number;selectAll:boolean;onChange:(value:string)=>void;onClose:()=>void}){
   const input=useRef<HTMLTextAreaElement>(null);
   const layout=textLayout(element);
   useEffect(()=>{
     const timer=window.setTimeout(()=>{
       const node=input.current;if(!node)return;
       node.focus();
-      node.setSelectionRange(node.value.length,node.value.length);
+      if(selectAll)node.select();
+      else node.setSelectionRange(node.value.length,node.value.length);
     },80);
     return()=>window.clearTimeout(timer);
-  },[]);
+  },[selectAll]);
   return <textarea
     ref={input}
     className="canvas-inline-text-editor"
