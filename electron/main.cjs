@@ -23,6 +23,9 @@ const MIME_TYPES={
 
 const DEFAULT_RENDERER_PORT=41731;
 const RENDERER_PORT_FILE='renderer-port.txt';
+const COMPACT_WIDTH=430;
+const EXPANDED_WIDTH=1280;
+const EXPANDED_THRESHOLD=640;
 let server=null;
 let serverOrigin='';
 
@@ -145,24 +148,47 @@ function startRendererServer(){
 function initialContentSize(){
   const {width,height}=screen.getPrimaryDisplay().workAreaSize;
   return {
-    width:Math.min(430,Math.max(320,width-32)),
+    width:Math.min(COMPACT_WIDTH,Math.max(320,width-32)),
     height:Math.min(932,Math.max(480,height-48)),
   };
 }
 
-function layoutBounds(window,expanded){
-  const current=window.getBounds();
+function expandedFromBounds(bounds){
+  return bounds.width>EXPANDED_THRESHOLD;
+}
+
+function currentExpanded(window){
+  const bounds=window.isMaximized()?window.getNormalBounds():window.getBounds();
+  return expandedFromBounds(bounds);
+}
+
+function notifyExpanded(window,expanded=currentExpanded(window)){
+  if(!window.isDestroyed()&&!window.webContents.isDestroyed())window.webContents.send('desktop-window:expanded-changed',Boolean(expanded));
+  return Boolean(expanded);
+}
+
+function layoutBounds(window,expanded,baseBounds){
+  const current=baseBounds??(window.isMaximized()?window.getNormalBounds():window.getBounds());
   const display=screen.getDisplayMatching(current);
   const area=display.workArea;
   const availableWidth=Math.max(320,area.width-32);
   const availableHeight=Math.max(480,area.height-32);
-  const width=expanded?Math.min(1280,availableWidth):Math.min(430,availableWidth);
+  const width=expanded?Math.min(EXPANDED_WIDTH,availableWidth):Math.min(COMPACT_WIDTH,availableWidth);
   const height=Math.min(932,availableHeight);
   const centerX=current.x+current.width/2;
   const centerY=current.y+current.height/2;
   const x=Math.max(area.x,Math.min(Math.round(centerX-width/2),area.x+area.width-width));
   const y=Math.max(area.y,Math.min(Math.round(centerY-height/2),area.y+area.height-height));
   return {x,y,width,height};
+}
+
+function applyExpanded(window,expanded,baseBounds){
+  const next=Boolean(expanded);
+  const bounds=layoutBounds(window,next,baseBounds);
+  if(window.isMaximized())window.unmaximize();
+  window.setBounds(bounds,true);
+  notifyExpanded(window,next);
+  return bounds;
 }
 
 async function createWindow(){
@@ -204,6 +230,28 @@ async function createWindow(){
     void shell.openExternal(url);
   });
 
+  let lastReportedExpanded=currentExpanded(window);
+  const reportExpanded=()=>{
+    if(window.isDestroyed()||window.isMaximized())return;
+    const expanded=currentExpanded(window);
+    if(expanded===lastReportedExpanded)return;
+    lastReportedExpanded=expanded;
+    notifyExpanded(window,expanded);
+  };
+  window.on('resize',reportExpanded);
+  window.on('maximize',()=>{
+    if(window.isDestroyed())return;
+    const normalBounds=window.getNormalBounds();
+    const next=!expandedFromBounds(normalBounds);
+    lastReportedExpanded=next;
+    window.unmaximize();
+    applyExpanded(window,next,normalBounds);
+  });
+  window.webContents.on('did-finish-load',()=>{
+    lastReportedExpanded=currentExpanded(window);
+    notifyExpanded(window,lastReportedExpanded);
+  });
+
   await window.loadURL(serverOrigin);
 }
 
@@ -212,12 +260,23 @@ ipcMain.on('desktop-window:close',event=>{
   if(window&&!window.isDestroyed())window.close();
 });
 
+ipcMain.handle('desktop-window:get-expanded',event=>{
+  const window=BrowserWindow.fromWebContents(event.sender);
+  return window?currentExpanded(window):false;
+});
+
 ipcMain.handle('desktop-window:set-expanded',(event,expanded)=>{
   const window=BrowserWindow.fromWebContents(event.sender);
   if(!window)return null;
-  const bounds=layoutBounds(window,Boolean(expanded));
-  window.setBounds(bounds,true);
-  return bounds;
+  return applyExpanded(window,Boolean(expanded));
+});
+
+ipcMain.handle('desktop-window:toggle-expanded',event=>{
+  const window=BrowserWindow.fromWebContents(event.sender);
+  if(!window)return false;
+  const next=!currentExpanded(window);
+  applyExpanded(window,next);
+  return next;
 });
 
 app.whenReady().then(async()=>{
