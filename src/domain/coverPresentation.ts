@@ -8,6 +8,18 @@ import {H,W,coverTemplateFor,type Book,type Page} from './model';
 export function frontCoverRenderPage(book:Book):Page{
   const page=structuredClone(book.pages[0]);
   const template=coverTemplateFor(book,book.coverTemplate);
+
+  // The interactive cover is intentionally simpler than a normal page: its
+  // stored background is the cover color and the cover template only controls
+  // the photo window. Old books can still carry normal-page template/pattern
+  // fields on page 0; stripping those render-only layers keeps HTML/PDF/image
+  // exports visually identical to the editor's BookCoverVisual.
+  page.templateBackground=undefined;
+  page.templateOverlay=undefined;
+  page.templateDecorations=undefined;
+  page.pattern=undefined;
+  page.patternAssetId=undefined;
+
   const image=page.elements.find(element=>element.type==='image');
   if(!image)return page;
   if(!template.slot){
