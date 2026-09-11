@@ -3,7 +3,7 @@ import {H,backCoverFor,backCoverPage} from '../domain/model';
 import {presentationPage} from '../domain/coverPresentation';
 import {drawComposition,compositionGeometry,defaultComposition,type CompositionOptions} from './composition';
 import {renderPage} from '../editor/renderer';
-import {flipbookMotion,readerLeafPlan,sharedViewerSize} from '../flipbook/spec';
+import {flipbookMotion,readerLeafPlan,shareViewerSizeForScale} from '../flipbook/spec';
 import {buildShareHtmlDocument} from './shareHtml';
 import {loadEmbeddedPageFlipBundle} from './pageFlipBundle';
 
@@ -181,7 +181,7 @@ async function exportSharePage(book:Book,indices:number[],quality:number,onProgr
     backColor:back.backgroundMode==='match-front'?(book.pages[0]?.background??back.background):back.background,
     backPage,
     leafPlan:readerLeafPlan(pages.length),
-    viewerConfig:{...sharedViewerSize,...flipbookMotion},
+    viewerConfig:{...shareViewerSizeForScale(scale),...flipbookMotion},
     libraryScript,
   });
 
