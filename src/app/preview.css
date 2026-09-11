@@ -5,14 +5,14 @@
 }
 .preview-shell .flip-stage{
   position:relative;
-  flex:1;
+  flex:1 1 auto;
   display:flex;
   align-items:center;
   justify-content:center;
   min-height:0;
-  padding:44px 18px 18px;
+  padding:34px 24px 26px;
+  box-sizing:border-box;
   overflow:hidden;
-  perspective:1500px;
 }
 .preview-shell .flip-book{
   position:relative;
@@ -21,11 +21,14 @@
   align-items:center;
   justify-content:center;
   flex:0 0 auto;
-  width:min(820px,calc(100% - 24px));
-  height:min(580px,calc(100% - 70px));
+  width:min(760px,calc(100% - 32px));
+  height:min(538px,calc(100% - 32px));
+  max-width:100%;
+  max-height:100%;
+  margin:auto;
   min-width:0;
   min-height:0;
-  transition:width .28s cubic-bezier(.2,.72,.2,1),height .28s cubic-bezier(.2,.72,.2,1),transform .28s cubic-bezier(.2,.72,.2,1);
+  transition:width .25s ease,height .25s ease,transform .25s ease;
   filter:none;
 }
 .preview-shell .flip-book .preview-pageflip-root{
@@ -107,107 +110,12 @@
   right:0;
   transform:scaleX(-1);
 }
-
-.preview-view-toggle{
-  position:absolute;
-  top:10px;
-  left:50%;
-  z-index:20;
-  display:flex;
-  gap:2px;
-  padding:3px;
-  transform:translateX(-50%);
-  border:1px solid #00000010;
-  border-radius:10px;
-  background:#ffffffdc;
-  box-shadow:0 3px 10px #0000000e;
-  backdrop-filter:blur(8px);
-}
-.preview-view-toggle button{
-  min-width:48px;
-  padding:6px 10px;
-  border-radius:7px;
-  color:#777;
-  font-size:10px;
-  line-height:1;
-  white-space:nowrap;
-}
-.preview-view-toggle button:hover{
-  background:#00000008;
-  color:#333;
-}
-.preview-view-toggle button.active{
-  background:#222;
-  color:#fff;
-  box-shadow:0 2px 5px #0002;
-}
-
-/* Depth mode is only a passive preview decoration. PageFlip remains the single
-   interaction/rendering engine; at most eight lightweight neighbor leaves are
-   mounted here and only nearby pages receive rendered image URLs. */
-.preview-depth-stack{
-  position:absolute;
-  inset:44px 18px 18px;
-  z-index:2;
-  pointer-events:none;
-  perspective:1500px;
-  transform-style:preserve-3d;
-  contain:layout paint style;
-}
-.preview-depth-leaf{
-  position:absolute;
-  top:50%;
-  width:min(38%,360px);
-  aspect-ratio:1200/1696;
-  overflow:hidden;
-  border-radius:4px 8px 8px 4px;
-  opacity:var(--stack-opacity);
-  box-shadow:0 7px 13px #0000001d,0 2px 3px #00000014,inset 0 0 0 1px #ffffff66;
-  transform-style:preserve-3d;
-  backface-visibility:hidden;
-  will-change:transform;
-  contain:layout paint style;
-  transform:translateY(-50%) translateY(var(--stack-y)) translateX(var(--stack-offset)) translateZ(var(--stack-z)) rotateY(var(--stack-tilt)) scale(var(--stack-scale));
-  transition:transform .26s cubic-bezier(.2,.72,.2,1),opacity .2s ease;
-}
-.preview-depth-leaf.left{
-  right:50%;
-  transform-origin:right center;
-  border-radius:8px 4px 4px 8px;
-}
-.preview-depth-leaf.right{
-  left:50%;
-  transform-origin:left center;
-}
-.preview-depth-leaf img{
-  width:100%;
-  height:100%;
-  object-fit:fill;
-  display:block;
-}
-.preview-depth-leaf::after{
-  content:'';
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  box-shadow:inset 0 0 0 1px #ffffff55;
-}
-.preview-depth-leaf.left::after{
-  background:linear-gradient(90deg,#00000007,transparent 15%,transparent 88%,#00000025);
-}
-.preview-depth-leaf.right::after{
-  background:linear-gradient(90deg,#0000002b,transparent 13%,transparent 92%,#00000008);
-}
-.preview-shell .flip-stage.depth-view .flip-book .stf__parent{
-  filter:drop-shadow(0 15px 18px #0000002b) drop-shadow(0 27px 30px #00000017);
-}
-
 .preview-shell .preview-navigation{
   display:flex;
   justify-content:center;
   gap:20px;
   align-items:center;
-  margin-top:9px;
+  margin-top:8px;
   font-size:11px;
   color:#888;
 }
@@ -234,53 +142,29 @@
     height:94dvh;
   }
   .preview-shell.expanded .flip-stage{
-    padding:50px 42px 22px;
+    padding:44px 54px 34px;
   }
   .preview-shell.expanded .flip-book{
-    width:min(820px,calc(100% - 180px));
-    height:min(580px,calc(100% - 100px));
+    width:min(760px,calc(100% - 96px));
+    height:min(538px,calc(100% - 86px));
   }
-  .preview-shell.expanded .flip-stage.depth-view .flip-book{
-    width:min(720px,calc(100% - 290px));
-    height:min(509px,calc(100% - 130px));
-  }
-  .preview-shell.expanded .preview-depth-stack{
-    inset:50px 42px 22px;
-  }
+  /* PageFlip lays the single front/back cover on one half of its landscape
+     viewport. Shift the host by exactly one quarter so that the visible cover,
+     not the hidden half, stays centered in the preview area. */
   .preview-shell.expanded .flip-stage.is-cover .flip-book{
-    transform:translateX(-18%);
+    transform:translateX(-25%);
   }
   .preview-shell.expanded .flip-stage.is-back-cover .flip-book{
-    transform:translateX(18%);
-  }
-  .preview-shell.expanded .flip-stage.depth-view.is-cover .flip-book{
-    transform:translateX(-13%);
-  }
-  .preview-shell.expanded .flip-stage.depth-view.is-back-cover .flip-book{
-    transform:translateX(13%);
+    transform:translateX(25%);
   }
 }
 @media(max-width:640px){
   .preview-shell .flip-stage{
-    padding:40px 6px 10px;
+    padding:28px 14px 18px;
   }
   .preview-shell .flip-book{
     width:calc(100% - 12px);
-    height:min(530px,calc(100% - 48px));
-  }
-  .preview-shell .preview-depth-stack{
-    inset:40px 6px 10px;
-  }
-  .preview-depth-leaf{
-    width:min(43%,250px);
-  }
-  .preview-view-toggle{
-    top:7px;
-  }
-  .preview-view-toggle button{
-    min-width:44px;
-    padding:5px 8px;
-    font-size:9px;
+    height:min(500px,calc(100% - 24px));
   }
   .preview-shell .preview-hint{
     display:none;
@@ -294,21 +178,20 @@
   border-radius:0;
 }
 .preview-shell:fullscreen .flip-stage{
-  padding:54px 42px 28px;
+  padding:52px 56px 36px;
 }
 .preview-shell:fullscreen .flip-book{
-  width:min(900px,calc(100% - 220px));
-  height:min(636px,calc(100% - 130px));
+  width:min(820px,calc(100% - 160px));
+  height:min(580px,calc(100% - 120px));
 }
-.preview-shell:fullscreen .flip-stage.depth-view .flip-book{
-  width:min(780px,calc(100% - 340px));
-  height:min(551px,calc(100% - 160px));
+.preview-shell:fullscreen .flip-stage.is-cover .flip-book{
+  transform:translateX(-25%);
 }
-.preview-shell:fullscreen .preview-depth-stack{
-  inset:54px 42px 28px;
+.preview-shell:fullscreen .flip-stage.is-back-cover .flip-book{
+  transform:translateX(25%);
 }
 @media(prefers-reduced-motion:reduce){
-  .preview-shell,.preview-shell .flip-book,.preview-depth-leaf{
+  .preview-shell,.preview-shell .flip-book{
     transition-duration:.01ms!important;
   }
 }
