@@ -1,4 +1,4 @@
-import {useEffect,useLayoutEffect,useState,type ComponentProps} from 'react';
+import {useEffect,useLayoutEffect,useState,type ComponentProps,type ReactNode} from 'react';
 import {createPortal} from 'react-dom';
 import {Copy,Trash2,X} from 'lucide-react';
 import {backCoverFor,textElement,uid,type Element} from '../domain/model';
@@ -20,7 +20,7 @@ function CakeStickerButtons(){
 type EditorPanelProps=ComponentProps<typeof EditorPanelCore>;
 type CoverPanelProps={onClose:()=>void;placement?:'left'|'right';paired?:boolean};
 
-function PanelShell({title,onClose,placement,paired,children}:{title:string;children:React.ReactNode}&CoverPanelProps){
+function PanelShell({title,onClose,placement,paired,children}:{title:string;children:ReactNode}&CoverPanelProps){
   return <aside className={`editor-panel ${placement?`panel-${placement}`:''} ${paired?'paired-library-panel':''}`}>
     <div className="panel-grabber"/>
     <header><h2>{title}</h2><IconButton label="关闭面板" onClick={onClose}><X size={17}/></IconButton></header>
