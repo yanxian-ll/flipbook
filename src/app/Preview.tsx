@@ -1,5 +1,5 @@
 import {useWorkspaceBackground} from '../components/useWorkspaceBackground';
-import {useEffect,useRef,useState,type CSSProperties} from 'react';
+import {useEffect,useRef,useState} from 'react';
 // page-flip 2.0.7 ships its browser bundle without TypeScript declarations.
 // @ts-expect-error The runtime export is the same PageFlip constructor used by the exported HTML viewer.
 import {PageFlip} from 'page-flip';
@@ -12,12 +12,11 @@ import {renderPage} from '../editor/renderer';
 import {IconButton,Loading,ErrorMessage,Button} from '../components/ui';
 import {ExportDialog} from '../export/ExportDialog';
 import {flipbookMotion,flipPrevSafely,readerLeafPlan,sharedViewerSize} from '../flipbook/spec';
+import {useWorkspaceExpansion} from './useWorkspaceExpansion';
 import './preview.css';
 
 type SavedEditorView={wide?:boolean;pageIndex?:number};
 type PreviewPageCache=Map<number,Promise<Blob>>;
-type PreviewViewMode='classic'|'depth';
-type PreviewUrlMap=Record<number,string>;
 
 const previewRenderCache=new WeakMap<Book,PreviewPageCache>();
 
@@ -81,67 +80,24 @@ function logicalPreviewIndex(physicalIndex:number,pageCount:number,backIndex:num
   return Math.max(0,Math.min(pageCount-1,physicalIndex));
 }
 
-function PreviewDepthStack({book,urls,physicalIndex,backIndex}:{book:Book;urls:PreviewUrlMap;physicalIndex:number;backIndex:number}){
-  const pageCount=book.pages.length;
-  if(pageCount<1)return null;
-  const current=logicalPreviewIndex(physicalIndex,pageCount,backIndex);
-  let leftStart=-1,rightStart=pageCount+1;
-  if(current===pageCount){
-    leftStart=pageCount-1;
-  }else if(current===0){
-    rightStart=1;
-  }else{
-    const spreadLeft=current%2===1?current:current-1;
-    const spreadRight=Math.min(pageCount-1,spreadLeft+1);
-    leftStart=spreadLeft-1;
-    rightStart=spreadRight+1;
-  }
-  const collect=(start:number,step:number)=>Array.from({length:4},(_,offset)=>start+offset*step).filter(value=>value>=0&&value<=pageCount&&value!==current);
-  const backgroundFor=(pageIndex:number)=>visualPageBackground(pageIndex===pageCount?backCoverPage(book):presentationPage(book,pageIndex));
-  const renderLeaf=(pageIndex:number,depth:number,side:'left'|'right')=>{
-    const distance=18+depth*18;
-    const style={
-      '--stack-offset':`${side==='left'?-distance:distance}px`,
-      '--stack-z':`${-20-depth*24}px`,
-      '--stack-tilt':`${(side==='left'?1:-1)*(3.2+depth*1.25)}deg`,
-      '--stack-scale':String(1-depth*.016),
-      '--stack-y':`${(depth-1)*1.6}px`,
-      '--stack-opacity':String(Math.max(.62,1-depth*.08)),
-      zIndex:10-depth,
-      background:backgroundFor(pageIndex),
-    } as CSSProperties;
-    const src=urls[pageIndex];
-    return <div key={`${side}-${pageIndex}`} className={`preview-depth-leaf ${side}`} style={style}>
-      {src&&<img src={src} alt="" aria-hidden draggable={false}/>} 
-    </div>;
-  };
-  return <div className="preview-depth-stack" aria-hidden="true">
-    {collect(leftStart,-1).map((pageIndex,offset)=>renderLeaf(pageIndex,offset+1,'left'))}
-    {collect(rightStart,1).map((pageIndex,offset)=>renderLeaf(pageIndex,offset+1,'right'))}
-  </div>;
-}
-
 export function Preview(){
   const {bookId}=useParams();
   const [query]=useSearchParams();
   const navigate=useNavigate();
   const initialView=savedEditorView(bookId);
+  const {wide:expanded}=useWorkspaceExpansion(initialView.wide??defaultExpanded());
   const [book,setBook]=useState<Book>();
   const [error,setError]=useState('');
   const [index,setIndex]=useState(initialView.pageIndex??0);
-  const [expanded,setExpanded]=useState(initialView.wide??defaultExpanded());
   const [exporting,setExporting]=useState(query.has('export'));
   const [ready,setReady]=useState(false);
-  const [viewMode,setViewMode]=useState<PreviewViewMode>('classic');
-  const [previewUrls,setPreviewUrls]=useState<PreviewUrlMap>({});
   const workspaceStyle=useWorkspaceBackground(book);
-  const ensureAroundRef=useRef<(physicalIndex:number,radius?:number)=>void>(()=>{});
   const flip=useRef<any>(null),shell=useRef<HTMLDivElement>(null),stage=useRef<HTMLDivElement>(null),flipHost=useRef<HTMLDivElement>(null);
 
   useEffect(()=>{
     let live=true;
     const view=savedEditorView(bookId);
-    setBook(undefined);setError('');setIndex(view.pageIndex??0);setExpanded(view.wide??defaultExpanded());setReady(false);setViewMode('classic');setPreviewUrls({});
+    setBook(undefined);setError('');setIndex(view.pageIndex??0);setReady(false);
     void repository.get(bookId!).then(value=>{if(live)setBook(value);}).catch(e=>{if(live)setError(friendlyError(e));});
     return()=>{live=false;};
   },[bookId]);
@@ -157,12 +113,11 @@ export function Preview(){
     const view=savedEditorView(bookId);
     const startPage=Math.max(0,Math.min(view.pageIndex??0,book.pages.length-1));
     setReady(false);
-    setPreviewUrls({});
     host.replaceChildren();
 
     const root=document.createElement('div');
     root.className='preview-pageflip-root';
-    book.pages.forEach((page,pageIndex)=>{
+    book.pages.forEach((_,pageIndex)=>{
       const shown=presentationPage(book,pageIndex);
       images.set(pageIndex,makePreviewLeaf(root,pageIndex===0?'封面':`第 ${pageIndex} 页`,pageIndex===0?'hard':'soft',pageIndex===0?'cover':'page',visualPageBackground(shown)));
     });
@@ -186,7 +141,6 @@ export function Preview(){
         const url=URL.createObjectURL(blob);
         urls.set(renderIndex,url);
         image.src=url;
-        setPreviewUrls(current=>current[renderIndex]===url?current:{...current,[renderIndex]:url});
       }catch(cause){if(live)setError(friendlyError(cause));}
     };
     const ensureAround=(physicalIndex:number,radius=2)=>{
@@ -196,7 +150,6 @@ export function Preview(){
       const unique=[...new Set(candidates.filter(value=>value>=0&&value<=book.pages.length))];
       void (async()=>{for(const value of unique){if(!live)return;await ensurePage(value);}})();
     };
-    ensureAroundRef.current=ensureAround;
 
     instance=new PageFlip(root,{
       width:sharedViewerSize.width,
@@ -238,7 +191,6 @@ export function Preview(){
 
     return()=>{
       live=false;
-      ensureAroundRef.current=()=>{};
       setReady(false);
       if(flip.current===instance)flip.current=null;
       if(instance){try{instance.destroy();}catch{}}
@@ -246,10 +198,6 @@ export function Preview(){
       urls.forEach(url=>URL.revokeObjectURL(url));
     };
   },[book,bookId]);
-
-  useEffect(()=>{
-    if(viewMode==='depth'&&ready)ensureAroundRef.current(index,3);
-  },[viewMode,index,ready]);
 
   useEffect(()=>{
     const key=(event:KeyboardEvent)=>{
@@ -305,13 +253,8 @@ export function Preview(){
     </header>
     <ErrorMessage message={error}/>
     {error?<Button onClick={()=>navigate('/')}>返回书架</Button>:!book||!plan?<Loading text="正在打开画册…"/>:<>
-      <div ref={stage} className={`flip-stage ${index===0?'is-cover':''} ${backCover?'is-back-cover':''} ${viewMode==='depth'?'depth-view':''}`}>
-        {viewMode==='depth'&&<PreviewDepthStack book={book} urls={previewUrls} physicalIndex={index} backIndex={plan.backIndex}/>} 
+      <div ref={stage} className={`flip-stage ${index===0?'is-cover':''} ${backCover?'is-back-cover':''}`}>
         <div ref={flipHost} className="flip-book"/>
-        <div className="preview-view-toggle" role="group" aria-label="预览展示方式">
-          <button type="button" className={viewMode==='classic'?'active':''} aria-pressed={viewMode==='classic'} onClick={()=>setViewMode('classic')}>经典</button>
-          <button type="button" className={viewMode==='depth'?'active':''} aria-pressed={viewMode==='depth'} onClick={()=>setViewMode('depth')}>立体</button>
-        </div>
       </div>
       <div className="preview-navigation">
         <IconButton label="上一页" disabled={!ready||index<=0} onClick={()=>flipPrevSafely(flip.current)}><ChevronLeft/></IconButton>
