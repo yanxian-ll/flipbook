@@ -25,7 +25,6 @@ function PolaroidStickerSection(){
   const add=(style:PolaroidStyleId)=>useEditor.getState().addElement(createPolaroidElement(style));
   return <section style={{marginTop:18}} aria-label="拍立得贴纸">
     <p className="field-label">拍立得</p>
-    <p className="muted" style={{marginTop:-4}}>点击添加。点外框选择整张拍立得，可移动、旋转、缩放；点照片区域拖动构图、滚轮连续缩放；双击后仍使用同一个素材库为当前拍立得选择 1 张照片。</p>
     <div style={{display:'grid',gridTemplateColumns:'repeat(2,minmax(0,1fr))',gap:10}}>
       {polaroidTemplates.map(template=><button
         key={template.id}
@@ -38,7 +37,6 @@ function PolaroidStickerSection(){
           <img src={template.overlay} alt="" draggable={false} style={{position:'absolute',inset:0,width:'100%',height:'100%',objectFit:'contain'}}/>
         </span>
         <span style={{fontSize:12,fontWeight:650,color:'inherit'}}>{template.name}</span>
-        <span className="muted" style={{fontSize:10,lineHeight:1.35}}>{template.description}</span>
       </button>)}
     </div>
   </section>;
@@ -127,7 +125,7 @@ function BackCoverTextPanel({onClose,placement,paired}:CoverPanelProps){
     };
   });
   return <PanelShell title="文字" onClose={onClose} placement={placement} paired={paired}>
-    <label className="field stack">后封面文字<textarea aria-label="文字内容" rows={3} value={back.text} placeholder="例如：日期、地点或一句话" onChange={event=>update({text:event.target.value})}/></label>
+    <label className="field stack">后封面文字<textarea aria-label="文字内容" rows={3} value={back.text} placeholder="例如：日期、地点或一句话" onChange={event=>update({text:event.value})}/></label>
     <label className="field">文字颜色<input type="color" value={back.textColor} onChange={event=>update({textColor:event.target.value})}/></label>
   </PanelShell>;
 }
