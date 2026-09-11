@@ -53,7 +53,9 @@ export function copyBackCoverElements(book:Book,ids:string[]){
 }
 
 export function pasteBackCoverElements(book:Book,items:Element[]){
-  const pasted=items.filter(element=>element.type!=='image').map(element=>({...element,id:uid(),x:element.x+30,y:element.y+30,templateTextKey:undefined}));
+  const pasted=items
+    .filter(element=>element.type==='text'||element.type==='sticker')
+    .map(element=>({...element,id:uid(),x:element.x+30,y:element.y+30,templateTextKey:undefined}));
   if(pasted.length)ensureBackCover(book).elements!.push(...pasted);
   return pasted;
 }
